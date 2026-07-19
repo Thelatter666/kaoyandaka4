@@ -35,7 +35,7 @@ export function useApi<T>(
         setState({ data: null, loading: false, error: message });
       }
     }
-  }, deps); // eslint-disable-line react-hooks/exhaustive-deps
+  }, deps);
 
   useEffect(() => {
     mountedRef.current = true;

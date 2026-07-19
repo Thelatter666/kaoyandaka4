@@ -2,17 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { PageShell } from '../components/layout/PageShell';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Modal } from '../components/ui/Modal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { DurationSelector } from '../components/presets/DurationSelector';
 import { PresetCard } from '../components/presets/PresetCard';
 import { RingCountdown } from '../components/timer/RingCountdown';
-import { useFocusSession, type FocusMode } from '../hooks/useFocusSession';
+import { useFocusSession } from '../hooks/useFocusSession';
 import { presetsApi, Preset } from '../api/presets';
 import { showToast } from '../components/ui/Toast';
-import { minutesToSeconds } from '../utils/duration';
 import { SHORT_BREAK_MINUTES, LONG_BREAK_MINUTES, LONG_BREAK_AFTER_ROUNDS } from '@shared/schemas/common';
 import type { Subject, SubSubject } from '@shared/types';
 
@@ -20,7 +18,7 @@ type PomodoroStep = 'select-preset' | 'adjust-duration' | 'active' | 'completed'
 
 export function PomodoroPage() {
   const {
-    activeSession, loading: sessionLoading,
+    activeSession,
     breakMode, breakRemainingSeconds, roundCount,
     startFocus, completeFocus, cancelFocus,
     startBreak, completeBreak,
@@ -35,9 +33,6 @@ export function PomodoroPage() {
   const [selectedPreset, setSelectedPreset] = useState<Preset | null>(null);
   const [durationMinutes, setDurationMinutes] = useState(45);
   const [actionLoading, setActionLoading] = useState(false);
-
-  // Preset selector modal
-  const [selectorOpen, setSelectorOpen] = useState(false);
 
   const fetchPresets = useCallback(async () => {
     setPresetsLoading(true);

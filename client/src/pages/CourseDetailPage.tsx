@@ -38,7 +38,9 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
           ...prev,
           episodes: prev.episodes.map((ep) => ep.id === episodeId ? { ...ep, isCompleted: updated.isCompleted, completedAt: updated.completedAt } : ep),
           completedEpisodeCount: updated.isCompleted ? prev.completedEpisodeCount + 1 : prev.completedEpisodeCount - 1,
-          watchedDurationSeconds: updated.isCompleted ? prev.watchedDurationSeconds + ep.durationSeconds : prev.watchedDurationSeconds - ep.durationSeconds,
+          watchedDurationSeconds: updated.isCompleted
+            ? prev.watchedDurationSeconds + (prev.episodes.find((e) => e.id === episodeId)?.durationSeconds || 0)
+            : prev.watchedDurationSeconds - (prev.episodes.find((e) => e.id === episodeId)?.durationSeconds || 0),
         } as CourseDetail;
       });
     } catch (err) {

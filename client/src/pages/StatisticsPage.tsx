@@ -8,9 +8,9 @@ import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { statisticsApi } from '../api/statistics';
 import { today, formatDate } from '../utils/date';
-import { formatDurationHuman, formatMinutes } from '../utils/duration';
+import { formatDurationHuman } from '../utils/duration';
 import { ForestResponse } from '@shared/types';
-import type { Subject } from '@shared/types';
+import type { Subject, SubSubject } from '@shared/types';
 
 type StatMode = 'day' | 'week' | 'month';
 
@@ -20,12 +20,6 @@ const TREE_ICONS: Record<string, string> = {
   math: '🌲',       // pine tree
   english: '🌳',    // broadleaf tree
   '408': '🍎',      // fruit tree
-};
-
-const TREE_SHAPES: Record<string, React.CSSProperties> = {
-  math: { color: 'var(--color-subject-math)' },
-  english: { color: 'var(--color-subject-english)' },
-  '408': { color: 'var(--color-subject-408)' },
 };
 
 export function StatisticsPage() {
@@ -200,7 +194,7 @@ export function StatisticsPage() {
                       {day.items.map((item) => (
                         <Card key={item.id} padding="10px 16px">
                           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
-                            <SubjectBadge subject={item.subject as Subject} subSubject={item.subSubject as Subject | null} />
+                            <SubjectBadge subject={item.subject as Subject} subSubject={item.subSubject as SubSubject | null} />
                             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</span>
                             <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', flexShrink: 0 }}>
                               {formatDurationHuman(item.durationSeconds)}

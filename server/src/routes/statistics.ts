@@ -123,7 +123,6 @@ router.get('/forest', validate(StatisticsQuerySchema, 'query'), async (req: Requ
           OR (source = 'course_video' AND focus_session_id IS NULL)`
     );
     const cumulativeTotalSeconds = cumRecords[0].total_seconds || 0;
-    const cumulativeTotalSessions = cumRecords[0].total_sessions || 0;
 
     // Calculate cumulative trees across all subjects
     const [cumBySubject] = await pool.query<RowDataPacket[]>(

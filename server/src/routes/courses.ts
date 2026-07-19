@@ -110,20 +110,11 @@ router.post('/parse', validate(ParseImportSchema), async (req: Request, res: Res
 
     for (const line of lines) {
       const trimmed = line.trim();
-      // Try to match title and time pattern: "Title\nMM:SS" or "Title H:MM:SS"
+      // Try to match standalone time pattern and pair with previous line
       const timeMatch = trimmed.match(/^(\d{1,3}):(\d{2})(?::(\d{2}))?$/);
       if (timeMatch) {
-        const hours = timeMatch[3] ? parseInt(timeMatch[1], 10) : 0;
-        const minutes = timeMatch[3] ? parseInt(timeMatch[2], 10) : parseInt(timeMatch[1], 10);
-        const seconds = timeMatch[3] ? parseInt(timeMatch[3], 10) : parseInt(timeMatch[2], 10);
-
-        if (minutes < 60 && seconds < 60) {
-          // This is a standalone time line - look back for title
-          const prevIdx = episodes.length;
-          if (prevIdx > 0 && !unrecognizedLines.includes(lines[prevIdx - 1]?.trim())) {
-            // Actually we need a different parsing approach - let's pair lines
-          }
-        }
+        // Skip standalone time lines - they're handled by the duration match below
+        continue;
       }
 
       // Simple parsing: try MM:SS or H:MM:SS at the end of the line
