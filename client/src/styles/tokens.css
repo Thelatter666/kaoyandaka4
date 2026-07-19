@@ -1,0 +1,145 @@
+/* ============================================================
+   砚台考研打卡 — 设计 Token（CSS 自定义属性）
+   ============================================================ */
+
+:root {
+  /* === 浅色主题（默认）=== */
+  --color-bg-page: #F7F4EF;
+  --color-bg-card: #FEFCF9;
+  --color-bg-card-hover: #F5F0E8;
+  --color-bg-input: #FFFFFF;
+  --color-bg-overlay: rgba(0, 0, 0, 0.4);
+
+  --color-text-primary: #2C3E50;
+  --color-text-secondary: #5D6D7E;
+  --color-text-muted: #95A5A6;
+  --color-text-inverse: #FEFCF9;
+
+  --color-accent-primary: #C0392B;
+  --color-accent-primary-hover: #A93226;
+  --color-accent-primary-light: rgba(192, 57, 43, 0.08);
+
+  --color-accent-success: #1E8449;
+  --color-accent-success-hover: #196F3D;
+  --color-accent-success-light: rgba(30, 132, 73, 0.08);
+
+  --color-accent-deep-green: #0E6655;
+  --color-accent-deep-green-hover: #0B5345;
+
+  --color-accent-warning: #E67E22;
+  --color-accent-warning-light: rgba(230, 126, 34, 0.08);
+
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-border-light: rgba(0, 0, 0, 0.05);
+  --color-border-focus: #C0392B;
+  --color-shadow: rgba(0, 0, 0, 0.06);
+  --color-shadow-card: rgba(0, 0, 0, 0.04);
+
+  /* 科目颜色（浅色） */
+  --color-subject-math: #2980B9;
+  --color-subject-math-bg: rgba(41, 128, 185, 0.08);
+  --color-subject-english: #E67E22;
+  --color-subject-english-bg: rgba(230, 126, 34, 0.08);
+  --color-subject-408: #8E44AD;
+  --color-subject-408-bg: rgba(142, 68, 173, 0.08);
+
+  /* 间距 */
+  --space-unit: 4px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-card-padding: 24px;
+  --space-section-gap: 32px;
+
+  /* 圆角 */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-card: 20px;
+  --radius-button: 12px;
+  --radius-nav: 24px;
+  --radius-full: 9999px;
+
+  /* 字体 */
+  --font-heading: 'Noto Serif SC', 'Songti SC', serif;
+  --font-body: 'Noto Sans SC', 'PingFang SC', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Menlo', monospace;
+
+  /* 字号 */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+
+  /* 字重 */
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  /* 阴影 */
+  --shadow-sm: 0 1px 2px var(--color-shadow);
+  --shadow-md: 0 4px 12px var(--color-shadow);
+  --shadow-lg: 0 8px 24px var(--color-shadow);
+  --shadow-card: 0 2px 8px var(--color-shadow-card);
+
+  /* 动效 */
+  --transition-fast: 180ms ease-out;
+  --transition-normal: 320ms ease-out;
+
+  /* 导航高度 */
+  --nav-height: 60px;
+
+  /* z-index */
+  --z-dropdown: 100;
+  --z-modal: 200;
+  --z-toast: 300;
+  --z-tooltip: 400;
+}
+
+/* === 深色主题 === */
+[data-theme="dark"] {
+  --color-bg-page: #1A2332;
+  --color-bg-card: #212D3D;
+  --color-bg-card-hover: #2A3A4E;
+  --color-bg-input: #2A3A4E;
+  --color-bg-overlay: rgba(0, 0, 0, 0.6);
+
+  --color-text-primary: #E8E0D5;
+  --color-text-secondary: #A0ACB8;
+  --color-text-muted: #6C7A8A;
+  --color-text-inverse: #1A2332;
+
+  --color-accent-primary: #E74C3C;
+  --color-accent-primary-hover: #EC7063;
+  --color-accent-primary-light: rgba(231, 76, 60, 0.12);
+
+  --color-accent-success: #27AE60;
+  --color-accent-success-hover: #2ECC71;
+  --color-accent-success-light: rgba(39, 174, 96, 0.12);
+
+  --color-accent-deep-green: #148F77;
+  --color-accent-deep-green-hover: #1ABC9C;
+
+  --color-accent-warning: #F39C12;
+  --color-accent-warning-light: rgba(243, 156, 18, 0.12);
+
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-light: rgba(255, 255, 255, 0.05);
+  --color-border-focus: #E74C3C;
+  --color-shadow: rgba(0, 0, 0, 0.20);
+  --color-shadow-card: rgba(0, 0, 0, 0.15);
+
+  --color-subject-math: #5DADE2;
+  --color-subject-math-bg: rgba(93, 173, 226, 0.12);
+  --color-subject-english: #F0B27A;
+  --color-subject-english-bg: rgba(240, 178, 122, 0.12);
+  --color-subject-408: #BB8FCE;
+  --color-subject-408-bg: rgba(187, 143, 206, 0.12);
+}

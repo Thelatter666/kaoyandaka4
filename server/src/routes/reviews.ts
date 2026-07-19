@@ -1,0 +1,73 @@
+import { Router, Request, Response, NextFunction } from 'express';
+import { validate } from '../middleware/validate.js';
+import { UpsertReviewSchema } from '../../../shared/src/schemas/review.js';
+import pool from '../db/connection.js';
+import { generateUUID } from '../utils/uuid.js';
+import { AppError } from '../middleware/errorHandler.js';
+import type { RowDataPacket, ResultSetHeader } from 'mysql2';
+
+const router = Router();
+
+interface ReviewRow extends RowDataPacket {
+  id: string;
+  review_date: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+function transformReview(row: ReviewRow) {
+  return {
+    id: row.id,
+    reviewDate: row.review_date,
+    content: row.content,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+// GET /api/v1/reviews?date=YYYY-MM-DD
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { date } = req.query;
+    if (!date || typeof date !== 'string') {
+      throw new AppError(400, 'VALIDATION_ERROR', '缺少 date 参数');
+    }
+    const [rows] = await pool.query<ReviewRow[]>(
+      'SELECT * FROM daily_reviews WHERE review_date = ?',
+      [date]
+    );
+    res.json(rows.length > 0 ? transformReview(rows[0]) : null);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PUT /api/v1/reviews — 创建或更新复盘
+router.put('/', validate(UpsertReviewSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { date, content } = req.body;
+    const [existing] = await pool.query<ReviewRow[]>(
+      'SELECT * FROM daily_reviews WHERE review_date = ?',
+      [date]
+    );
+
+    if (existing.length > 0) {
+      await pool.query('UPDATE daily_reviews SET content = ? WHERE review_date = ?', [content, date]);
+      const [rows] = await pool.query<ReviewRow[]>('SELECT * FROM daily_reviews WHERE review_date = ?', [date]);
+      res.json(transformReview(rows[0]));
+    } else {
+      const id = generateUUID();
+      await pool.query<ResultSetHeader>(
+        'INSERT INTO daily_reviews (id, review_date, content) VALUES (?, ?, ?)',
+        [id, date, content]
+      );
+      const [rows] = await pool.query<ReviewRow[]>('SELECT * FROM daily_reviews WHERE id = ?', [id]);
+      res.status(201).json(transformReview(rows[0]));
+    }
+  } catch (err) {
+    next(err);
+  }
+});
+
+export default router;
