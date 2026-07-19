@@ -1,0 +1,32 @@
+{
+  "name": "kaoyandaily",
+  "private": true,
+  "version": "1.0.0",
+  "description": "砚台考研打卡 — 个人本地使用的考研学习管理网站",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "cd client && npx vite --port 5173",
+    "dev:server": "cd server && npx tsx watch src/index.ts",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "cd client && npx vite build",
+    "build:server": "cd server && npx tsc",
+    "test": "npx vitest run",
+    "test:watch": "npx vitest",
+    "test:e2e": "cd e2e && npx playwright test",
+    "lint": "npx eslint . --ext .ts,.tsx",
+    "db:init": "cd server && npx tsx src/db/init.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@playwright/test": "^1.50.0",
+    "@types/node": "^22.0.0",
+    "concurrently": "^9.0.0",
+    "eslint": "^9.0.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "zod": "^3.24.0"
+  }
+}
