@@ -16,6 +16,7 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
   charset: 'utf8mb4',
+  dateStrings: true,  // 保持 DATE/DATETIME 字段为字符串格式，避免时区转换
 });
 
 export default pool;

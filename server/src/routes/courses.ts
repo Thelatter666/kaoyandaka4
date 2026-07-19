@@ -104,33 +104,61 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
 router.post('/parse', validate(ParseImportSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { rawText } = req.body;
-    const lines = rawText.split('\n').filter((l: string) => l.trim());
+    const rawLines = rawText.split('\n');
     const episodes: Array<{ title: string; durationText: string; durationSeconds: number }> = [];
     const unrecognizedLines: string[] = [];
 
-    for (const line of lines) {
-      const trimmed = line.trim();
-      // Try to match standalone time pattern and pair with previous line
-      const timeMatch = trimmed.match(/^(\d{1,3}):(\d{2})(?::(\d{2}))?$/);
-      if (timeMatch) {
-        // Skip standalone time lines - they're handled by the duration match below
-        continue;
+    // Pre-process: collect non-empty lines
+    const lines = rawLines.map((l: string) => l.trim()).filter((l: string) => l.length > 0);
+    const used = new Set<number>();
+
+    // Pass 1: scan and build episodes
+    for (let i = 0; i < lines.length; i++) {
+      if (used.has(i)) continue;
+      const line = lines[i];
+
+      // Case 1: Same-line format "Title MM:SS" or "Title H:MM:SS"
+      const sameLineMatch = line.match(/^(.+?)\s+(\d{1,3}:\d{2}(?::\d{2})?)\s*$/);
+      if (sameLineMatch) {
+        const title = sameLineMatch[1].trim();
+        const durationText = sameLineMatch[2];
+        const parsed = parseTimeString(durationText);
+        if (parsed && title) {
+          episodes.push({ title, durationText, durationSeconds: parsed.durationSeconds });
+          used.add(i);
+          continue;
+        }
       }
 
-      // Simple parsing: try MM:SS or H:MM:SS at the end of the line
-      const durationMatch = trimmed.match(/(\d{1,3}:\d{2}(?::\d{2})?)\s*$/);
-      if (durationMatch) {
-        const durationText = durationMatch[1];
-        const title = trimmed.slice(0, trimmed.length - durationText.length).trim();
-        if (title) {
+      // Case 2: Alternating lines — next line is a pure time pattern
+      if (i + 1 < lines.length) {
+        const nextLine = lines[i + 1];
+        const pureTimeMatch = nextLine.match(/^(\d{1,3}):(\d{2})(?::(\d{2}))?$/);
+        if (pureTimeMatch) {
+          const durationText = pureTimeMatch[0];
           const parsed = parseTimeString(durationText);
           if (parsed) {
-            episodes.push({ title, durationText, durationSeconds: parsed.durationSeconds });
+            episodes.push({ title: line, durationText, durationSeconds: parsed.durationSeconds });
+            used.add(i);
+            used.add(i + 1);
+            i++; // skip the time line
             continue;
           }
         }
       }
-      unrecognizedLines.push(trimmed);
+
+      // Case 3: Current line is a standalone time that should have been consumed above
+      if (line.match(/^(\d{1,3}):(\d{2})(?::(\d{2}))?$/)) {
+        used.add(i); // Consume orphan time lines silently
+        continue;
+      }
+    }
+
+    // Pass 2: collect unrecognized (unused) lines
+    for (let i = 0; i < lines.length; i++) {
+      if (!used.has(i)) {
+        unrecognizedLines.push(lines[i]);
+      }
     }
 
     const totalDurationSeconds = episodes.reduce((sum, ep) => sum + ep.durationSeconds, 0);
