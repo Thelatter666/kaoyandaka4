@@ -78,6 +78,13 @@
   --glow-primary: 0 0 24px rgba(224, 85, 69, 0.45);
   --glow-success: 0 0 24px rgba(47, 163, 107, 0.45);
 
+  /* 番茄钟「光晕核心」（设计文档 5.1）：数字渐变提亮端（模式色混入 30% 白）与低时警示金 */
+  /* 深色主题下数字用纯色，不引用下列提亮色；--color-timer-low 双主题同值 */
+  --color-timer-focus-light: #E9887D;
+  --color-timer-success-light: #6EBE97;
+  --color-timer-deep-green-light: #569388;
+  --color-timer-low: #F5A45C;
+
   /* 动效 */
   --dur-fast: 160ms;
   --dur-med: 240ms;

@@ -1,0 +1,158 @@
+/* ============================================================
+   番茄钟页（设计文档 5.3）
+   进行中：圆盘居中为绝对主角，操作区置于圆盘正下方一排；
+   页面其余内容 opacity 0.4 淡出但保持可交互（不做全屏遮罩）；
+   移动端操作按钮纵向堆叠，全部 ≥44px。
+   ============================================================ */
+
+/* ---- 圆盘主舞台 ---- */
+.pomodoro-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.pomodoro-hero__stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---- 操作区：圆盘正下方一排 ---- */
+.pomodoro-ops {
+  display: flex;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ---- 其余内容淡出：保持可交互，仅降低不透明度 ---- */
+.pomodoro-dimmed {
+  opacity: 0.4;
+  transition: opacity var(--dur-med) var(--ease-out);
+}
+
+/* ---- 预设选择区 ---- */
+.pomodoro-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-md);
+}
+
+/* ---- 调整时长：glass-2 横条卡 ---- */
+.pomodoro-adjust-card {
+  border-radius: var(--radius-card);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.pomodoro-adjust-card__preset {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.pomodoro-adjust-card__preset-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.pomodoro-adjust-card__preset-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-xs);
+}
+
+.pomodoro-adjust-card__preset-name {
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pomodoro-adjust-card__preset-duration {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pomodoro-adjust-card__duration-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-md);
+}
+
+.pomodoro-adjust-card__actions {
+  display: flex;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+/* 主 CTA「开始专注」：全站最大主按钮 */
+.pomodoro-cta {
+  flex: 1;
+}
+
+/* ---- 完成态 ---- */
+.pomodoro-completed {
+  position: relative;
+}
+
+.pomodoro-completed__icon {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-accent-success);
+}
+
+/* 第 4 轮完成后「长休息」入口：辉光描边高亮（不自动开始） */
+.pomodoro-longbreak {
+  border-color: var(--color-accent-deep-green);
+  color: var(--color-accent-deep-green);
+  box-shadow: 0 0 0 1px var(--color-accent-deep-green), var(--glow-success);
+}
+
+/* ---- 移动端：操作按钮纵向堆叠，全部 ≥44px ---- */
+@media (max-width: 767px) {
+  .pomodoro-ops {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .pomodoro-ops .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .pomodoro-preset-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pomodoro-adjust-card {
+    padding: var(--space-md);
+  }
+
+  .pomodoro-adjust-card__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pomodoro-adjust-card__actions .btn {
+    width: 100%;
+  }
+}
