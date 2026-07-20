@@ -5,7 +5,7 @@ export default [
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    ignores: ['node_modules/', 'dist/', '.vite/', '*.config.*'],
+    ignores: ['**/node_modules/', '**/dist/', '**/.vite/', '*.config.*'],
   },
   {
     languageOptions: {

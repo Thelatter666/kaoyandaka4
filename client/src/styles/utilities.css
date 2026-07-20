@@ -1,8 +1,8 @@
 /* ============================================================
-   砚台考研打卡 — 工具类
+   砚台考研打卡 — 工具类（极光玻璃）
    ============================================================ */
 
-/* 屏幕阅读器专用 */
+/* ---- 屏幕阅读器专用 ---- */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -15,7 +15,117 @@
   border: 0;
 }
 
-/* 骨架屏 */
+/* ---- 玻璃材质三档（全站唯一合法组合，见设计文档 4.1）---- */
+.glass-1 {
+  background: var(--color-glass-bg);
+  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(1.4);
+  backdrop-filter: blur(var(--blur-glass)) saturate(1.4);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-glass-sm);
+}
+
+.glass-2 {
+  background: var(--color-glass-bg-strong);
+  -webkit-backdrop-filter: blur(var(--blur-glass-strong)) saturate(1.4);
+  backdrop-filter: blur(var(--blur-glass-strong)) saturate(1.4);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-glass-md);
+}
+
+.glass-3 {
+  background: var(--color-glass-3-bg);
+  -webkit-backdrop-filter: blur(var(--blur-glass-strong)) saturate(1.4);
+  backdrop-filter: blur(var(--blur-glass-strong)) saturate(1.4);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-glass-lg);
+  color: var(--color-glass-3-text);
+}
+
+/* 不支持 backdrop-filter 时降级为不透明实底 */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-1,
+  .glass-2 {
+    background: var(--color-bg-card-solid);
+  }
+
+  .glass-3 {
+    background: var(--color-glass-3-solid);
+  }
+}
+
+/* ---- 极光光斑背景基础样式（见设计文档 4.2）---- */
+.aurora-background {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-aurora);
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.aurora-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  will-change: transform;
+}
+
+.aurora-blob--1 {
+  width: 55vmax;
+  height: 55vmax;
+  top: -18%;
+  left: -12%;
+  background: radial-gradient(circle, var(--color-aurora-1) 0%, transparent 70%);
+  opacity: var(--aurora-opacity-a);
+  animation: aurora-drift-a 36s ease-in-out infinite alternate;
+}
+
+.aurora-blob--2 {
+  width: 48vmax;
+  height: 48vmax;
+  top: -12%;
+  right: -10%;
+  background: radial-gradient(circle, var(--color-aurora-2) 0%, transparent 70%);
+  opacity: var(--aurora-opacity-b);
+  animation: aurora-drift-b 48s ease-in-out infinite alternate;
+}
+
+.aurora-blob--3 {
+  width: 40vmax;
+  height: 40vmax;
+  bottom: -14%;
+  left: -8%;
+  background: radial-gradient(circle, var(--color-aurora-3) 0%, transparent 70%);
+  opacity: var(--aurora-opacity-b);
+  animation: aurora-drift-b 48s ease-in-out infinite alternate-reverse;
+}
+
+.aurora-blob--4 {
+  width: 60vmax;
+  height: 60vmax;
+  bottom: -20%;
+  right: -14%;
+  background: radial-gradient(circle, var(--color-aurora-4) 0%, transparent 70%);
+  opacity: var(--aurora-opacity-a);
+  animation: aurora-drift-a 36s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes aurora-drift-a {
+  from { transform: translate(0, 0); }
+  to { transform: translate(6vmax, 4vmax); }
+}
+
+@keyframes aurora-drift-b {
+  from { transform: translate(0, 0); }
+  to { transform: translate(-5vmax, -6vmax); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora-blob {
+    animation: none;
+  }
+}
+
+/* ---- 玻璃骨架 shimmer（background-position 动画 1.6s）---- */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
@@ -24,37 +134,42 @@
 .skeleton {
   background: linear-gradient(
     90deg,
-    var(--color-border-light) 25%,
-    var(--color-border) 50%,
-    var(--color-border-light) 75%
+    var(--color-skeleton-base) 25%,
+    var(--color-skeleton-shine) 50%,
+    var(--color-skeleton-base) 75%
   );
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  animation: shimmer 1.6s linear infinite;
   border-radius: var(--radius-md);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .skeleton {
     animation: none;
-    background: var(--color-border-light);
+    background: var(--color-skeleton-base);
   }
 }
 
-/* 文本截断 */
+/* ---- 数字等宽（统计/计时数字一律 tabular-nums）---- */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- 文本截断 ---- */
 .truncate {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Flex 工具 */
+/* ---- Flex 工具 ---- */
 .flex-center {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* 间距工具 */
+/* ---- 间距工具 ---- */
 .gap-xs { gap: var(--space-xs); }
 .gap-sm { gap: var(--space-sm); }
 .gap-md { gap: var(--space-md); }

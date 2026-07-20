@@ -1,49 +1,90 @@
 /* ============================================================
-   砚台考研打卡 — 设计 Token（CSS 自定义属性）
+   砚台考研打卡 — 设计令牌（极光玻璃 · Aurora Glass）
+   依据《前端重设计文档》第二节：双主题令牌 / 形状 / 阴影 / 动效
+   组件只允许引用令牌，禁止书写裸色值。
    ============================================================ */
 
 :root {
   /* === 浅色主题（默认）=== */
-  --color-bg-page: #F7F4EF;
-  --color-bg-card: #FEFCF9;
-  --color-bg-card-hover: #F5F0E8;
-  --color-bg-input: #FFFFFF;
-  --color-bg-overlay: rgba(0, 0, 0, 0.4);
+  --color-bg-page: #F7F8FA;              /* 晨雾白页面底色 */
+  --color-bg-card-solid: #FFFFFF;        /* 玻璃降级实底（不支持 backdrop-filter 时） */
 
-  --color-text-primary: #2C3E50;
-  --color-text-secondary: #5D6D7E;
-  --color-text-muted: #95A5A6;
-  --color-text-inverse: #FEFCF9;
+  --color-text-primary: #1D2939;
+  --color-text-secondary: #475467;
+  --color-text-muted: #667085;           /* AA 下限 */
+  --color-text-inverse: #FFFFFF;         /* 深底上的文字 */
 
-  --color-accent-primary: #C0392B;
-  --color-accent-primary-hover: #A93226;
-  --color-accent-primary-light: rgba(192, 57, 43, 0.08);
+  --color-accent-primary: #E05545;       /* 珊瑚红：辉光、大图形、渐变 */
+  --color-accent-primary-strong: #B93A2C;/* 主按钮底 / 正文红字（白字对比 5.6:1） */
+  --color-accent-primary-light: rgba(224, 85, 69, 0.10);
+  --color-accent-success: #2FA36B;       /* 松绿：图形、进度 */
+  --color-accent-success-strong: #1E7A4E;/* 成功态文字 / 实底（白字对比 5.4:1） */
+  --color-accent-deep-green: #0E6655;    /* 长休息 */
+  --color-accent-warning: #D9730D;       /* 警示（AA 达标） */
+  --color-accent-danger: #C43228;        /* 破坏性操作 */
 
-  --color-accent-success: #1E8449;
-  --color-accent-success-hover: #196F3D;
-  --color-accent-success-light: rgba(30, 132, 73, 0.08);
+  /* 玻璃材质 */
+  --color-glass-bg: rgba(255, 255, 255, 0.55);        /* glass-1 卡底色 */
+  --color-glass-bg-strong: rgba(255, 255, 255, 0.72); /* glass-2 高层级玻璃 */
+  --color-glass-border: rgba(255, 255, 255, 0.65);    /* 玻璃顶部高光边 */
+  --color-glass-3-bg: rgba(29, 41, 57, 0.72);         /* glass-3 深底反转（Toast/tooltip） */
+  --color-glass-3-solid: #1D2939;                     /* glass-3 降级实底（其上色的全不透明形态） */
+  --color-glass-3-text: #FFFFFF;                      /* glass-3 深底上的文字 */
 
-  --color-accent-deep-green: #0E6655;
-  --color-accent-deep-green-hover: #0B5345;
+  /* glass-3 深底上的状态色（取自深色主题提亮色，保证深底对比度） */
+  --color-accent-success-ondark: #3ECF8E;
+  --color-accent-danger-ondark: #F4786A;
 
-  --color-accent-warning: #E67E22;
-  --color-accent-warning-light: rgba(230, 126, 34, 0.08);
+  --color-border: rgba(16, 24, 40, 0.08);
+  --color-border-focus: #B93A2C;
 
-  --color-border: rgba(0, 0, 0, 0.08);
-  --color-border-light: rgba(0, 0, 0, 0.05);
-  --color-border-focus: #C0392B;
-  --color-shadow: rgba(0, 0, 0, 0.06);
-  --color-shadow-card: rgba(0, 0, 0, 0.04);
+  /* 科目颜色 */
+  --color-subject-math: #3E7CB1;
+  --color-subject-english: #D9730D;
+  --color-subject-408: #7C4DBE;
+  --color-subject-math-bg: rgba(62, 124, 177, 0.10);
+  --color-subject-english-bg: rgba(217, 115, 13, 0.10);
+  --color-subject-408-bg: rgba(124, 77, 190, 0.10);
 
-  /* 科目颜色（浅色） */
-  --color-subject-math: #2980B9;
-  --color-subject-math-bg: rgba(41, 128, 185, 0.08);
-  --color-subject-english: #E67E22;
-  --color-subject-english-bg: rgba(230, 126, 34, 0.08);
-  --color-subject-408: #8E44AD;
-  --color-subject-408-bg: rgba(142, 68, 173, 0.08);
+  /* 极光光斑（浅色）：粉紫 / 雾蓝 / 蜜金 / 青绿 */
+  --color-aurora-1: #C7B8F5;
+  --color-aurora-2: #A8CBF5;
+  --color-aurora-3: #F5D9A8;
+  --color-aurora-4: #A8E6CF;
+  --aurora-opacity-a: 0.35;
+  --aurora-opacity-b: 0.5;
 
-  /* 间距 */
+  /* 骨架 shimmer（取文档玻璃/描边的 rgba 语言） */
+  --color-skeleton-base: rgba(16, 24, 40, 0.06);
+  --color-skeleton-shine: rgba(255, 255, 255, 0.55);
+
+  /* 圆角 */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-card: 24px;
+  --radius-lg: 28px;
+  --radius-full: 9999px;
+
+  /* 玻璃模糊 */
+  --blur-glass: 16px;
+  --blur-glass-strong: 20px;
+
+  /* 阴影（含玻璃顶部高光边） */
+  --shadow-glass-sm: 0 2px 12px rgba(16, 24, 40, 0.06), inset 0 1px 0 var(--color-glass-border);
+  --shadow-glass-md: 0 8px 32px rgba(16, 24, 40, 0.10), inset 0 1px 0 var(--color-glass-border);
+  --shadow-glass-lg: 0 16px 48px rgba(16, 24, 40, 0.14), inset 0 1px 0 var(--color-glass-border);
+
+  /* 彩色辉光（仅核心视觉与主按钮 hover 使用） */
+  --glow-primary: 0 0 24px rgba(224, 85, 69, 0.45);
+  --glow-success: 0 0 24px rgba(47, 163, 107, 0.45);
+
+  /* 动效 */
+  --dur-fast: 160ms;
+  --dur-med: 240ms;
+  --dur-slow: 400ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* 间距（4/8 体系） */
   --space-unit: 4px;
   --space-xs: 4px;
   --space-sm: 8px;
@@ -51,23 +92,21 @@
   --space-lg: 24px;
   --space-xl: 32px;
   --space-2xl: 48px;
-  --space-card-padding: 24px;
-  --space-section-gap: 32px;
 
-  /* 圆角 */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-card: 20px;
-  --radius-button: 12px;
-  --radius-nav: 24px;
-  --radius-full: 9999px;
+  /* 层级：aurora 0 / content 1 / nav 50 / modal 200 / toast 300 / tooltip 400 */
+  --z-aurora: 0;
+  --z-content: 1;
+  --z-nav: 50;
+  --z-modal: 200;
+  --z-toast: 300;
+  --z-tooltip: 400;
 
   /* 字体 */
   --font-heading: 'Noto Serif SC', 'Songti SC', serif;
-  --font-body: 'Noto Sans SC', 'PingFang SC', -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', 'Menlo', monospace;
+  --font-body: 'Noto Sans SC', 'PingFang SC', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
 
-  /* 字号 */
+  /* 字级：12/14/16/18/20/24/30/36，计时器专用 64（移动 52） */
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -76,70 +115,102 @@
   --text-2xl: 1.5rem;
   --text-3xl: 1.875rem;
   --text-4xl: 2.25rem;
+  --text-timer: 4rem;
+  --text-timer-mobile: 3.25rem;
 
-  /* 字重 */
+  /* 字重：标题 600–700 / 正文 400 / 标签 500 */
   --font-normal: 400;
   --font-medium: 500;
   --font-semibold: 600;
   --font-bold: 700;
 
-  /* 阴影 */
-  --shadow-sm: 0 1px 2px var(--color-shadow);
-  --shadow-md: 0 4px 12px var(--color-shadow);
-  --shadow-lg: 0 8px 24px var(--color-shadow);
-  --shadow-card: 0 2px 8px var(--color-shadow-card);
-
-  /* 动效 */
-  --transition-fast: 180ms ease-out;
-  --transition-normal: 320ms ease-out;
-
-  /* 导航高度 */
-  --nav-height: 60px;
-
-  /* z-index */
+  /* ---- 旧令牌别名（向后兼容，逐步迁移） ---- */
+  --color-bg-card: var(--color-glass-bg);
+  --color-bg-card-hover: var(--color-glass-bg-strong);
+  --color-bg-input: var(--color-bg-card-solid);
+  --color-bg-overlay: rgba(16, 24, 40, 0.32);
+  --color-accent-primary-hover: var(--color-accent-primary-strong);
+  --color-accent-success-hover: var(--color-accent-success-strong);
+  --color-accent-success-light: rgba(47, 163, 107, 0.10);
+  --color-accent-deep-green-hover: var(--color-accent-deep-green);
+  --color-accent-warning-light: rgba(217, 115, 13, 0.10);
+  --color-border-light: var(--color-border);
+  --color-shadow: rgba(16, 24, 40, 0.06);
+  --color-shadow-card: rgba(16, 24, 40, 0.04);
+  --shadow-sm: var(--shadow-glass-sm);
+  --shadow-md: var(--shadow-glass-md);
+  --shadow-lg: var(--shadow-glass-lg);
+  --shadow-card: var(--shadow-glass-sm);
+  --radius-button: var(--radius-md);
+  --radius-nav: var(--radius-full);
+  --transition-fast: var(--dur-fast) var(--ease-out);
+  --transition-normal: var(--dur-med) var(--ease-out);
+  --nav-height: 56px;
   --z-dropdown: 100;
-  --z-modal: 200;
-  --z-toast: 300;
-  --z-tooltip: 400;
+  --space-card-padding: var(--space-lg);
+  --space-section-gap: var(--space-xl);
 }
 
-/* === 深色主题 === */
+/* === 深色主题（午夜版本）=== */
 [data-theme="dark"] {
-  --color-bg-page: #1A2332;
-  --color-bg-card: #212D3D;
-  --color-bg-card-hover: #2A3A4E;
-  --color-bg-input: #2A3A4E;
-  --color-bg-overlay: rgba(0, 0, 0, 0.6);
+  --color-bg-page: #101828;              /* 午夜靛蓝 */
+  --color-bg-card-solid: #1D2939;        /* 玻璃降级实底 */
 
-  --color-text-primary: #E8E0D5;
-  --color-text-secondary: #A0ACB8;
-  --color-text-muted: #6C7A8A;
-  --color-text-inverse: #1A2332;
+  --color-text-primary: #F2F4F7;
+  --color-text-secondary: #C4CBD6;
+  --color-text-muted: #98A2B3;
+  --color-text-inverse: #101828;
 
-  --color-accent-primary: #E74C3C;
-  --color-accent-primary-hover: #EC7063;
-  --color-accent-primary-light: rgba(231, 76, 60, 0.12);
+  --color-accent-primary: #F4786A;       /* 提亮珊瑚红（对底 6.1:1） */
+  --color-accent-primary-strong: #F4786A;
+  --color-accent-primary-light: rgba(244, 120, 106, 0.14);
+  --color-accent-success: #3ECF8E;
+  --color-accent-success-strong: #3ECF8E;
+  --color-accent-deep-green: #2DD4BF;
+  --color-accent-warning: #F5A45C;
+  --color-accent-danger: #F4786A;
 
-  --color-accent-success: #27AE60;
-  --color-accent-success-hover: #2ECC71;
-  --color-accent-success-light: rgba(39, 174, 96, 0.12);
+  /* 玻璃材质 */
+  --color-glass-bg: rgba(255, 255, 255, 0.06);        /* 烟熏玻璃 */
+  --color-glass-bg-strong: rgba(23, 32, 51, 0.78);
+  --color-glass-border: rgba(255, 255, 255, 0.10);
+  --color-glass-3-bg: rgba(16, 24, 40, 0.85);
+  --color-glass-3-solid: #101828;
+  --color-glass-3-text: #FFFFFF;
 
-  --color-accent-deep-green: #148F77;
-  --color-accent-deep-green-hover: #1ABC9C;
+  --color-border: rgba(255, 255, 255, 0.09);
+  --color-border-focus: #F4786A;
 
-  --color-accent-warning: #F39C12;
-  --color-accent-warning-light: rgba(243, 156, 18, 0.12);
+  /* 科目颜色 */
+  --color-subject-math: #6FB1E8;
+  --color-subject-english: #F5A45C;
+  --color-subject-408: #B490E8;
+  --color-subject-math-bg: rgba(111, 177, 232, 0.14);
+  --color-subject-english-bg: rgba(245, 164, 92, 0.14);
+  --color-subject-408-bg: rgba(180, 144, 232, 0.14);
 
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-light: rgba(255, 255, 255, 0.05);
-  --color-border-focus: #E74C3C;
-  --color-shadow: rgba(0, 0, 0, 0.20);
-  --color-shadow-card: rgba(0, 0, 0, 0.15);
+  /* 极光光斑（深色）：极光绿 / 极光紫 / 极光蓝 */
+  --color-aurora-1: #34D399;
+  --color-aurora-2: #A78BFA;
+  --color-aurora-3: #60A5FA;
+  --color-aurora-4: #34D399;
+  --aurora-opacity-a: 0.10;
+  --aurora-opacity-b: 0.16;
 
-  --color-subject-math: #5DADE2;
-  --color-subject-math-bg: rgba(93, 173, 226, 0.12);
-  --color-subject-english: #F0B27A;
-  --color-subject-english-bg: rgba(240, 178, 122, 0.12);
-  --color-subject-408: #BB8FCE;
-  --color-subject-408-bg: rgba(187, 143, 206, 0.12);
+  /* 骨架 shimmer */
+  --color-skeleton-base: rgba(255, 255, 255, 0.08);
+  --color-skeleton-shine: rgba(255, 255, 255, 0.16);
+
+  /* 阴影（深色压重） */
+  --shadow-glass-sm: 0 2px 12px rgba(0, 0, 0, 0.28), inset 0 1px 0 var(--color-glass-border);
+  --shadow-glass-md: 0 8px 32px rgba(0, 0, 0, 0.36), inset 0 1px 0 var(--color-glass-border);
+  --shadow-glass-lg: 0 16px 48px rgba(0, 0, 0, 0.44), inset 0 1px 0 var(--color-glass-border);
+
+  /* 辉光（跟随提亮色） */
+  --glow-primary: 0 0 24px rgba(244, 120, 106, 0.45);
+  --glow-success: 0 0 24px rgba(62, 207, 142, 0.45);
+
+  /* ---- 旧令牌别名（深色差异项） ---- */
+  --color-shadow: rgba(0, 0, 0, 0.28);
+  --color-shadow-card: rgba(0, 0, 0, 0.20);
 }

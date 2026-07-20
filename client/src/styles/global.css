@@ -1,7 +1,9 @@
 /* ============================================================
-   砚台考研打卡 — 全局样式
+   砚台考研打卡 — 全局样式（极光玻璃）
    ============================================================ */
 
+/* Google Fonts：Noto Serif SC / Noto Sans SC / JetBrains Mono（font-display: swap） */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@600;700&display=swap');
 @import './tokens.css';
 
 *,
@@ -25,7 +27,8 @@ body {
   background-color: var(--color-bg-page);
   line-height: 1.6;
   min-height: 100dvh;
-  transition: background-color var(--transition-fast), color var(--transition-fast);
+  /* 主题切换降级：180ms 颜色淡变（支持 View Transitions 时由圆形扩散接管） */
+  transition: background-color 180ms ease-out, color 180ms ease-out;
 }
 
 #root {
@@ -34,8 +37,13 @@ body {
   flex-direction: column;
 }
 
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: var(--font-semibold);
+}
+
 a {
-  color: var(--color-accent-primary);
+  color: var(--color-accent-primary-strong);
   text-decoration: none;
 }
 
@@ -55,14 +63,14 @@ input, textarea, select {
   font-size: inherit;
 }
 
-/* Focus visible styles */
+/* 焦点环：2px + 2px offset，双主题可见，禁止移除 */
 :focus-visible {
   outline: 2px solid var(--color-border-focus);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
 
-/* Reduced motion */
+/* prefers-reduced-motion：全部动画/过渡取消，状态直接呈现 */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -70,10 +78,11 @@ input, textarea, select {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-/* Scrollbar styling */
+/* 滚动条 */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -92,13 +101,13 @@ input, textarea, select {
   background: var(--color-text-muted);
 }
 
-/* Selection */
+/* 选中态 */
 ::selection {
   background: var(--color-accent-primary-light);
-  color: var(--color-accent-primary);
+  color: var(--color-accent-primary-strong);
 }
 
-/* View Transitions API theme switching */
+/* View Transitions 主题切换：圆形扩散 320ms（圆形 clip-path 由 useTheme 驱动） */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: 320ms;
@@ -106,4 +115,11 @@ input, textarea, select {
 
 [data-theme="dark"]::view-transition-old(root) {
   animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
 }

@@ -1,0 +1,27 @@
+/* ============================================================
+   砚台考研打卡 — Card 组件样式（glass-1 材质由工具类提供）
+   ============================================================ */
+
+.card {
+  border-radius: var(--radius-card);
+  transition:
+    transform var(--dur-med) var(--ease-out),
+    box-shadow var(--dur-med) var(--ease-out);
+}
+
+/* padding 档位：16 / 24 / 32 */
+.card--pad-sm { padding: var(--space-md); }
+.card--pad-md { padding: var(--space-lg); }
+.card--pad-lg { padding: var(--space-xl); }
+
+/* 可点击卡片 hover：上浮 2px + 阴影升至 md */
+.card--hoverable:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glass-md);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card--hoverable:hover {
+    transform: none;
+  }
+}

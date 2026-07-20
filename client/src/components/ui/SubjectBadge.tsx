@@ -1,4 +1,5 @@
 import React from 'react';
+import { Sigma, BookA, Cpu, type LucideProps } from 'lucide-react';
 import type { Subject, SubSubject } from '@shared/types';
 
 const SUBJECT_LABELS: Record<Subject, string> = {
@@ -14,10 +15,10 @@ const SUB_SUBJECT_LABELS: Record<SubSubject, string> = {
   computer_network: '计算机网络',
 };
 
-const SUBJECT_ICONS: Record<Subject, string> = {
-  math: '∑',
-  english: 'Aa',
-  '408': '</>',
+const SUBJECT_ICONS: Record<Subject, React.ComponentType<LucideProps>> = {
+  math: Sigma,
+  english: BookA,
+  '408': Cpu,
 };
 
 interface SubjectBadgeProps {
@@ -28,7 +29,7 @@ interface SubjectBadgeProps {
 
 export function SubjectBadge({ subject, subSubject, size = 'sm' }: SubjectBadgeProps) {
   const label = subSubject ? SUB_SUBJECT_LABELS[subSubject] : SUBJECT_LABELS[subject];
-  const icon = SUBJECT_ICONS[subject];
+  const Icon = SUBJECT_ICONS[subject];
 
   return (
     <span
@@ -39,7 +40,7 @@ export function SubjectBadge({ subject, subSubject, size = 'sm' }: SubjectBadgeP
         padding: size === 'sm' ? '2px 10px' : '4px 14px',
         borderRadius: 'var(--radius-full)',
         fontSize: size === 'sm' ? 'var(--text-xs)' : 'var(--text-sm)',
-        fontWeight: 500,
+        fontWeight: 'var(--font-medium)',
         backgroundColor: `var(--color-subject-${subject}-bg)`,
         color: `var(--color-subject-${subject})`,
         whiteSpace: 'nowrap',
@@ -47,7 +48,7 @@ export function SubjectBadge({ subject, subSubject, size = 'sm' }: SubjectBadgeP
       }}
       aria-label={`科目：${SUBJECT_LABELS[subject]}${subSubject ? ` - ${SUB_SUBJECT_LABELS[subSubject]}` : ''}`}
     >
-      <span aria-hidden="true" style={{ fontWeight: 700 }}>{icon}</span>
+      <Icon size={14} strokeWidth={1.75} aria-hidden="true" />
       {label}
     </span>
   );

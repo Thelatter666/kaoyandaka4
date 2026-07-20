@@ -4,18 +4,19 @@ export function SkipLink() {
   return (
     <a
       href="#main-content"
+      className="glass-2"
       style={{
         position: 'absolute',
         top: -100,
         left: 16,
         padding: 'var(--space-sm) var(--space-md)',
-        backgroundColor: 'var(--color-accent-primary)',
-        color: 'var(--color-text-inverse)',
-        borderRadius: 'var(--radius-sm)',
+        color: 'var(--color-text-primary)',
+        borderRadius: 'var(--radius-full)',
         fontSize: 'var(--text-sm)',
-        fontWeight: 500,
+        fontWeight: 'var(--font-medium)',
         zIndex: 'var(--z-tooltip)',
         textDecoration: 'none',
+        transition: 'top var(--dur-fast) var(--ease-out)',
       }}
       onFocus={(e) => {
         e.currentTarget.style.top = '8px';

@@ -1,5 +1,7 @@
 /* ============================================================
-   砚台考研打卡 — Button 组件样式
+   砚台考研打卡 — Button 组件样式（极光玻璃）
+   variants: primary / glass / ghost / danger
+   sizes: sm 36px / md 44px / lg 52px
    ============================================================ */
 
 .btn {
@@ -7,12 +9,17 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-sm);
-  border: 1.5px solid transparent;
-  border-radius: var(--radius-button);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
   font-family: var(--font-body);
-  font-weight: 500;
+  font-weight: var(--font-medium);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
   white-space: nowrap;
   user-select: none;
   text-decoration: none;
@@ -22,7 +29,7 @@
 .btn:focus-visible {
   outline: 2px solid var(--color-border-focus);
   outline-offset: 2px;
-  border-radius: var(--radius-button);
+  border-radius: var(--radius-md);
 }
 
 .btn:disabled,
@@ -31,10 +38,10 @@
   opacity: 0.5;
 }
 
-/* ---- Sizes ---- */
+/* ---- Sizes（交互目标均 ≥36px，md/lg ≥44px）---- */
 
 .btn--sm {
-  padding: 6px 14px;
+  padding: 4px 14px;
   font-size: var(--text-sm);
   min-height: 36px;
   min-width: 36px;
@@ -48,71 +55,66 @@
 }
 
 .btn--lg {
-  padding: 14px 28px;
+  padding: 12px 28px;
   font-size: var(--text-lg);
-  min-height: 44px;
-  min-width: 44px;
+  min-height: 52px;
+  min-width: 52px;
 }
 
-/* ---- Variants ---- */
+/* ---- Primary：accent-primary-strong 底 + 白字 + 同色投影 ---- */
 
-/* Primary — solid brand-red background */
 .btn--primary {
-  background-color: var(--color-accent-primary);
+  background-color: var(--color-accent-primary-strong);
   color: var(--color-text-inverse);
-  border-color: var(--color-accent-primary);
+  box-shadow: 0 4px 14px var(--color-accent-primary-light);
 }
 
 .btn--primary:hover:not(:disabled):not(.btn--loading) {
-  background-color: var(--color-accent-primary-hover);
-  border-color: var(--color-accent-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--glow-primary);
 }
 
 .btn--primary:active:not(:disabled):not(.btn--loading) {
   transform: scale(0.97);
+  box-shadow: 0 4px 14px var(--color-accent-primary-light);
 }
 
-/* Secondary — outlined neutral */
-.btn--secondary {
-  background-color: transparent;
-  color: var(--color-text-primary);
+/* ---- Glass：glass-1 材质 + 描边 ---- */
+
+.btn--glass {
+  background: var(--color-glass-bg);
+  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(1.4);
+  backdrop-filter: blur(var(--blur-glass)) saturate(1.4);
   border-color: var(--color-border);
+  box-shadow: var(--shadow-glass-sm);
+  color: var(--color-text-primary);
 }
 
-.btn--secondary:hover:not(:disabled):not(.btn--loading) {
-  background-color: var(--color-bg-card-hover);
-  border-color: var(--color-text-muted);
+.btn--glass:hover:not(:disabled):not(.btn--loading) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glass-md);
 }
 
-.btn--secondary:active:not(:disabled):not(.btn--loading) {
+.btn--glass:active:not(:disabled):not(.btn--loading) {
   transform: scale(0.97);
+  box-shadow: var(--shadow-glass-sm);
 }
 
-/* Danger — soft red outline, fills red on hover */
-.btn--danger {
-  background-color: var(--color-accent-primary-light);
-  color: var(--color-accent-primary);
-  border-color: var(--color-accent-primary);
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .btn--glass {
+    background: var(--color-bg-card-solid);
+  }
 }
 
-.btn--danger:hover:not(:disabled):not(.btn--loading) {
-  background-color: var(--color-accent-primary);
-  color: var(--color-text-inverse);
-}
+/* ---- Ghost：透明，hover 浅底 ---- */
 
-.btn--danger:active:not(:disabled):not(.btn--loading) {
-  transform: scale(0.97);
-}
-
-/* Ghost — transparent, shows background on hover */
 .btn--ghost {
   background-color: transparent;
   color: var(--color-text-secondary);
-  border-color: transparent;
 }
 
 .btn--ghost:hover:not(:disabled):not(.btn--loading) {
-  background-color: var(--color-bg-card-hover);
+  background-color: var(--color-glass-bg);
   color: var(--color-text-primary);
 }
 
@@ -120,16 +122,29 @@
   transform: scale(0.97);
 }
 
-/* ---- Spinner ---- */
+/* ---- Danger：danger 底白字 ---- */
+
+.btn--danger {
+  background-color: var(--color-accent-danger);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-glass-sm);
+}
+
+.btn--danger:hover:not(:disabled):not(.btn--loading) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glass-md);
+}
+
+.btn--danger:active:not(:disabled):not(.btn--loading) {
+  transform: scale(0.97);
+  box-shadow: var(--shadow-glass-sm);
+}
+
+/* ---- Loading 旋转图标（Loader2）---- */
 
 .btn__spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid currentColor;
-  border-right-color: transparent;
-  border-radius: 50%;
-  display: inline-block;
-  animation: btn-spin 0.6s linear infinite;
+  flex-shrink: 0;
+  animation: btn-spin 0.8s linear infinite;
 }
 
 @keyframes btn-spin {
@@ -138,21 +153,17 @@
   }
 }
 
-/* ---- Reduced motion ---- */
+/* ---- Reduced motion：全局 0.01ms 规则之外，按压形变一并取消 ---- */
 
 @media (prefers-reduced-motion: reduce) {
-  .btn {
-    transition-duration: 0.01ms !important;
-  }
-
   .btn--primary:active:not(:disabled),
-  .btn--secondary:active:not(:disabled),
+  .btn--glass:active:not(:disabled),
   .btn--danger:active:not(:disabled),
   .btn--ghost:active:not(:disabled) {
     transform: none;
   }
 
   .btn__spinner {
-    animation-duration: 0.01ms !important;
+    animation: none;
   }
 }

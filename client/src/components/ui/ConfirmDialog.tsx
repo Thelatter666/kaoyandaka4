@@ -57,7 +57,7 @@ export function ConfirmDialog({
         </p>
       )}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-md)' }}>
-        <Button variant="secondary" onClick={onClose} disabled={loading}>
+        <Button variant="glass" onClick={onClose} disabled={loading}>
           {cancelLabel}
         </Button>
         <Button

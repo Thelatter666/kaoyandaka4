@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'info';
 
@@ -15,6 +16,12 @@ export function showToast(type: ToastType, message: string) {
   addToastFn?.(type, message);
 }
 
+const TOAST_CONFIG: Record<ToastType, { Icon: typeof CheckCircle2; color: string }> = {
+  success: { Icon: CheckCircle2, color: 'var(--color-accent-success-ondark)' },
+  error: { Icon: AlertCircle, color: 'var(--color-accent-danger-ondark)' },
+  info: { Icon: Info, color: 'var(--color-glass-3-text)' },
+};
+
 export function ToastContainer() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
@@ -23,7 +30,7 @@ export function ToastContainer() {
     setToasts((prev) => [...prev.slice(-4), { id, type, message }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3000);
+    }, 3500);
   }, []);
 
   useEffect(() => {
@@ -34,36 +41,39 @@ export function ToastContainer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      bottom: 24,
-      right: 24,
-      zIndex: 'var(--z-toast)',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 'var(--space-sm)',
-    }}>
+    <div
+      aria-live="polite"
+      style={{
+        position: 'fixed',
+        bottom: 24,
+        right: 24,
+        zIndex: 'var(--z-toast)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--space-sm)',
+      }}
+    >
       {toasts.map((toast) => {
-        const bgColor = toast.type === 'success' ? 'var(--color-accent-success)' :
-          toast.type === 'error' ? 'var(--color-accent-primary)' :
-          'var(--color-text-primary)';
+        const { Icon, color } = TOAST_CONFIG[toast.type];
 
         return (
           <div
             key={toast.id}
-            role="alert"
+            role="status"
+            className="glass-3"
             style={{
-              backgroundColor: bgColor,
-              color: 'var(--color-text-inverse)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-sm)',
               padding: '12px 20px',
               borderRadius: 'var(--radius-md)',
               fontSize: 'var(--text-sm)',
-              boxShadow: 'var(--shadow-md)',
-              animation: 'toast-slide-in 200ms ease-out',
+              animation: 'toast-slide-in 200ms var(--ease-out)',
               maxWidth: 360,
             }}
           >
-            {toast.message}
+            <Icon size={18} strokeWidth={1.75} color={color} aria-hidden="true" style={{ flexShrink: 0 }} />
+            <span>{toast.message}</span>
           </div>
         );
       })}

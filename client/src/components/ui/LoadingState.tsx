@@ -2,28 +2,34 @@ import React from 'react';
 
 interface LoadingStateProps {
   message?: string;
+  /** 骨架条数量，默认 3 */
+  rows?: number;
 }
 
-export function LoadingState({ message = '加载中...' }: LoadingStateProps) {
+export function LoadingState({ message = '加载中...', rows = 3 }: LoadingStateProps) {
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 'var(--space-2xl) var(--space-lg)',
-      gap: 'var(--space-md)',
-    }}>
-      <div style={{
-        width: 32,
-        height: 32,
-        border: '3px solid var(--color-border)',
-        borderTopColor: 'var(--color-accent-primary)',
-        borderRadius: '50%',
-        animation: 'spin 0.8s linear infinite',
-      }} />
-      <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>{message}</p>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <div
+      role="status"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        padding: 'var(--space-xl) var(--space-lg)',
+        gap: 'var(--space-md)',
+      }}
+    >
+      <span className="sr-only">{message}</span>
+      {Array.from({ length: rows }, (_, i) => (
+        <div
+          key={i}
+          className="skeleton"
+          aria-hidden="true"
+          style={{
+            height: 20,
+            width: `${100 - i * 18}%`,
+            borderRadius: 'var(--radius-sm)',
+          }}
+        />
+      ))}
     </div>
   );
 }
