@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { AuroraBackground } from './components/layout/AuroraBackground';
 import { TopNav } from './components/layout/TopNav';
 import { SkipLink } from './components/ui/SkipLink';
 import { ToastContainer } from './components/ui/Toast';
@@ -66,6 +67,8 @@ export default function App() {
   return (
     <>
       <SkipLink />
+      {/* 极光背景：固定全屏 z-index 0，全页面共享（设计文档 7.1） */}
+      <AuroraBackground />
       <TopNav activeHash={hash} onNavigate={navigate} />
       {renderPage()}
       <ToastContainer />

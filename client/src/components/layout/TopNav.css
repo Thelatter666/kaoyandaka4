@@ -1,0 +1,116 @@
+/* ============================================================
+   悬浮胶囊导航（设计文档 7.2）
+   sticky top 12px / max-width 960px / glass-2 / 全圆角 / 高 56px
+   ============================================================ */
+
+.top-nav {
+  position: sticky;
+  top: 12px;
+  z-index: var(--z-nav);
+  width: calc(100% - 2 * var(--space-md));
+  max-width: 960px;
+  height: 56px;
+  margin: 12px auto 0;
+  padding: 0 var(--space-sm) 0 var(--space-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  border-radius: var(--radius-full);
+}
+
+/* 左：品牌（宋体 700 18px） */
+.top-nav__brand {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.top-nav__brand:hover {
+  text-decoration: none;
+}
+
+/* 中：6 项导航（lucide 16px + 文字） */
+.top-nav__links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.top-nav__link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 var(--space-md);
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.top-nav__link:hover {
+  background: var(--color-glass-bg);
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+/* 当前页：主色底白字胶囊 + 微辉光（aria-current="page" 双通道表达） */
+.top-nav__link[aria-current="page"] {
+  background: var(--color-accent-primary-strong);
+  color: var(--color-text-inverse);
+  font-weight: var(--font-semibold);
+  box-shadow: var(--glow-primary);
+}
+
+.top-nav__link[aria-current="page"]:hover {
+  background: var(--color-accent-primary-strong);
+  color: var(--color-text-inverse);
+}
+
+/* 右：主题切换 */
+.top-nav__actions {
+  display: flex;
+  align-items: center;
+}
+
+/* <960px：导航文字隐藏，图标-only（aria-label 保留，触控区 ≥44px） */
+@media (max-width: 959px) {
+  .top-nav__link-label {
+    display: none;
+  }
+
+  .top-nav__link {
+    width: 44px;
+    padding: 0;
+  }
+}
+
+/* <720px：品牌名隐藏，收紧间距保证 6 图标横向不滚动不溢出 */
+@media (max-width: 719px) {
+  .top-nav {
+    width: calc(100% - 2 * var(--space-sm));
+    padding: 0 var(--space-xs);
+  }
+
+  .top-nav__brand {
+    display: none;
+  }
+
+  .top-nav__links {
+    gap: 0;
+  }
+}

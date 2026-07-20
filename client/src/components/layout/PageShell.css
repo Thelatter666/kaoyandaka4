@@ -1,0 +1,19 @@
+/* ============================================================
+   页面容器（设计文档 7.3）
+   max-width 1120px / 水平 padding 24px（移动 16px）/ z-index 1
+   ============================================================ */
+
+.page-shell {
+  flex: 1;
+  position: relative;
+  z-index: var(--z-content);
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--space-lg);
+}
+
+@media (max-width: 719px) {
+  .page-shell {
+    padding: var(--space-md);
+  }
+}

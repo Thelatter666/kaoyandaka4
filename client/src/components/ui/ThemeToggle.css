@@ -1,0 +1,28 @@
+/* ============================================================
+   主题切换按钮（设计文档 7.4）：44px 玻璃圆形图标按钮
+   ============================================================ */
+
+.theme-toggle {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.theme-toggle:hover {
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-glass-md);
+  transform: translateY(-1px);
+}
+
+.theme-toggle:active {
+  transform: scale(0.97);
+}
