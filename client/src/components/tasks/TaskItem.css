@@ -1,0 +1,132 @@
+/* ============================================================
+   任务行卡 TaskItem（设计文档 8.2）
+   glass-1 行卡；完成态＝松绿 CheckCircle2 + 删除线 + opacity 0.62；
+   重要＝Pin 填充主色；拖拽手柄 GripVertical；全部交互目标 44px。
+   ============================================================ */
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 4px 8px;
+  border-radius: var(--radius-md);
+  animation: task-item-in var(--dur-med) var(--ease-out) both;
+  transition:
+    opacity var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+/* 列表项入场：opacity + translateY(6px)，延迟由使用方 style 驱动（最多 8 项） */
+@keyframes task-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 完成态：整卡 opacity 0.62（图标 + 删除线双通道，不只靠颜色） */
+.task-item--done {
+  opacity: 0.62;
+}
+
+/* 键盘排序模式：主色虚线描边 + 浅底 */
+.task-item--sorting {
+  background: var(--color-accent-primary-light);
+  border: 2px dashed var(--color-accent-primary);
+}
+
+/* ---- 44px 触控区图标按钮 ---- */
+.task-item__handle,
+.task-item__toggle,
+.task-item__pin,
+.task-item__delete {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+.task-item__handle {
+  cursor: grab;
+}
+
+.task-item__handle:active {
+  cursor: grabbing;
+}
+
+.task-item__toggle:hover {
+  color: var(--color-accent-success);
+  background: var(--color-glass-bg);
+}
+
+/* 完成态：松绿 CheckCircle2 */
+.task-item--done .task-item__toggle {
+  color: var(--color-accent-success);
+}
+
+.task-item__pin:hover {
+  color: var(--color-accent-primary);
+  background: var(--color-glass-bg);
+}
+
+/* 重要：Pin 填充主色 */
+.task-item__pin--active {
+  color: var(--color-accent-primary);
+}
+
+.task-item__delete:hover {
+  color: var(--color-accent-danger);
+  background: var(--color-glass-bg);
+}
+
+/* ---- 内容区 ---- */
+.task-item__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-item__text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+/* 完成态：文字删除线 */
+.task-item--done .task-item__text {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+/* 行内编辑输入：聚焦主色描边 */
+.task-item__edit-input {
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border-focus);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-base);
+  background: var(--color-glass-bg);
+  color: var(--color-text-primary);
+  outline: none;
+}
+
+/* ---- reduced-motion：入场动画取消 ---- */
+@media (prefers-reduced-motion: reduce) {
+  .task-item {
+    animation: none;
+  }
+}

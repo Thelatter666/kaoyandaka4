@@ -1,0 +1,285 @@
+/* ============================================================
+   计划页（设计文档 8.2）
+   「今天/明天」玻璃分段控件 + 新建任务玻璃输入条 + 任务行卡列表
+   + 复盘玻璃卡（保存状态图标 + 文字）。
+   ============================================================ */
+
+/* ---- 标题区：宋体 30px + 引导文案 ---- */
+.plan-header {
+  margin-bottom: var(--space-lg);
+}
+
+.plan-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-family: var(--font-heading);
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+}
+
+.plan-title .lucide {
+  color: var(--color-accent-primary);
+  flex-shrink: 0;
+}
+
+.plan-subtitle {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  margin-top: var(--space-xs);
+}
+
+/* ---- 今天/明天 玻璃分段控件（通用样式见 utilities.css）---- */
+.plan-tabs {
+  width: 280px;
+  max-width: 100%;
+  margin-bottom: var(--space-lg);
+}
+
+/* ---- 12 栏：任务 7 + 复盘 5；小屏单列 ---- */
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--space-xl);
+  align-items: start;
+}
+
+.plan-grid__tasks { grid-column: span 7; }
+.plan-grid__review { grid-column: span 5; }
+
+@media (max-width: 900px) {
+  .plan-grid__tasks,
+  .plan-grid__review {
+    grid-column: span 12;
+  }
+}
+
+/* ---- 新建任务：玻璃输入条，聚焦时描边主色辉光 ---- */
+.plan-add {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  padding: 8px;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-lg);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.plan-add:focus-within {
+  border-color: var(--color-accent-primary);
+  box-shadow: var(--glow-primary);
+}
+
+.plan-add__input {
+  flex: 1;
+  min-width: 160px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: var(--text-base);
+  outline: none;
+}
+
+.plan-add__input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.plan-add__controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.plan-add__select {
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  outline: none;
+  cursor: pointer;
+}
+
+.plan-add__important {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: 44px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.plan-add__important input {
+  accent-color: var(--color-accent-primary);
+  width: 16px;
+  height: 16px;
+}
+
+.plan-add__important--active {
+  color: var(--color-accent-primary);
+}
+
+/* ---- 任务分组与列表 ---- */
+.plan-task-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.plan-group-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.plan-group-title .lucide {
+  color: var(--color-accent-primary);
+}
+
+.plan-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* ---- 复盘区：glass-1 卡 + 玻璃多行输入 + 保存状态 ---- */
+.plan-review__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.plan-review__title .lucide {
+  color: var(--color-accent-primary);
+}
+
+.plan-review__date {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-md);
+}
+
+.plan-review__textarea {
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-glass-bg);
+  color: var(--color-text-primary);
+  font-size: var(--text-base);
+  font-family: inherit;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.plan-review__textarea:focus {
+  border-color: var(--color-accent-primary);
+  box-shadow: var(--glow-primary);
+}
+
+.plan-review__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.plan-review__status-wrap {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.plan-review__status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.plan-review__status--saved {
+  color: var(--color-accent-success-strong);
+}
+
+.plan-review__status--error {
+  color: var(--color-accent-danger);
+}
+
+/* 保存中：RefreshCw 转动（transform 动画） */
+@keyframes plan-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.plan-spin {
+  animation: plan-spin 0.8s linear infinite;
+}
+
+/* ---- 次日处理弹窗：玻璃行 ---- */
+.plan-unfinished {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+}
+
+.plan-unfinished__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.plan-unfinished__content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plan-unfinished__actions {
+  display: flex;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* ---- reduced-motion：转动取消 ---- */
+@media (prefers-reduced-motion: reduce) {
+  .plan-spin {
+    animation: none;
+  }
+}

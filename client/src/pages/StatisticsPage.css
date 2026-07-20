@@ -34,43 +34,7 @@
   margin-bottom: var(--space-xl);
 }
 
-/* 日/周/月玻璃分段控件（滑块指示器 240ms 滑动） */
-.segmented {
-  position: relative;
-  display: flex;
-  padding: 4px;
-  border-radius: var(--radius-full);
-  min-width: 200px;
-}
-
-.segmented__indicator {
-  position: absolute;
-  top: 4px;
-  bottom: 4px;
-  left: 4px;
-  width: calc((100% - 8px) / 3);
-  border-radius: var(--radius-full);
-  background: var(--color-glass-bg-strong);
-  box-shadow: var(--shadow-glass-sm);
-  transition: transform var(--dur-med) var(--ease-out);
-}
-
-.segmented__item {
-  position: relative;
-  z-index: 1;
-  flex: 1;
-  min-height: 36px;
-  padding: 4px 20px;
-  border-radius: var(--radius-full);
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  transition: color var(--dur-fast) var(--ease-out);
-}
-
-.segmented__item--active {
-  color: var(--color-text-primary);
-  font-weight: var(--font-semibold);
-}
+/* 日/周/月玻璃分段控件：通用样式见 utilities.css（.segmented，默认 3 段） */
 
 /* 范围导航器：44px 玻璃圆钮 + 等宽日期范围 + 今天胶囊 */
 .range-nav {

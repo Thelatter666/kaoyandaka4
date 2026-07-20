@@ -150,6 +150,45 @@
   }
 }
 
+/* ---- 玻璃分段控件（滑块指示器 240ms 滑动，设计文档 4.4）----
+   段数由 --_segments 私有属性指定，默认 3；指示器位移由使用方内联 transform 驱动 */
+.segmented {
+  position: relative;
+  display: flex;
+  padding: 4px;
+  border-radius: var(--radius-full);
+  min-width: 200px;
+}
+
+.segmented__indicator {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / var(--_segments, 3));
+  border-radius: var(--radius-full);
+  background: var(--color-glass-bg-strong);
+  box-shadow: var(--shadow-glass-sm);
+  transition: transform var(--dur-med) var(--ease-out);
+}
+
+.segmented__item {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 36px;
+  padding: 4px 20px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.segmented__item--active {
+  color: var(--color-text-primary);
+  font-weight: var(--font-semibold);
+}
+
 /* ---- 数字等宽（统计/计时数字一律 tabular-nums）---- */
 .tabular-nums {
   font-variant-numeric: tabular-nums;

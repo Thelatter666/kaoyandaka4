@@ -9,9 +9,11 @@ interface EmptyStateProps {
   description?: string;
   actionLabel?: string;
   onAction?: () => void;
+  /** 紧凑档：padding 由 48px 减为 24px（用于卡片内嵌的小空间空态，如首页摘要卡） */
+  compact?: boolean;
 }
 
-export function EmptyState({ icon, title, description, actionLabel, onAction }: EmptyStateProps) {
+export function EmptyState({ icon, title, description, actionLabel, onAction, compact = false }: EmptyStateProps) {
   return (
     <div
       style={{
@@ -19,7 +21,7 @@ export function EmptyState({ icon, title, description, actionLabel, onAction }: 
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 'var(--space-2xl) var(--space-lg)',
+        padding: compact ? 'var(--space-lg)' : 'var(--space-2xl) var(--space-lg)',
         textAlign: 'center',
       }}
     >

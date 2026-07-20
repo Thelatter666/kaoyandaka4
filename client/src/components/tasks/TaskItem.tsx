@@ -1,6 +1,16 @@
+/**
+ * 任务行卡 TaskItem（设计文档 8.2）
+ *
+ * glass-1 行卡；完成态＝松绿 CheckCircle2 + 文字删除线 + 整卡 opacity 0.62
+ * （颜色 + 图标 + 删除线多通道表达）；重要＝Pin 填充主色；拖拽手柄
+ * GripVertical 44px 触控区；键盘排序（Enter/空格进入，方向键移动）与
+ * sr-only 上移/下移按钮保留；删除 Trash2。业务回调与排序逻辑不变。
+ */
 import React, { useState, useRef, useEffect } from 'react';
+import { CheckCircle2, Circle, GripVertical, Pin, Trash2 } from 'lucide-react';
 import { SubjectBadge } from '../ui/SubjectBadge';
 import type { Subject, SubSubject } from '@shared/types';
+import './TaskItem.css';
 
 export interface TaskData {
   id: string;
@@ -23,6 +33,8 @@ interface TaskItemProps {
   onSortKeyDown?: (e: React.KeyboardEvent) => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
+  /** 额外样式（如列表项入场延迟 animationDelay） */
+  style?: React.CSSProperties;
 }
 
 export function TaskItem({
@@ -35,6 +47,7 @@ export function TaskItem({
   onSortKeyDown,
   onMoveUp,
   onMoveDown,
+  style,
 }: TaskItemProps) {
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(task.content);
@@ -54,72 +67,51 @@ export function TaskItem({
     setEditing(false);
   };
 
+  const classNames = [
+    'task-item',
+    'glass-1',
+    task.isCompleted ? 'task-item--done' : '',
+    isSortMode ? 'task-item--sorting' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 'var(--space-sm)',
-        padding: '12px 16px',
-        borderRadius: 'var(--radius-md)',
-        backgroundColor: isSortMode ? 'var(--color-accent-primary-light)' : 'transparent',
-        border: isSortMode ? '2px dashed var(--color-accent-primary)' : '1px solid transparent',
-        transition: 'all var(--transition-fast)',
-      }}
-    >
-      {/* Sort handle */}
+    <div className={classNames} style={style}>
+      {/* 拖拽手柄：44px 触控区，键盘排序（Enter/空格 + 方向键） */}
       <button
+        type="button"
+        className="task-item__handle"
         tabIndex={0}
         aria-label={`排序：${task.content}`}
         aria-grabbed={isSortMode}
         onKeyDown={onSortKeyDown}
-        onClick={() => isSortMode ? undefined : undefined}
-        style={{
-          width: 28,
-          height: 28,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'grab',
-          border: 'none',
-          background: 'none',
-          color: 'var(--color-text-muted)',
-          fontSize: 'var(--text-base)',
-          borderRadius: 'var(--radius-sm)',
-        }}
       >
-        ⠿
+        <GripVertical size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
-      {/* Complete checkbox */}
+      {/* 完成切换：完成态松绿 CheckCircle2 / 未完成空心圆 */}
       <button
+        type="button"
+        className="task-item__toggle"
         onClick={() => onToggle(task.id)}
-        aria-label={task.isCompleted ? '标记为未完成' : '标记为已完成'}
-        style={{
-          width: 24,
-          height: 24,
-          borderRadius: '50%',
-          border: `2px solid ${task.isCompleted ? 'var(--color-accent-success)' : 'var(--color-border)'}`,
-          backgroundColor: task.isCompleted ? 'var(--color-accent-success)' : 'transparent',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          flexShrink: 0,
-          transition: 'all var(--transition-fast)',
-          color: 'white',
-          fontSize: 14,
-        }}
+        aria-label={task.isCompleted ? `标记为未完成：${task.content}` : `标记为已完成：${task.content}`}
+        aria-pressed={task.isCompleted}
       >
-        {task.isCompleted && '✓'}
+        {task.isCompleted ? (
+          <CheckCircle2 size={22} strokeWidth={1.75} aria-hidden="true" />
+        ) : (
+          <Circle size={22} strokeWidth={1.75} aria-hidden="true" />
+        )}
       </button>
 
-      {/* Content */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      {/* 内容（未完成时点击进入行内编辑） */}
+      <div className="task-item__content">
         {editing ? (
           <input
             ref={inputRef}
             type="text"
+            className="task-item__edit-input"
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
             onBlur={handleSave}
@@ -127,88 +119,55 @@ export function TaskItem({
               if (e.key === 'Enter') handleSave();
               if (e.key === 'Escape') setEditing(false);
             }}
-            style={{
-              width: '100%',
-              padding: '4px 8px',
-              border: '1px solid var(--color-border-focus)',
-              borderRadius: 'var(--radius-sm)',
-              fontSize: 'var(--text-base)',
-              backgroundColor: 'var(--color-bg-input)',
-              color: 'var(--color-text-primary)',
-              outline: 'none',
-            }}
+            aria-label="编辑任务内容"
           />
         ) : (
           <span
+            className="task-item__text"
             onClick={() => !task.isCompleted && setEditing(true)}
-            style={{
-              textDecoration: task.isCompleted ? 'line-through' : 'none',
-              color: task.isCompleted ? 'var(--color-text-muted)' : 'var(--color-text-primary)',
-              cursor: task.isCompleted ? 'default' : 'pointer',
-              display: 'block',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
+            title={task.content}
           >
             {task.content}
           </span>
         )}
       </div>
 
-      {/* Subject badge */}
+      {/* 科目徽章 */}
       <SubjectBadge subject={task.subject} subSubject={task.subSubject} />
 
-      {/* Pin button */}
+      {/* 重要切换：重要时 Pin 填充主色 */}
       <button
+        type="button"
+        className={`task-item__pin${task.isImportant ? ' task-item__pin--active' : ''}`}
         onClick={() => onPin(task.id)}
-        aria-label={task.isImportant ? '取消重要' : '标记为重要'}
+        aria-label={task.isImportant ? `取消重要：${task.content}` : `标记为重要：${task.content}`}
+        aria-pressed={task.isImportant}
         title={task.isImportant ? '取消重要' : '标记为重要'}
-        style={{
-          width: 32,
-          height: 32,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          border: 'none',
-          background: 'none',
-          cursor: 'pointer',
-          fontSize: '1rem',
-          color: task.isImportant ? 'var(--color-accent-warning)' : 'var(--color-text-muted)',
-          transition: 'all var(--transition-fast)',
-        }}
       >
-        📌
+        <Pin size={16} strokeWidth={1.75} fill={task.isImportant ? 'currentColor' : 'none'} aria-hidden="true" />
       </button>
 
-      {/* Move up/down (screen reader only) */}
+      {/* 上移/下移（仅屏幕阅读器，键盘排序等价物保留） */}
       {onMoveUp && (
-        <button className="sr-only" onClick={onMoveUp} aria-label={`上移：${task.content}`}>上移</button>
+        <button type="button" className="sr-only" onClick={onMoveUp} aria-label={`上移：${task.content}`}>
+          上移
+        </button>
       )}
       {onMoveDown && (
-        <button className="sr-only" onClick={onMoveDown} aria-label={`下移：${task.content}`}>下移</button>
+        <button type="button" className="sr-only" onClick={onMoveDown} aria-label={`下移：${task.content}`}>
+          下移
+        </button>
       )}
 
-      {/* Delete */}
+      {/* 删除 */}
       <button
+        type="button"
+        className="task-item__delete"
         onClick={() => onDelete(task.id)}
         aria-label={`删除：${task.content}`}
-        style={{
-          width: 32,
-          height: 32,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          border: 'none',
-          background: 'none',
-          cursor: 'pointer',
-          fontSize: '1rem',
-          color: 'var(--color-text-muted)',
-          opacity: 0.5,
-          transition: 'all var(--transition-fast)',
-        }}
+        title="删除任务"
       >
-        ✕
+        <Trash2 size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
     </div>
   );

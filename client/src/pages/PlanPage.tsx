@@ -1,4 +1,20 @@
+/**
+ * 计划页（设计文档 8.2）
+ *
+ * 「今天/明天」玻璃分段控件（滑块指示器 240ms）；新建任务玻璃输入条
+ * （聚焦描边主色辉光）；任务行卡 TaskItem（glass-1，完成/重要/拖拽/键盘
+ * 排序语义不变）；复盘 glass-1 卡（保存状态 RefreshCw 转动 / Check / 重试）。
+ * 任务 CRUD、排序、顺延、复盘保存与切换日期逻辑全部保持现状。
+ */
 import React, { useState, useEffect, useCallback } from 'react';
+import {
+  ClipboardList,
+  Pin,
+  Pencil,
+  RefreshCw,
+  Check,
+  AlertCircle,
+} from 'lucide-react';
 import { PageShell } from '../components/layout/PageShell';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -13,9 +29,11 @@ import { tasksApi, Task } from '../api/tasks';
 import { reviewsApi, Review } from '../api/reviews';
 import { today, tomorrow, formatDateDisplay } from '../utils/date';
 import type { Subject, SubSubject } from '@shared/types';
-import { SubjectEnum } from '@shared/schemas/common';
+import './PlanPage.css';
 
 type TabDate = 'today' | 'tomorrow';
+
+const TAB_ORDER: TabDate[] = ['today', 'tomorrow'];
 
 const SUB_SUBJECT_OPTIONS: { value: SubSubject; label: string }[] = [
   { value: 'data_structure', label: '数据结构' },
@@ -207,134 +225,115 @@ export function PlanPage() {
   const importantTasks = tasks.filter((t) => t.isImportant);
   const normalTasks = tasks.filter((t) => !t.isImportant);
 
-  const selectStyle: React.CSSProperties = {
-    padding: '8px 12px',
-    borderRadius: 'var(--radius-md)',
-    border: '1px solid var(--color-border)',
-    backgroundColor: 'var(--color-bg-input)',
-    color: 'var(--color-text-primary)',
-    fontSize: 'var(--text-sm)',
-    outline: 'none',
-  };
-
-  const inputStyle: React.CSSProperties = {
-    padding: '10px 14px',
-    borderRadius: 'var(--radius-md)',
-    border: '1px solid var(--color-border)',
-    backgroundColor: 'var(--color-bg-input)',
-    color: 'var(--color-text-primary)',
-    fontSize: 'var(--text-base)',
-    width: '100%',
-    outline: 'none',
-  };
-
   return (
     <PageShell>
-      <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 700, marginBottom: 'var(--space-lg)' }}>
-        📋 每日计划与复盘
-      </h2>
+      {/* 标题区：宋体 30px + 引导文案 */}
+      <header className="plan-header">
+        <h2 className="plan-title">
+          <ClipboardList size={26} strokeWidth={1.75} aria-hidden="true" />
+          每日计划与复盘
+        </h2>
+        <p className="plan-subtitle">安排今天与明天的任务，睡前写一段复盘</p>
+      </header>
 
-      {/* Tab bar */}
-      <div style={{
-        display: 'flex',
-        gap: 'var(--space-sm)',
-        marginBottom: 'var(--space-xl)',
-        borderBottom: '2px solid var(--color-border-light)',
-        paddingBottom: 'var(--space-sm)',
-      }}>
-        {(['today', 'tomorrow'] as TabDate[]).map((tab) => (
+      {/* 今天/明天：玻璃分段控件（滑块指示器 240ms 滑动） */}
+      <div
+        className="segmented glass-1 plan-tabs"
+        role="group"
+        aria-label="选择计划日期"
+        style={{ '--_segments': 2 } as React.CSSProperties}
+      >
+        <span
+          className="segmented__indicator"
+          style={{ transform: `translateX(${TAB_ORDER.indexOf(activeTab) * 100}%)` }}
+          aria-hidden="true"
+        />
+        {TAB_ORDER.map((tab) => (
           <button
             key={tab}
+            type="button"
+            className={`segmented__item${activeTab === tab ? ' segmented__item--active' : ''}`}
+            aria-pressed={activeTab === tab}
             onClick={() => setActiveTab(tab)}
-            style={{
-              padding: '8px 20px',
-              fontSize: 'var(--text-base)',
-              fontWeight: activeTab === tab ? 600 : 400,
-              color: activeTab === tab ? 'var(--color-accent-primary)' : 'var(--color-text-secondary)',
-              backgroundColor: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === tab ? '2px solid var(--color-accent-primary)' : '2px solid transparent',
-              cursor: 'pointer',
-              transition: 'all var(--transition-fast)',
-              marginBottom: -10,
-            }}
           >
-            {tab === 'today' ? `今天 ${formatDateDisplay(dateStr).split(' ')[1] || ''}` : `明天 ${formatDateDisplay(dateStr).split(' ')[1] || ''}`}
+            {tab === 'today' ? '今天' : '明天'}{' '}
+            {formatDateDisplay(tab === 'today' ? today() : tomorrow()).split(' ')[1] || ''}
           </button>
         ))}
       </div>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(12, 1fr)',
-        gap: 'var(--space-xl)',
-      }}>
-        {/* Tasks Section */}
-        <div style={{ gridColumn: 'span 7' }}>
-          {/* Add Task Form */}
-          <Card style={{ marginBottom: 'var(--space-lg)' }}>
-            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-lg)', marginBottom: 'var(--space-md)' }}>
-              添加任务
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
-              <input
-                type="text"
-                value={newContent}
-                onChange={(e) => setNewContent(e.target.value)}
-                placeholder="任务内容..."
-                maxLength={500}
-                style={inputStyle}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleAddTask(); }}
-              />
-              <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center', flexWrap: 'wrap' }}>
-                <select value={newSubject} onChange={(e) => { setNewSubject(e.target.value as Subject); setNewSubSubject(null); }} style={selectStyle}>
-                  <option value="math">数学</option>
-                  <option value="english">英语</option>
-                  <option value="408">408</option>
+      <div className="plan-grid">
+        {/* 任务区（7 栏） */}
+        <section className="plan-grid__tasks" aria-label="任务列表">
+          {/* 新建任务：玻璃输入条，聚焦时描边主色辉光 */}
+          <div className="plan-add glass-1">
+            <input
+              type="text"
+              className="plan-add__input"
+              value={newContent}
+              onChange={(e) => setNewContent(e.target.value)}
+              placeholder="任务内容..."
+              aria-label="新任务内容"
+              maxLength={500}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleAddTask(); }}
+            />
+            <div className="plan-add__controls">
+              <select
+                className="plan-add__select"
+                value={newSubject}
+                onChange={(e) => { setNewSubject(e.target.value as Subject); setNewSubSubject(null); }}
+                aria-label="科目"
+              >
+                <option value="math">数学</option>
+                <option value="english">英语</option>
+                <option value="408">408</option>
+              </select>
+              {newSubject === '408' && (
+                <select
+                  className="plan-add__select"
+                  value={newSubSubject || ''}
+                  onChange={(e) => setNewSubSubject((e.target.value || null) as SubSubject | null)}
+                  aria-label="子科目"
+                >
+                  <option value="">不限</option>
+                  {SUB_SUBJECT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
-                {newSubject === '408' && (
-                  <select value={newSubSubject || ''} onChange={(e) => setNewSubSubject((e.target.value || null) as SubSubject | null)} style={selectStyle}>
-                    <option value="">不限</option>
-                    {SUB_SUBJECT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                )}
-                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-sm)', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={newImportant} onChange={(e) => setNewImportant(e.target.checked)} />
-                  重要
-                </label>
-                <Button variant="primary" size="sm" onClick={handleAddTask} loading={adding}>
-                  添加
-                </Button>
-              </div>
+              )}
+              <label className={`plan-add__important${newImportant ? ' plan-add__important--active' : ''}`}>
+                <input type="checkbox" checked={newImportant} onChange={(e) => setNewImportant(e.target.checked)} />
+                <Pin size={14} strokeWidth={1.75} fill={newImportant ? 'currentColor' : 'none'} aria-hidden="true" />
+                重要
+              </label>
+              <Button variant="primary" size="sm" onClick={handleAddTask} loading={adding}>
+                添加
+              </Button>
             </div>
-          </Card>
+          </div>
 
-          {/* Task List */}
+          {/* 任务列表 */}
           {tasksLoading ? (
             <LoadingState message="加载任务中..." />
           ) : tasksError ? (
             <ErrorState message={tasksError} onRetry={fetchTasks} />
           ) : tasks.length === 0 ? (
             <Card>
-              <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 'var(--space-lg)' }}>
-                暂无任务，添加第一个吧
-              </p>
+              <EmptyState
+                icon={<ClipboardList size={40} strokeWidth={1.75} />}
+                title="暂无任务"
+                description="在上方输入条添加第一个任务吧"
+              />
             </Card>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-              {/* Important tasks */}
+            <div className="plan-task-groups">
+              {/* 重要任务 */}
               {importantTasks.length > 0 && (
-                <div>
-                  <h4 style={{
-                    fontSize: 'var(--text-sm)',
-                    fontWeight: 600,
-                    color: 'var(--color-accent-warning)',
-                    marginBottom: 'var(--space-sm)',
-                  }}>
-                    📌 重要 ({importantTasks.length})
-                  </h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {importantTasks.map((task) => (
+                <section aria-label={`重要任务 ${importantTasks.length} 项`}>
+                  <h3 className="plan-group-title">
+                    <Pin size={14} strokeWidth={1.75} fill="currentColor" aria-hidden="true" />
+                    重要 <span className="tabular-nums">({importantTasks.length})</span>
+                  </h3>
+                  <div className="plan-task-list">
+                    {importantTasks.map((task, i) => (
                       <TaskItem
                         key={task.id}
                         task={task as TaskData}
@@ -342,25 +341,21 @@ export function PlanPage() {
                         onPin={handlePin}
                         onEdit={handleEdit}
                         onDelete={handleDelete}
+                        style={{ animationDelay: `${Math.min(i, 7) * 40}ms` }}
                       />
                     ))}
                   </div>
-                </div>
+                </section>
               )}
 
-              {/* Normal tasks */}
+              {/* 普通任务 */}
               {normalTasks.length > 0 && (
-                <div>
-                  <h4 style={{
-                    fontSize: 'var(--text-sm)',
-                    fontWeight: 600,
-                    color: 'var(--color-text-secondary)',
-                    marginBottom: 'var(--space-sm)',
-                  }}>
-                    普通 ({normalTasks.length})
-                  </h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {normalTasks.map((task) => (
+                <section aria-label={`普通任务 ${normalTasks.length} 项`}>
+                  <h3 className="plan-group-title">
+                    普通 <span className="tabular-nums">({normalTasks.length})</span>
+                  </h3>
+                  <div className="plan-task-list">
+                    {normalTasks.map((task, i) => (
                       <TaskItem
                         key={task.id}
                         task={task as TaskData}
@@ -368,81 +363,65 @@ export function PlanPage() {
                         onPin={handlePin}
                         onEdit={handleEdit}
                         onDelete={handleDelete}
+                        style={{ animationDelay: `${Math.min(i, 7) * 40}ms` }}
                       />
                     ))}
                   </div>
-                </div>
+                </section>
               )}
             </div>
           )}
-        </div>
+        </section>
 
-        {/* Daily Review Section */}
-        <div style={{ gridColumn: 'span 5' }}>
+        {/* 复盘区（5 栏）：glass-1 卡 + 保存状态图标 + 文字 */}
+        <section className="plan-grid__review" aria-label="每日复盘">
           <Card>
-            <h3 style={{
-              fontFamily: 'var(--font-heading)',
-              fontSize: 'var(--text-lg)',
-              marginBottom: 'var(--space-md)',
-            }}>
-              📝 每日复盘
+            <h3 className="plan-review__title">
+              <Pencil size={18} strokeWidth={1.75} aria-hidden="true" />
+              每日复盘
             </h3>
-            <p style={{
-              fontSize: 'var(--text-sm)',
-              color: 'var(--color-text-secondary)',
-              marginBottom: 'var(--space-md)',
-            }}>
-              {formatDateDisplay(dateStr)}
-            </p>
+            <p className="plan-review__date">{formatDateDisplay(dateStr)}</p>
             <textarea
+              className="plan-review__textarea"
               value={reviewContent}
               onChange={(e) => {
                 setReviewContent(e.target.value);
                 if (reviewSaving === 'saved') setReviewSaving('idle');
               }}
               placeholder="记录今天的学习心得、遇到的困难、明天的计划..."
+              aria-label="每日复盘内容"
               rows={8}
-              style={{
-                width: '100%',
-                padding: '12px',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--color-border)',
-                backgroundColor: 'var(--color-bg-input)',
-                color: 'var(--color-text-primary)',
-                fontSize: 'var(--text-base)',
-                resize: 'vertical',
-                fontFamily: 'inherit',
-                outline: 'none',
-                lineHeight: 1.6,
-              }}
             />
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              gap: 'var(--space-sm)',
-              marginTop: 'var(--space-md)',
-            }}>
-              {reviewSaving === 'saving' && (
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>保存中...</span>
-              )}
-              {reviewSaving === 'saved' && (
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-accent-success)' }}>已保存 ✓</span>
-              )}
-              {reviewSaving === 'error' && (
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-accent-primary)' }}>
-                  保存失败，点击重试
-                </span>
-              )}
+            <div className="plan-review__footer">
+              <span className="plan-review__status-wrap" aria-live="polite">
+                {reviewSaving === 'saving' && (
+                  <span className="plan-review__status">
+                    <RefreshCw size={14} strokeWidth={1.75} className="plan-spin" aria-hidden="true" />
+                    保存中...
+                  </span>
+                )}
+                {reviewSaving === 'saved' && (
+                  <span className="plan-review__status plan-review__status--saved">
+                    <Check size={14} strokeWidth={1.75} aria-hidden="true" />
+                    已保存
+                  </span>
+                )}
+                {reviewSaving === 'error' && (
+                  <span className="plan-review__status plan-review__status--error">
+                    <AlertCircle size={14} strokeWidth={1.75} aria-hidden="true" />
+                    保存失败，点击重试
+                  </span>
+                )}
+              </span>
               <Button variant="primary" size="sm" onClick={handleSaveReview} loading={reviewSaving === 'saving'}>
                 保存复盘
               </Button>
             </div>
           </Card>
-        </div>
+        </section>
       </div>
 
-      {/* Unfinished Tasks Modal */}
+      {/* 次日处理弹窗（沿用 Modal 新材质） */}
       <Modal
         isOpen={showUnfinished && unfinishedTasks.length > 0}
         onClose={handleCloseUnfinished}
@@ -454,28 +433,14 @@ export function PlanPage() {
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
           {unfinishedTasks.map((task) => (
-            <div
-              key={task.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: 'var(--space-md)',
-                backgroundColor: 'var(--color-border-light)',
-                borderRadius: 'var(--radius-md)',
-                gap: 'var(--space-sm)',
-                flexWrap: 'wrap',
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 'var(--text-base)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {task.content}
-                </p>
+            <div key={task.id} className="plan-unfinished glass-1">
+              <div className="plan-unfinished__info">
+                <p className="plan-unfinished__content">{task.content}</p>
                 <SubjectBadge subject={task.subject as Subject} subSubject={task.subSubject as SubSubject | null} />
               </div>
-              <div style={{ display: 'flex', gap: 'var(--space-xs)', flexShrink: 0 }}>
+              <div className="plan-unfinished__actions">
                 <Button variant="primary" size="sm" onClick={() => handleCarryOver(task)}>顺延</Button>
-                <Button variant="secondary" size="sm" onClick={() => handleUnfinishedComplete(task)}>标记完成</Button>
+                <Button variant="glass" size="sm" onClick={() => handleUnfinishedComplete(task)}>标记完成</Button>
                 <Button variant="ghost" size="sm" onClick={() => handleUnfinishedDismiss(task)}>放弃</Button>
               </div>
             </div>
