@@ -1,0 +1,205 @@
+/* ============================================================
+   学习预设卡（设计文档 8.3 / 8.4）
+   glass-1 + 顶部 3px 科目色渐变条 + 科目 lucide 图标双通道；
+   选中态 = 主色 2px 描边 + 辉光 + 左上 CheckCircle2。
+   ============================================================ */
+
+.preset-card {
+  position: relative;
+  overflow: hidden;
+  /* 科目色私有属性（由科目修饰类赋值，禁止裸色值） */
+  --_subject-color: var(--color-text-secondary);
+  --_subject-color-bg: var(--color-glass-bg);
+}
+
+.preset-card--math {
+  --_subject-color: var(--color-subject-math);
+  --_subject-color-bg: var(--color-subject-math-bg);
+}
+
+.preset-card--english {
+  --_subject-color: var(--color-subject-english);
+  --_subject-color-bg: var(--color-subject-english-bg);
+}
+
+.preset-card--408 {
+  --_subject-color: var(--color-subject-408);
+  --_subject-color-bg: var(--color-subject-408-bg);
+}
+
+/* 顶部 3px 科目色渐变条 */
+.preset-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--_subject-color), var(--_subject-color-bg));
+  pointer-events: none;
+}
+
+.preset-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* ---- 头部：科目图标 + 宋体名称 + 「最近」胶囊 ---- */
+
+.preset-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.preset-card__icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--_subject-color-bg);
+  color: var(--_subject-color);
+}
+
+.preset-card__name {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-lg); /* 18px */
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+}
+
+/* 「最近」玻璃胶囊（颜色+圆点双通道） */
+.preset-card__recent {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-glass-bg-strong);
+  border: 1px solid var(--color-border);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--color-accent-success-strong);
+  white-space: nowrap;
+}
+
+.preset-card__recent-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent-success);
+}
+
+/* ---- 时长：等宽大数字 + 分钟小字 ---- */
+
+.preset-card__duration {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+}
+
+.preset-card__duration-num {
+  font-family: var(--font-mono);
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+  line-height: 1.1;
+}
+
+.preset-card__duration-unit {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* ---- 底部：科目徽章 + 操作 ---- */
+
+.preset-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.preset-card__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+/* 44px 触控区图标按钮（垂直负边距补偿，保持视觉紧凑） */
+.preset-card__action {
+  width: 44px;
+  height: 44px;
+  margin: -8px 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.preset-card__action:hover {
+  background: var(--color-glass-bg-strong);
+  color: var(--color-text-primary);
+}
+
+.preset-card__action:active {
+  transform: scale(0.97);
+}
+
+.preset-card__action--danger:hover {
+  background: var(--color-accent-primary-light);
+  color: var(--color-accent-danger);
+}
+
+/* ---- 选中态（番茄钟等选择场景）：主色 2px 描边 + 辉光 + 左上 CheckCircle2 ---- */
+
+.preset-card--selected {
+  border: 2px solid var(--color-accent-primary);
+  box-shadow: var(--shadow-glass-sm), var(--glow-primary);
+}
+
+.preset-card__selected-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1;
+  display: flex;
+  line-height: 0;
+  border-radius: 50%;
+  background: var(--color-bg-card-solid);
+  color: var(--color-accent-primary-strong);
+}
+
+/* ---- compact 档（嵌入窄栏时） ---- */
+
+.preset-card--compact .preset-card__body {
+  gap: var(--space-sm);
+}
+
+.preset-card--compact .preset-card__name {
+  font-size: var(--text-base);
+}
+
+.preset-card--compact .preset-card__duration-num {
+  font-size: var(--text-2xl);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preset-card__action:active {
+    transform: none;
+  }
+}

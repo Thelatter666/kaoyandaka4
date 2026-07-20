@@ -1,0 +1,42 @@
+/* ============================================================
+   网课管理页（设计文档 8.5）
+   标题区 + 7 分区网格 repeat(auto-fill, minmax(320px, 1fr))
+   ============================================================ */
+
+.courses-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.courses-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-family: var(--font-heading);
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+}
+
+.courses-title .lucide {
+  color: var(--color-accent-primary);
+  flex-shrink: 0;
+}
+
+.courses-subtitle {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  margin-top: var(--space-xs);
+}
+
+/* 7 分区网格（设计文档 8.5） */
+.courses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-lg);
+  align-items: start;
+}

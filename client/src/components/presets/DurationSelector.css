@@ -1,0 +1,144 @@
+/* ============================================================
+   专注时长选择器（设计文档 8.3）
+   快捷钮玻璃胶囊组 + -5/+5 44px 圆钮 + 等宽 36px 当前值。
+   ============================================================ */
+
+.duration-selector {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* ---- 快捷钮：玻璃胶囊组 ---- */
+
+.duration-selector__quick {
+  display: flex;
+  gap: var(--space-xs);
+  padding: 4px;
+  border-radius: var(--radius-full);
+  align-self: flex-start;
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+
+.duration-selector__pill {
+  min-height: 36px;
+  padding: 4px 18px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-text-secondary);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.duration-selector__pill:hover:not(:disabled):not(.duration-selector__pill--active) {
+  background: var(--color-glass-bg-strong);
+  color: var(--color-text-primary);
+}
+
+.duration-selector__pill:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.duration-selector__pill--active {
+  background: var(--color-accent-primary-strong);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-glass-sm);
+}
+
+.duration-selector__pill:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ---- 步进：44px 圆钮 + 当前值 ---- */
+
+.duration-selector__stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.duration-selector__round {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--color-text-primary);
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    opacity var(--dur-fast) var(--ease-out);
+}
+
+.duration-selector__round:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glass-md);
+  color: var(--color-accent-primary-strong);
+}
+
+.duration-selector__round:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.duration-selector__round:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.duration-selector__value {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  min-width: 120px;
+  justify-content: center;
+}
+
+/* 当前值：等宽 36px */
+.duration-selector__num {
+  font-family: var(--font-mono);
+  font-size: var(--text-4xl); /* 36px */
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+  line-height: 1.1;
+}
+
+.duration-selector__unit {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* ---- 滑杆 ---- */
+
+.duration-selector__range {
+  width: 100%;
+  accent-color: var(--color-accent-primary);
+  cursor: pointer;
+}
+
+.duration-selector__range:disabled {
+  cursor: not-allowed;
+}
+
+.duration-selector__bounds {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .duration-selector__pill:active:not(:disabled),
+  .duration-selector__round:active:not(:disabled),
+  .duration-selector__round:hover:not(:disabled) {
+    transform: none;
+  }
+}

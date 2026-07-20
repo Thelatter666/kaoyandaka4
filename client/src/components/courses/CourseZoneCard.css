@@ -1,0 +1,175 @@
+/* ============================================================
+   网课分区卡（设计文档 8.5）
+   glass-1：标题行（图标+名称+进度百分比）+ 双进度条 + 课程列表；
+   空分区 = 虚线描边玻璃卡 + 导入次按钮。
+   ============================================================ */
+
+.zone-card {
+  --_subject-color: var(--color-text-secondary);
+  --_subject-color-bg: var(--color-glass-bg);
+  border-radius: var(--radius-card);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.zone-card--math {
+  --_subject-color: var(--color-subject-math);
+  --_subject-color-bg: var(--color-subject-math-bg);
+}
+
+.zone-card--english {
+  --_subject-color: var(--color-subject-english);
+  --_subject-color-bg: var(--color-subject-english-bg);
+}
+
+.zone-card--408 {
+  --_subject-color: var(--color-subject-408);
+  --_subject-color-bg: var(--color-subject-408-bg);
+}
+
+/* ---- 标题行：科目图标 + 名称 + 进度百分比 ---- */
+
+.zone-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.zone-card__icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--_subject-color-bg);
+  color: var(--_subject-color);
+}
+
+.zone-card__label {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zone-card__pct {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  color: var(--_subject-color);
+}
+
+/* ---- 课程列表 ---- */
+
+.zone-card__courses {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-sm);
+}
+
+.zone-card__course-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.zone-card__course {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: 44px;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  text-align: left;
+  color: var(--color-text-primary);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.zone-card__course:hover {
+  background: var(--color-glass-bg-strong);
+}
+
+.zone-card__course:active {
+  transform: scale(0.98);
+}
+
+.zone-card__course-name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+}
+
+.zone-card__course-meta {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.zone-card__course-chevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+/* 删除：44px 触控区图标按钮 */
+.zone-card__course-delete {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  color: var(--color-text-muted);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.zone-card__course-delete:hover {
+  background: var(--color-accent-primary-light);
+  color: var(--color-accent-danger);
+}
+
+.zone-card__course-delete:active {
+  transform: scale(0.97);
+}
+
+/* ---- 空分区：虚线描边玻璃卡 + 导入次按钮 ---- */
+
+.zone-card--empty {
+  border-style: dashed;
+  border-width: 1.5px;
+  align-items: flex-start;
+}
+
+.zone-card__empty-hint {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zone-card__course:active,
+  .zone-card__course-delete:active {
+    transform: none;
+  }
+}

@@ -1,4 +1,12 @@
+/**
+ * 学习预设页（设计文档 8.3）
+ *
+ * 三科分组标题（科目 lucide 图标 + 宋体标题 + 组内数量胶囊）；
+ * 顶部 4 创建按钮（数学/英语/408 锁定 + 通用新建，科目色区分）；
+ * 创建/编辑弹窗 glass-2；科目锁定行为与全部业务逻辑不变。
+ */
 import React, { useState, useCallback, useEffect } from 'react';
+import { Plus, Lock, SlidersHorizontal, Sigma, BookA, Cpu, type LucideProps } from 'lucide-react';
 import { PageShell } from '../components/layout/PageShell';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -13,6 +21,7 @@ import { PresetCard } from '../components/presets/PresetCard';
 import { showToast } from '../components/ui/Toast';
 import { presetsApi, Preset } from '../api/presets';
 import type { Subject, SubSubject } from '@shared/types';
+import './PresetsPage.css';
 
 const SUBJECT_LABELS: Record<Subject, string> = {
   math: '数学',
@@ -21,6 +30,12 @@ const SUBJECT_LABELS: Record<Subject, string> = {
 };
 
 const SUBJECT_ORDER: Subject[] = ['math', 'english', '408'];
+
+const SUBJECT_ICONS: Record<Subject, React.ComponentType<LucideProps>> = {
+  math: Sigma,
+  english: BookA,
+  '408': Cpu,
+};
 
 interface PresetFormData {
   name: string;
@@ -73,10 +88,10 @@ export function PresetsPage() {
 
   useEffect(() => { fetchPresets(); }, [fetchPresets]);
 
-  const openCreate = (lockedSubject?: Subject) => {
+  const openCreate = (subject?: Subject) => {
     setEditingPreset(null);
-    setLockedSubject(lockedSubject);
-    setFormData(emptyForm(lockedSubject));
+    setLockedSubject(subject);
+    setFormData(emptyForm(subject));
     setModalOpen(true);
   };
 
@@ -142,18 +157,7 @@ export function PresetsPage() {
     items: presets.filter((p) => p.subject === subj),
   }));
 
-  const selectStyle: React.CSSProperties = {
-    padding: '10px 14px',
-    borderRadius: 'var(--radius-md)',
-    border: '1px solid var(--color-border)',
-    backgroundColor: 'var(--color-bg-input)',
-    color: 'var(--color-text-primary)',
-    fontSize: 'var(--text-base)',
-    width: '100%',
-    outline: 'none',
-  };
-
-  const inputStyle: React.CSSProperties = {
+  const fieldStyle: React.CSSProperties = {
     padding: '10px 14px',
     borderRadius: 'var(--radius-md)',
     border: '1px solid var(--color-border)',
@@ -173,38 +177,38 @@ export function PresetsPage() {
 
   return (
     <PageShell>
-      {/* Header */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 'var(--space-xl)',
-        flexWrap: 'wrap',
-        gap: 'var(--space-md)',
-      }}>
-        <h2 style={{
-          fontFamily: 'var(--font-heading)',
-          fontSize: 'var(--text-2xl)',
-          fontWeight: 700,
-          margin: 0,
-        }}>
-          ⚙️ 学习预设
-        </h2>
-        <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
+      {/* 标题区：宋体 30px + 引导文案；右侧 4 创建按钮（三科锁定 + 通用） */}
+      <header className="presets-header">
+        <div className="presets-header__text">
+          <h2 className="presets-title">
+            <SlidersHorizontal size={26} strokeWidth={1.75} aria-hidden="true" />
+            学习预设
+          </h2>
+          <p className="presets-subtitle">按科目整理专注时长，创建后可在番茄钟一键开始</p>
+        </div>
+        <div className="presets-actions">
           <Button variant="primary" onClick={() => openCreate()}>
+            <Plus size={16} strokeWidth={1.75} aria-hidden="true" />
             新建预设
           </Button>
-          <Button variant="secondary" onClick={() => openCreate('math')}>
-            ＋数学
-          </Button>
-          <Button variant="secondary" onClick={() => openCreate('english')}>
-            ＋英语
-          </Button>
-          <Button variant="secondary" onClick={() => openCreate('408')}>
-            ＋408
-          </Button>
+          {SUBJECT_ORDER.map((subj) => {
+            const SubjectIcon = SUBJECT_ICONS[subj];
+            return (
+              <button
+                key={subj}
+                type="button"
+                className={`presets-create presets-create--${subj} glass-1`}
+                onClick={() => openCreate(subj)}
+                aria-label={`新建${SUBJECT_LABELS[subj]}预设（科目锁定）`}
+              >
+                <Plus size={14} strokeWidth={1.75} aria-hidden="true" />
+                <SubjectIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+                {SUBJECT_LABELS[subj]}
+              </button>
+            );
+          })}
         </div>
-      </div>
+      </header>
 
       {/* Content */}
       {loading ? (
@@ -213,68 +217,54 @@ export function PresetsPage() {
         <ErrorState message={error} onRetry={fetchPresets} />
       ) : presets.length === 0 ? (
         <EmptyState
-          icon="📋"
+          icon={<SlidersHorizontal size={40} strokeWidth={1.75} />}
           title="还没有学习预设"
           description="创建一个预设来快速开始专注学习"
           actionLabel="创建第一个预设"
           onAction={() => openCreate()}
         />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>
-          {grouped.map((group) => (
-            <div key={group.subject}>
-              <h3 style={{
-                fontFamily: 'var(--font-heading)',
-                fontSize: 'var(--text-lg)',
-                fontWeight: 600,
-                marginBottom: 'var(--space-md)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 'var(--space-sm)',
-              }}>
-                <span style={{ color: `var(--color-subject-${group.subject})` }}>●</span>
-                {group.label}
-                <span style={{
-                  fontSize: 'var(--text-sm)',
-                  color: 'var(--color-text-muted)',
-                  fontWeight: 400,
-                }}>
-                  ({group.items.length})
-                </span>
-              </h3>
-              {group.items.length === 0 ? (
-                <Card>
-                  <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 'var(--space-md)' }}>
-                    暂无{group.label}预设
-                  </p>
-                </Card>
-              ) : (
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                  gap: 'var(--space-md)',
-                }}>
-                  {group.items.map((preset) => (
-                    <PresetCard
-                      key={preset.id}
-                      id={preset.id}
-                      name={preset.name}
-                      subject={preset.subject as Subject}
-                      subSubject={preset.subSubject as SubSubject | null}
-                      durationMinutes={preset.durationMinutes}
-                      isRecentlyUsed={false}
-                      onEdit={() => openEdit(preset)}
-                      onDelete={() => setDeleteTarget(preset)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+        <div className="presets-groups">
+          {grouped.map((group) => {
+            const GroupIcon = SUBJECT_ICONS[group.subject];
+            return (
+              <section key={group.subject} className="presets-group">
+                {/* 分组标题：科目图标 + 宋体标题 + 组内数量胶囊 */}
+                <h3 className="presets-group__title">
+                  <span className={`presets-group__icon presets-group__icon--${group.subject}`} aria-hidden="true">
+                    <GroupIcon size={18} strokeWidth={1.75} />
+                  </span>
+                  {group.label}
+                  <span className="presets-group__count tabular-nums">{group.items.length}</span>
+                </h3>
+                {group.items.length === 0 ? (
+                  <Card>
+                    <p className="presets-group__empty">暂无{group.label}预设</p>
+                  </Card>
+                ) : (
+                  <div className="presets-group__grid">
+                    {group.items.map((preset) => (
+                      <PresetCard
+                        key={preset.id}
+                        id={preset.id}
+                        name={preset.name}
+                        subject={preset.subject as Subject}
+                        subSubject={preset.subSubject as SubSubject | null}
+                        durationMinutes={preset.durationMinutes}
+                        isRecentlyUsed={false}
+                        onEdit={() => openEdit(preset)}
+                        onDelete={() => setDeleteTarget(preset)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          })}
         </div>
       )}
 
-      {/* Create/Edit Modal */}
+      {/* Create/Edit Modal（glass-2 面板，科目锁定行为不变） */}
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -291,7 +281,7 @@ export function PresetsPage() {
               onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
               placeholder="例如：数学上午刷题"
               maxLength={200}
-              style={inputStyle}
+              style={fieldStyle}
             />
           </div>
 
@@ -301,8 +291,15 @@ export function PresetsPage() {
             {lockedSubject ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
                 <SubjectBadge subject={lockedSubject} size="md" />
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-                  （已锁定）
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--color-text-muted)',
+                }}>
+                  <Lock size={12} strokeWidth={1.75} aria-hidden="true" />
+                  已锁定
                 </span>
               </div>
             ) : (
@@ -314,7 +311,7 @@ export function PresetsPage() {
                   subject: e.target.value as Subject,
                   subSubject: null,
                 }))}
-                style={selectStyle}
+                style={fieldStyle}
               >
                 <option value="math">数学</option>
                 <option value="english">英语</option>
@@ -337,7 +334,7 @@ export function PresetsPage() {
                   ...prev,
                   subSubject: (e.target.value || null) as SubSubject | null,
                 }))}
-                style={selectStyle}
+                style={fieldStyle}
               >
                 <option value="">不限</option>
                 {SUB_SUBJECT_OPTIONS.map((opt) => (
@@ -363,7 +360,7 @@ export function PresetsPage() {
             gap: 'var(--space-md)',
             marginTop: 'var(--space-md)',
           }}>
-            <Button variant="secondary" onClick={() => setModalOpen(false)} disabled={saving}>
+            <Button variant="glass" onClick={() => setModalOpen(false)} disabled={saving}>
               取消
             </Button>
             <Button
@@ -386,7 +383,8 @@ export function PresetsPage() {
         title="删除预设"
         message={`确定要删除预设「${deleteTarget?.name}」吗？`}
         detail="删除后不可恢复，但已产生的学习记录和统计数据将保留。"
-        confirmLabel="删除"
+        confirmLabel="删除预设"
+        destructive
       />
     </PageShell>
   );

@@ -1,0 +1,222 @@
+/* ============================================================
+   课程详情页（设计文档 8.6）
+   顶部信息卡 glass-1 + 集数行卡（28px 完成圆点 / Play 开始学习）
+   ============================================================ */
+
+/* ---- 返回链接 ---- */
+
+.course-detail__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  margin-bottom: var(--space-md);
+  border-radius: var(--radius-sm);
+}
+
+.course-detail__back:hover {
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+/* ---- 顶部课程信息卡 ---- */
+
+.course-detail__info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.course-detail__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.course-detail__name {
+  font-family: var(--font-heading);
+  font-size: var(--text-2xl); /* 24px */
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+}
+
+/* 统计数字行 */
+.course-detail__stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-md);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-md);
+}
+
+.course-detail__stat dt {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-bottom: 2px;
+}
+
+.course-detail__stat dd {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+}
+
+@media (max-width: 640px) {
+  .course-detail__stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 删除入口：danger 幽灵按钮 */
+.course-detail__danger-zone {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-md);
+}
+
+.course-detail__delete,
+.course-detail__delete:hover:not(:disabled) {
+  color: var(--color-accent-danger);
+}
+
+.course-detail__delete:hover:not(:disabled) {
+  background: var(--color-accent-primary-light);
+}
+
+/* ---- 集数列表 ---- */
+
+.course-detail__episodes-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-md);
+}
+
+.course-detail__episodes-title .lucide {
+  color: var(--color-accent-primary);
+  flex-shrink: 0;
+}
+
+.course-detail__empty {
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.course-detail__episodes {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* 集数行卡 glass-1 */
+.episode-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  min-width: 0;
+}
+
+/* 完成圆点：28px 视觉，44px 触控区；完成行动效 160ms */
+.episode-row__toggle {
+  width: 44px;
+  height: 44px;
+  margin: -8px 0;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+}
+
+.episode-row__dot {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-inverse);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.episode-row__toggle:hover .episode-row__dot {
+  border-color: var(--color-accent-success);
+}
+
+.episode-row__toggle:active .episode-row__dot {
+  transform: scale(0.88);
+}
+
+.episode-row--done .episode-row__dot {
+  background: var(--color-accent-success);
+  border-color: var(--color-accent-success);
+}
+
+.episode-row__index {
+  flex-shrink: 0;
+  min-width: 28px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.episode-row__title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+/* 完成态：图标 + 删除线 + 弱化（不只靠颜色） */
+.episode-row--done .episode-row__title {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+.episode-row__duration {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.episode-row__play {
+  flex-shrink: 0;
+}
+
+/* 小屏：Play 按钮仅图标（aria-label 保留，44px 触控区不变） */
+@media (max-width: 560px) {
+  .episode-row__play-text {
+    display: none;
+  }
+
+  .episode-row__duration {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .episode-row__toggle:active .episode-row__dot {
+    transform: none;
+  }
+}
