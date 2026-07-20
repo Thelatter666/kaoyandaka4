@@ -85,6 +85,41 @@
   --color-timer-deep-green-light: #569388;
   --color-timer-low: #F5A45C;
 
+  /* 学习森林「玻璃花房」（设计文档 6.1/6.2）：场景插画专用色，双主题同值 */
+  /* 天空五档（黎明/上午/午后/黄昏/夜晚，渐变自上而下） */
+  --color-forest-sky-dawn-top: #F5D9A8;
+  --color-forest-sky-dawn-bottom: #A8CBF5;
+  --color-forest-sky-morning-top: #BFDCF5;
+  --color-forest-sky-morning-bottom: #E8F3FB;
+  --color-forest-sky-afternoon-top: #A8CBF5;
+  --color-forest-sky-afternoon-bottom: #D9ECFA;
+  --color-forest-sky-dusk-top: #F5B88A;
+  --color-forest-sky-dusk-bottom: #C7B8F5;
+  --color-forest-sky-night-top: #2B3A55;
+  --color-forest-sky-night-bottom: #4A5A7A;
+  /* 远山 / 苔藓地面 / 树干 / 树下阴影 */
+  --color-forest-hill: #5B7089;
+  --color-forest-moss-top: #7FB069;
+  --color-forest-moss-bottom: #5E9152;
+  --color-forest-grass: #4E7C43;
+  --color-forest-trunk: #8A6B4F;
+  --color-forest-tree-shadow: rgba(0, 0, 0, 0.08);
+  /* 数学·松树三层（冷青绿）/ 英语·阔叶树两面 / 408·果树冠与果点 */
+  --color-forest-pine-1: #3E8E7E;
+  --color-forest-pine-2: #4FA891;
+  --color-forest-pine-3: #6FC3AC;
+  --color-forest-broadleaf-1: #5FA85C;
+  --color-forest-broadleaf-2: #7FC47B;
+  --color-forest-fruit-1: #8E6FC7;
+  --color-forest-fruit-2: #A98FDB;
+  --color-forest-fruit-dot: #F4786A;
+  /* 深色主题天空压暗罩 / 夜晚地面压暗罩 / 玻璃罩反光与尘埃 */
+  --color-forest-sky-dim: rgba(16, 24, 40, 0.35);
+  --color-forest-ground-dim: rgba(16, 24, 40, 0.30);
+  --color-forest-sheen: rgba(255, 255, 255, 0.12);
+  --color-forest-sheen-band: rgba(255, 255, 255, 0.06);
+  --color-forest-dust: rgba(255, 255, 255, 0.40);
+
   /* 动效 */
   --dur-fast: 160ms;
   --dur-med: 240ms;

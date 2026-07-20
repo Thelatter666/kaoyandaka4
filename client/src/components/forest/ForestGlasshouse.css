@@ -1,0 +1,420 @@
+/* ============================================================
+   学习森林「玻璃花房」场景（设计文档 6.1 / 6.2 / 6.3）
+   自底向上：天空 → 远山 → 苔藓地面 → 树层 → 玻璃罩反光 → 尘埃光斑
+   动效只用 opacity / transform；reduced-motion 全部静止。
+   ============================================================ */
+
+/* 天空渐变端点注册为可过渡自定义属性（不支持的浏览器直接切换，属渐进增强） */
+@property --forest-sky-top {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #A8CBF5;
+}
+
+@property --forest-sky-bottom {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #D9ECFA;
+}
+
+/* ---- 容器：glass-1 大卡（材质由工具类提供），圆角 --radius-lg ---- */
+.forest {
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+}
+
+/* ---- 场景标题条：左侧标题 + 范围文字，右侧图例 ---- */
+.forest__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.forest__heading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.forest__title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+}
+
+.forest__range {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* 图例：玻璃小胶囊（树形小图标 + 科目名 + 棵数） */
+.forest__legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  list-style: none;
+}
+
+.forest__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-glass-bg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-glass-sm);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.forest__legend-count {
+  font-family: var(--font-mono);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+}
+
+/* ---- 场景区：桌面 16:9（min-height 340px）/ 移动 4:3 ---- */
+.forest__scene {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  min-height: 340px;
+}
+
+@media (max-width: 767px) {
+  .forest__scene {
+    aspect-ratio: 4 / 3;
+    min-height: 0;
+  }
+}
+
+/* ---- 1. 天空层：本地小时 5 档渐变，切换 transition 1s ---- */
+.forest__sky {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--forest-sky-top), var(--forest-sky-bottom));
+  transition:
+    --forest-sky-top 1s linear,
+    --forest-sky-bottom 1s linear;
+}
+
+/* 深色主题：整体叠加压暗罩 */
+.forest__sky::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  transition: background-color 180ms ease-out;
+}
+
+[data-theme='dark'] .forest__sky::after {
+  background: var(--color-forest-sky-dim);
+}
+
+.forest__scene--dawn {
+  --forest-sky-top: var(--color-forest-sky-dawn-top);
+  --forest-sky-bottom: var(--color-forest-sky-dawn-bottom);
+}
+
+.forest__scene--morning {
+  --forest-sky-top: var(--color-forest-sky-morning-top);
+  --forest-sky-bottom: var(--color-forest-sky-morning-bottom);
+}
+
+.forest__scene--afternoon {
+  --forest-sky-top: var(--color-forest-sky-afternoon-top);
+  --forest-sky-bottom: var(--color-forest-sky-afternoon-bottom);
+}
+
+.forest__scene--dusk {
+  --forest-sky-top: var(--color-forest-sky-dusk-top);
+  --forest-sky-bottom: var(--color-forest-sky-dusk-bottom);
+}
+
+.forest__scene--night {
+  --forest-sky-top: var(--color-forest-sky-night-top);
+  --forest-sky-bottom: var(--color-forest-sky-night-bottom);
+}
+
+/* ---- 2. 远山层：贴场景底部 ---- */
+.forest__hills {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 55%;
+  display: block;
+}
+
+/* ---- 3. 地面层：底部 28% 苔藓渐变 + 草叶点缀（夜晚压暗） ---- */
+.forest__ground {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 28%;
+  background: linear-gradient(180deg, var(--color-forest-moss-top), var(--color-forest-moss-bottom));
+}
+
+.forest__scene--night .forest__ground::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--color-forest-ground-dim);
+}
+
+.forest__grass {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  width: 100%;
+  height: 40%;
+  display: block;
+}
+
+/* ---- 4. 树层 ---- */
+.forest__trees {
+  position: absolute;
+  inset: 0;
+}
+
+.forest__zone {
+  position: absolute;
+  bottom: 0;
+  top: 0;
+  width: 33.3334%;
+}
+
+.forest__tree-wrap {
+  position: absolute;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 每棵树：≥44px 触控区，视觉树形居中 */
+.forest__tree {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.forest__tree:hover {
+  transform: translateY(-2px);
+}
+
+.forest__tree:active {
+  transform: scale(0.97);
+}
+
+.forest__tree svg {
+  display: block;
+  filter: drop-shadow(0 2px 3px var(--color-forest-tree-shadow));
+}
+
+/* 幼苗占位：opacity 0.5 */
+.forest__sapling {
+  position: absolute;
+  left: 50%;
+  bottom: 10%;
+  transform: translateX(-50%);
+  opacity: 0.5;
+}
+
+/* 露珠 tooltip：glass-3 + 水滴圆角（hover/focus 触发，Escape 关闭） */
+.forest__tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-tooltip);
+  padding: 6px 12px;
+  border-radius: 16px 16px 16px 4px;
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ---- 5. 玻璃罩反光：顶部弧形高光 + 对角反光带（位于树层之上） ---- */
+.forest__sheen {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  pointer-events: none;
+}
+
+.forest__sheen-arc {
+  position: absolute;
+  top: -18%;
+  left: 8%;
+  right: 8%;
+  height: 46%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, var(--color-forest-sheen) 0%, transparent 70%);
+}
+
+.forest__sheen-band {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 42%,
+    var(--color-forest-sheen-band) 50%,
+    transparent 58%
+  );
+}
+
+/* ---- 6. 尘埃光斑：6 个模糊圆点 12–20s 缓慢漂浮，错相位 ---- */
+.forest__dust {
+  position: absolute;
+  inset: 0;
+  z-index: 26;
+  pointer-events: none;
+}
+
+.forest__mote {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--color-forest-dust);
+  filter: blur(2px);
+  will-change: transform;
+}
+
+@keyframes forest-mote-a {
+  from { transform: translate(0, 0); }
+  to { transform: translate(16px, -24px); }
+}
+
+@keyframes forest-mote-b {
+  from { transform: translate(0, 0); }
+  to { transform: translate(-20px, -18px); }
+}
+
+@keyframes forest-mote-c {
+  from { transform: translate(0, 0); }
+  to { transform: translate(12px, 20px); }
+}
+
+.forest__mote--1 {
+  width: 6px;
+  height: 6px;
+  left: 18%;
+  top: 34%;
+  animation: forest-mote-a 14s ease-in-out infinite alternate;
+}
+
+.forest__mote--2 {
+  width: 4px;
+  height: 4px;
+  left: 38%;
+  top: 22%;
+  animation: forest-mote-b 18s ease-in-out 1.5s infinite alternate;
+}
+
+.forest__mote--3 {
+  width: 8px;
+  height: 8px;
+  left: 55%;
+  top: 42%;
+  animation: forest-mote-c 16s ease-in-out 3s infinite alternate;
+}
+
+.forest__mote--4 {
+  width: 5px;
+  height: 5px;
+  left: 70%;
+  top: 26%;
+  animation: forest-mote-a 20s ease-in-out 0.8s infinite alternate-reverse;
+}
+
+.forest__mote--5 {
+  width: 4px;
+  height: 4px;
+  left: 84%;
+  top: 48%;
+  animation: forest-mote-b 12s ease-in-out 2.2s infinite alternate;
+}
+
+.forest__mote--6 {
+  width: 7px;
+  height: 7px;
+  left: 28%;
+  top: 56%;
+  animation: forest-mote-c 15s ease-in-out 4s infinite alternate-reverse;
+}
+
+/* ---- 空态：居中引导面板 ---- */
+.forest__empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+  z-index: 40;
+}
+
+.forest__empty-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-lg) var(--space-xl);
+  border-radius: var(--radius-card);
+  text-align: center;
+  max-width: 360px;
+}
+
+.forest__empty-title {
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+}
+
+.forest__empty-desc {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+/* ---- 「+N 棵」玻璃角标：场景右下角 ---- */
+.forest__overflow {
+  position: absolute;
+  right: var(--space-md);
+  bottom: var(--space-md);
+  z-index: 40;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+}
+
+/* ---- reduced-motion：尘埃静止、树按压形变取消（全局 0.01ms 之外的显式降级） ---- */
+@media (prefers-reduced-motion: reduce) {
+  .forest__mote {
+    animation: none;
+  }
+
+  .forest__tree:hover,
+  .forest__tree:active {
+    transform: none;
+  }
+}

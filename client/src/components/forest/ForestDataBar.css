@@ -1,0 +1,80 @@
+/* ============================================================
+   场景下方数据条（设计文档 6.3）：玻璃横条四等分，tabular-nums
+   ============================================================ */
+
+.forest-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-md);
+  border-radius: var(--radius-card);
+  padding: var(--space-md) var(--space-lg);
+  margin-top: var(--space-lg);
+}
+
+.forest-bar__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* 单元格分隔线（首格除外） */
+.forest-bar__cell + .forest-bar__cell {
+  border-left: 1px solid var(--color-border);
+  padding-left: var(--space-md);
+}
+
+.forest-bar__label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.forest-bar__value {
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+}
+
+/* 各科距下一棵树剩余时长：色点 + 科目名 + 等宽时长 */
+.forest-bar__remaining {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-md);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.forest-bar__remaining-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.forest-bar__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.forest-bar__dot--math { background: var(--color-subject-math); }
+.forest-bar__dot--english { background: var(--color-subject-english); }
+.forest-bar__dot--408 { background: var(--color-subject-408); }
+
+.forest-bar__subject {
+  color: var(--color-text-secondary);
+}
+
+/* 移动端：2×2 网格 */
+@media (max-width: 767px) {
+  .forest-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .forest-bar__cell:nth-child(3) {
+    border-left: none;
+    padding-left: 0;
+  }
+}

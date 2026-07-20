@@ -1,26 +1,30 @@
+/**
+ * 统计页 · 学习森林「玻璃花房」（设计文档 8.7）
+ * 标题区 + 日/周/月玻璃分段控件 + 范围导航器（玻璃圆钮 + 等宽日期 + 今天胶囊）；
+ * 主体：玻璃花房场景 → 数据条 → 本期/累计成果卡 → 学习记录时间线。
+ * 数据逻辑（接口调用、mode/range 切换、禁用规则）与重构前完全一致。
+ */
 import React, { useState, useEffect, useCallback } from 'react';
+import { BarChart3, BookOpen, ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
 import { PageShell } from '../components/layout/PageShell';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { SubjectBadge } from '../components/ui/SubjectBadge';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
-import { LoadingState } from '../components/ui/LoadingState';
+import { ForestGlasshouse } from '../components/forest/ForestGlasshouse';
+import { ForestDataBar } from '../components/forest/ForestDataBar';
 import { statisticsApi } from '../api/statistics';
 import { today, formatDate } from '../utils/date';
 import { formatDurationHuman } from '../utils/duration';
 import { ForestResponse } from '@shared/types';
 import type { Subject, SubSubject } from '@shared/types';
+import './StatisticsPage.css';
 
 type StatMode = 'day' | 'week' | 'month';
 
 const MODE_LABELS: Record<StatMode, string> = { day: '日', week: '周', month: '月' };
-
-const TREE_ICONS: Record<string, string> = {
-  math: '🌲',       // pine tree
-  english: '🌳',    // broadleaf tree
-  '408': '🍎',      // fruit tree
-};
+const MODE_ORDER: StatMode[] = ['day', 'week', 'month'];
 
 export function StatisticsPage() {
   const [mode, setMode] = useState<StatMode>('week');
@@ -75,131 +79,142 @@ export function StatisticsPage() {
 
   return (
     <PageShell>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-xl)', flexWrap: 'wrap', gap: 'var(--space-md)' }}>
-        <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 700, margin: 0 }}>
-          🌳 学习森林
-        </h2>
-        <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)', maxWidth: 400 }}>
-          每专注学习满 1 小时，就会在对应科目的森林里种下一棵树 🌿
-        </p>
-      </div>
+      {/* 标题区：宋体 30px + 引导文案 */}
+      <header className="stats-header">
+        <h2 className="stats-title">学习森林</h2>
+        <p className="stats-subtitle">每专注学习满 1 小时，就会在对应科目的森林里种下一棵树</p>
+      </header>
 
-      {/* Mode Switcher + Navigation */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-xl)',
-        flexWrap: 'wrap', gap: 'var(--space-md)',
-      }}>
-        <div style={{ display: 'flex', gap: 'var(--space-xs)' }}>
-          {(Object.entries(MODE_LABELS) as [StatMode, string][]).map(([m, label]) => (
-            <button key={m} onClick={() => { setMode(m); setCurrentDate(today()); }}
-              style={{
-                padding: '8px 20px', borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer',
-                fontSize: 'var(--text-sm)', fontWeight: mode === m ? 600 : 400,
-                backgroundColor: mode === m ? 'var(--color-accent-primary)' : 'transparent',
-                color: mode === m ? 'var(--color-text-inverse)' : 'var(--color-text-secondary)',
-                transition: 'all var(--transition-fast)',
-              }}
+      {/* 日/周/月玻璃分段控件 + 范围导航器 */}
+      <div className="stats-controls">
+        <div className="segmented glass-1" role="group" aria-label="统计范围">
+          <span
+            className="segmented__indicator"
+            style={{ transform: `translateX(${MODE_ORDER.indexOf(mode) * 100}%)` }}
+            aria-hidden="true"
+          />
+          {MODE_ORDER.map((m) => (
+            <button
+              key={m}
+              type="button"
+              className={`segmented__item${mode === m ? ' segmented__item--active' : ''}`}
+              aria-pressed={mode === m}
+              onClick={() => { setMode(m); setCurrentDate(today()); }}
             >
-              {label}
+              {MODE_LABELS[m]}
             </button>
           ))}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-          <Button variant="secondary" size="sm" onClick={goBack} disabled={!data?.canGoBack}>←</Button>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', minWidth: 160, textAlign: 'center' }}>
-            {formatRangeLabel()}
-          </span>
-          <Button variant="secondary" size="sm" onClick={goForward} disabled={!data?.canGoForward}>→</Button>
-          <Button variant="ghost" size="sm" onClick={goToday}>今天</Button>
+        <div className="range-nav">
+          <button
+            type="button"
+            className="range-nav__arrow glass-1"
+            onClick={goBack}
+            disabled={!data?.canGoBack}
+            aria-disabled={!data?.canGoBack}
+            aria-label="上一期"
+          >
+            <ChevronLeft size={20} strokeWidth={1.75} aria-hidden="true" />
+          </button>
+          <span className="range-nav__label tabular-nums">{formatRangeLabel()}</span>
+          <button
+            type="button"
+            className="range-nav__arrow glass-1"
+            onClick={goForward}
+            disabled={!data?.canGoForward}
+            aria-disabled={!data?.canGoForward}
+            aria-label="下一期"
+          >
+            <ChevronRight size={20} strokeWidth={1.75} aria-hidden="true" />
+          </button>
+          <Button variant="glass" size="sm" className="range-nav__today" onClick={goToday}>
+            今天
+          </Button>
         </div>
       </div>
 
-      {loading ? <LoadingState message="加载统计中..." /> :
-       error ? <ErrorState message={error} onRetry={fetchData} /> :
-       !data ? <EmptyState icon="🌿" title="暂无数据" /> : (
+      {loading ? (
+        /* 加载：场景骨架 shimmer */
+        <div role="status">
+          <span className="sr-only">加载统计中...</span>
+          <div className="skeleton stats-skeleton__scene" aria-hidden="true" />
+          <div className="skeleton stats-skeleton__bar" aria-hidden="true" />
+        </div>
+      ) : error ? (
+        <ErrorState message={error} onRetry={fetchData} />
+      ) : !data ? (
+        <EmptyState title="暂无数据" />
+      ) : (
         <>
-          {/* Forest Visualization */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-lg)', marginBottom: 'var(--space-xl)' }}>
-            {(['math', 'english', '408'] as Subject[]).map((subject) => {
-              const trees = data.period.treesBySubject[subject] || 0;
-              const remaining = data.period.remainingSecondsBySubject[subject] || 3600;
-              const labels: Record<string, string> = { math: '数学森林', english: '英语森林', '408': '408 森林' };
+          {/* 玻璃花房场景 */}
+          <ForestGlasshouse
+            treesBySubject={data.period.treesBySubject}
+            rangeLabel={formatRangeLabel()}
+            periodTotalTrees={data.period.totalTrees}
+            cumulativeTotalTrees={data.cumulative.totalTrees}
+            onStartFocus={() => { window.location.hash = '#/pomodoro'; }}
+          />
 
-              return (
-                <Card key={subject} padding="var(--space-lg)" style={{ textAlign: 'center' }}>
-                  <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 600, marginBottom: 'var(--space-md)' }}>
-                    {TREE_ICONS[subject]} {labels[subject]}
-                  </h3>
+          {/* 数据条：本期专注时长 / 完成次数 / 树木总数 / 各科距下一棵树剩余时长 */}
+          <ForestDataBar
+            totalFocusSeconds={data.period.totalFocusSeconds}
+            totalCompletedSessions={data.period.totalCompletedSessions}
+            totalTrees={data.period.totalTrees}
+            remainingSecondsBySubject={data.period.remainingSecondsBySubject}
+          />
 
-                  {/* Tree icons */}
-                  <div style={{
-                    display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 'var(--space-sm)',
-                    marginBottom: 'var(--space-md)', minHeight: 80,
-                  }}>
-                    {trees > 0 ? (
-                      Array.from({ length: Math.min(trees, 20) }, (_, i) => (
-                        <span key={i} style={{ fontSize: '2rem', lineHeight: 1 }} aria-label={`${labels[subject]} 第${i + 1}棵树`}>
-                          {TREE_ICONS[subject]}
-                        </span>
-                      ))
-                    ) : (
-                      <span style={{ fontSize: '2rem', opacity: 0.2 }} aria-label="还没有种下树">
-                        🌱
-                      </span>
-                    )}
-                  </div>
-
-                  <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, fontFamily: 'var(--font-mono)', color: `var(--color-subject-${subject})` }}>
-                    {trees} 棵
-                  </p>
-                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: 4 }}>
-                    距离下一棵树还有 {formatDurationHuman(remaining)}
-                  </p>
-                </Card>
-              );
-            })}
-          </div>
-
-          {/* Results Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-lg)', marginBottom: 'var(--space-xl)' }}>
+          {/* 本期成果卡 + 累计成果卡 */}
+          <div className="stats-results">
             <Card>
-              <h3 style={{ fontSize: 'var(--text-lg)', fontFamily: 'var(--font-heading)', marginBottom: 'var(--space-md)' }}>📊 本期成果</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-md)' }}>
+              <h3 className="stats-card-title">
+                <BarChart3 size={18} strokeWidth={1.75} aria-hidden="true" />
+                本期成果
+              </h3>
+              <div className="stats-grid stats-grid--3">
                 <StatItem label="专注时长" value={formatDurationHuman(data.period.totalFocusSeconds)} />
                 <StatItem label="完成次数" value={`${data.period.totalCompletedSessions} 次`} />
                 <StatItem label="种下树木" value={`${data.period.totalTrees} 棵`} />
               </div>
             </Card>
             <Card>
-              <h3 style={{ fontSize: 'var(--text-lg)', fontFamily: 'var(--font-heading)', marginBottom: 'var(--space-md)' }}>🏆 累计成果</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-md)' }}>
+              <h3 className="stats-card-title">
+                <Trophy size={18} strokeWidth={1.75} aria-hidden="true" />
+                累计成果
+              </h3>
+              <div className="stats-grid stats-grid--2">
                 <StatItem label="累计专注" value={formatDurationHuman(data.cumulative.totalFocusSeconds)} />
                 <StatItem label="累计树木" value={`${data.cumulative.totalTrees} 棵`} />
               </div>
             </Card>
           </div>
 
-          {/* Learning Records Timeline */}
+          {/* 学习记录时间线（按日分组 glass-1 行卡） */}
           {data.records.length > 0 && (
-            <div>
-              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-lg)', marginBottom: 'var(--space-md)' }}>📖 学习记录</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
+            <section className="stats-records" aria-label="学习记录">
+              <h3 className="stats-card-title stats-card-title--section">
+                <BookOpen size={18} strokeWidth={1.75} aria-hidden="true" />
+                学习记录
+              </h3>
+              <div className="stats-records__groups">
                 {data.records.map((day) => (
                   <div key={day.date}>
-                    <h4 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 'var(--space-sm)' }}>
-                      {day.date}
-                    </h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {day.items.map((item) => (
-                        <Card key={item.id} padding="10px 16px">
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
+                    <h4 className="stats-records__date tabular-nums">{day.date}</h4>
+                    <div className="stats-records__items">
+                      {day.items.map((item, i) => (
+                        <Card
+                          key={item.id}
+                          padding="10px 16px"
+                          className="stats-record"
+                          style={{ animationDelay: `${Math.min(i, 7) * 40}ms` }}
+                        >
+                          <div className="stats-record__row">
                             <SubjectBadge subject={item.subject as Subject} subSubject={item.subSubject as SubSubject | null} />
-                            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</span>
-                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', flexShrink: 0 }}>
+                            <span className="stats-record__title truncate">{item.title}</span>
+                            <span className="stats-record__duration tabular-nums">
                               {formatDurationHuman(item.durationSeconds)}
                             </span>
-                            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', flexShrink: 0 }}>
+                            <span className="stats-record__time tabular-nums">
                               {new Date(item.time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
@@ -209,17 +224,7 @@ export function StatisticsPage() {
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-
-          {data.records.length === 0 && (
-            <EmptyState
-              icon="🌿"
-              title="还没有种下第一棵树"
-              description="每次专注 1 小时，这里就会长出一棵属于你的学习树"
-              actionLabel="去番茄钟开始第一次专注"
-              onAction={() => window.location.hash = '#/pomodoro'}
-            />
+            </section>
           )}
         </>
       )}
@@ -230,8 +235,8 @@ export function StatisticsPage() {
 function StatItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginBottom: 4 }}>{label}</p>
-      <p style={{ fontSize: 'var(--text-xl)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{value}</p>
+      <p className="stats-stat__label">{label}</p>
+      <p className="stats-stat__value tabular-nums">{value}</p>
     </div>
   );
 }

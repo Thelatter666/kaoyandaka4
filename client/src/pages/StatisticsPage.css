@@ -1,0 +1,267 @@
+/* ============================================================
+   统计页 · 学习森林「玻璃花房」（设计文档 8.7 / 4.4）
+   ============================================================ */
+
+/* ---- 标题区：宋体 30px + 引导文案 ---- */
+.stats-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.stats-title {
+  font-family: var(--font-heading);
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+}
+
+.stats-subtitle {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  max-width: 400px;
+}
+
+/* ---- 控制行：分段控件 + 范围导航器 ---- */
+.stats-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+/* 日/周/月玻璃分段控件（滑块指示器 240ms 滑动） */
+.segmented {
+  position: relative;
+  display: flex;
+  padding: 4px;
+  border-radius: var(--radius-full);
+  min-width: 200px;
+}
+
+.segmented__indicator {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / 3);
+  border-radius: var(--radius-full);
+  background: var(--color-glass-bg-strong);
+  box-shadow: var(--shadow-glass-sm);
+  transition: transform var(--dur-med) var(--ease-out);
+}
+
+.segmented__item {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 36px;
+  padding: 4px 20px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.segmented__item--active {
+  color: var(--color-text-primary);
+  font-weight: var(--font-semibold);
+}
+
+/* 范围导航器：44px 玻璃圆钮 + 等宽日期范围 + 今天胶囊 */
+.range-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.range-nav__arrow {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-primary);
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    opacity var(--dur-fast) var(--ease-out);
+}
+
+.range-nav__arrow:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glass-md);
+}
+
+.range-nav__arrow:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* 禁用态：opacity 0.35（配合 aria-disabled） */
+.range-nav__arrow:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.range-nav__label {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  min-width: 160px;
+  text-align: center;
+}
+
+.range-nav__today {
+  border-radius: var(--radius-full);
+}
+
+/* ---- 加载：场景骨架 shimmer ---- */
+.stats-skeleton__scene {
+  aspect-ratio: 16 / 9;
+  min-height: 340px;
+  border-radius: var(--radius-lg);
+}
+
+.stats-skeleton__bar {
+  height: 72px;
+  margin-top: var(--space-lg);
+  border-radius: var(--radius-card);
+}
+
+@media (max-width: 767px) {
+  .stats-skeleton__scene {
+    aspect-ratio: 4 / 3;
+    min-height: 0;
+  }
+}
+
+/* ---- 成果卡：lucide 图标 + 大数字网格 ---- */
+.stats-results {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-lg);
+  margin-top: var(--space-lg);
+}
+
+@media (max-width: 767px) {
+  .stats-results {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stats-card-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-md);
+}
+
+.stats-card-title--section {
+  margin-top: var(--space-xl);
+}
+
+.stats-grid {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.stats-grid--3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.stats-grid--2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.stats-stat__label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-bottom: 4px;
+}
+
+.stats-stat__value {
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+}
+
+/* ---- 学习记录时间线 ---- */
+.stats-records__groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.stats-records__date {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.stats-records__items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* 列表项入场：opacity + translateY(6px)，延迟由 style 驱动（最多 8 项） */
+@keyframes stats-record-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stats-record {
+  animation: stats-record-in var(--dur-med) var(--ease-out) both;
+}
+
+.stats-record__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.stats-record__title {
+  flex: 1;
+  min-width: 0;
+}
+
+.stats-record__duration {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.stats-record__time {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+/* ---- reduced-motion：入场动画与按压形变取消 ---- */
+@media (prefers-reduced-motion: reduce) {
+  .stats-record {
+    animation: none;
+  }
+
+  .range-nav__arrow:hover:not(:disabled),
+  .range-nav__arrow:active:not(:disabled) {
+    transform: none;
+  }
+}
