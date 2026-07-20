@@ -155,7 +155,8 @@
   align-items: center;
   gap: 6px;
   font-weight: var(--font-semibold);
-  color: var(--color-accent-warning);
+  /* 14px 警示文字用 strong 变体（AA ≥4.5:1） */
+  color: var(--color-accent-warning-strong);
   margin-bottom: var(--space-sm);
 }
 
@@ -182,7 +183,8 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
-  background: var(--color-accent-warning);
+  /* 实底徽用 strong 变体：白字对比 4.8:1（深色主题为反色文字 8.7:1） */
+  background: var(--color-accent-warning-strong);
   color: var(--color-text-inverse);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
@@ -231,6 +233,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--color-accent-warning);
+  /* 14px 警示文字用 strong 变体（AA ≥4.5:1） */
+  color: var(--color-accent-warning-strong);
   font-weight: var(--font-medium);
 }

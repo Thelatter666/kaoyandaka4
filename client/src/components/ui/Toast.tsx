@@ -69,7 +69,8 @@ export function ToastContainer() {
               borderRadius: 'var(--radius-md)',
               fontSize: 'var(--text-sm)',
               animation: 'toast-slide-in 200ms var(--ease-out)',
-              maxWidth: 360,
+              /* 375px 窄屏不横向溢出：宽度上限随视口收敛 */
+              maxWidth: 'min(360px, calc(100vw - 48px))',
             }}
           >
             <Icon size={18} strokeWidth={1.75} color={color} aria-hidden="true" style={{ flexShrink: 0 }} />

@@ -293,7 +293,8 @@ export function PomodoroPage() {
                   fontFamily: 'var(--font-heading)',
                   fontSize: 'var(--text-base)',
                   marginBottom: 'var(--space-md)',
-                  color: `var(--color-subject-${subj})`,
+                  /* 16px 科目标题用文字色令牌（AA ≥4.5:1），图标同色系双通道 */
+                  color: `var(--color-subject-${subj}-text)`,
                 }}>
                   <SubjectIcon size={16} strokeWidth={1.75} aria-hidden="true" />
                   {SUBJECT_LABELS[subj]}

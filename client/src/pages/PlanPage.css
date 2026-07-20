@@ -128,8 +128,9 @@
   height: 16px;
 }
 
+/* 激活态：14px 文字用 strong 主色（AA ≥4.5:1），图标同色系 */
 .plan-add__important--active {
-  color: var(--color-accent-primary);
+  color: var(--color-accent-primary-strong);
 }
 
 /* ---- 任务分组与列表 ---- */

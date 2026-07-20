@@ -26,7 +26,7 @@ import { SubjectBadge } from '../components/ui/SubjectBadge';
 import { TaskItem, TaskData } from '../components/tasks/TaskItem';
 import { showToast } from '../components/ui/Toast';
 import { tasksApi, Task } from '../api/tasks';
-import { reviewsApi, Review } from '../api/reviews';
+import { reviewsApi } from '../api/reviews';
 import { today, tomorrow, formatDateDisplay } from '../utils/date';
 import type { Subject, SubSubject } from '@shared/types';
 import './PlanPage.css';
@@ -58,7 +58,6 @@ export function PlanPage() {
   const [tasksError, setTasksError] = useState<string | null>(null);
 
   // Review
-  const [review, setReview] = useState<Review | null>(null);
   const [reviewContent, setReviewContent] = useState('');
   const [reviewSaving, setReviewSaving] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
@@ -89,7 +88,6 @@ export function PlanPage() {
   const fetchReview = useCallback(async () => {
     try {
       const r = await reviewsApi.getByDate(dateStr);
-      setReview(r);
       setReviewContent(r?.content || '');
     } catch {
       // ignore
@@ -143,7 +141,7 @@ export function PlanPage() {
     try {
       await tasksApi.toggle(id);
       fetchTasks();
-    } catch (err) {
+    } catch {
       showToast('error', '操作失败');
     }
   };
@@ -152,7 +150,7 @@ export function PlanPage() {
     try {
       await tasksApi.pin(id);
       fetchTasks();
-    } catch (err) {
+    } catch {
       showToast('error', '操作失败');
     }
   };
@@ -161,7 +159,7 @@ export function PlanPage() {
     try {
       await tasksApi.update(id, { content });
       fetchTasks();
-    } catch (err) {
+    } catch {
       showToast('error', '更新失败');
     }
   };
@@ -171,7 +169,7 @@ export function PlanPage() {
       await tasksApi.delete(id);
       showToast('success', '任务已删除');
       fetchTasks();
-    } catch (err) {
+    } catch {
       showToast('error', '删除失败');
     }
   };
@@ -179,11 +177,10 @@ export function PlanPage() {
   const handleSaveReview = async () => {
     setReviewSaving('saving');
     try {
-      const result = await reviewsApi.upsert({ date: dateStr, content: reviewContent });
-      setReview(result);
+      await reviewsApi.upsert({ date: dateStr, content: reviewContent });
       setReviewSaving('saved');
       setTimeout(() => setReviewSaving('idle'), 2000);
-    } catch (err) {
+    } catch {
       setReviewSaving('error');
     }
   };
@@ -199,7 +196,7 @@ export function PlanPage() {
         isImportant: task.isImportant,
       });
       setUnfinishedTasks((prev) => prev.filter((t) => t.id !== task.id));
-    } catch (err) {
+    } catch {
       showToast('error', '顺延失败');
     }
   };
@@ -208,7 +205,7 @@ export function PlanPage() {
     try {
       await tasksApi.toggle(task.id);
       setUnfinishedTasks((prev) => prev.filter((t) => t.id !== task.id));
-    } catch (err) {
+    } catch {
       showToast('error', '操作失败');
     }
   };

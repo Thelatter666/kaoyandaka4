@@ -69,9 +69,10 @@
   transform: scale(0.97);
 }
 
-.presets-create--math { --_subject-color: var(--color-subject-math); }
-.presets-create--english { --_subject-color: var(--color-subject-english); }
-.presets-create--408 { --_subject-color: var(--color-subject-408); }
+/* 14px 科目色文字用文字色令牌（AA ≥4.5:1） */
+.presets-create--math { --_subject-color: var(--color-subject-math-text); }
+.presets-create--english { --_subject-color: var(--color-subject-english-text); }
+.presets-create--408 { --_subject-color: var(--color-subject-408-text); }
 
 /* ---- 三科分组 ---- */
 

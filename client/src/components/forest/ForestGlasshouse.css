@@ -250,6 +250,17 @@
   pointer-events: none;
 }
 
+/* 场景左/右边缘的树：tooltip 从树中心向内展开（场景 overflow:hidden 防裁切），
+   水滴尖角同步朝向树的一侧 */
+.forest__tooltip--align-left {
+  transform: translateX(-10%);
+}
+
+.forest__tooltip--align-right {
+  transform: translateX(-90%);
+  border-radius: 16px 16px 4px 16px;
+}
+
 /* ---- 5. 玻璃罩反光：顶部弧形高光 + 对角反光带（位于树层之上） ---- */
 .forest__sheen {
   position: absolute;

@@ -6,8 +6,9 @@
    ============================================================ */
 
 .ring-countdown {
-  /* 模式色：专注 accent-primary（默认） */
+  /* 模式色：专注 accent-primary（默认）；--_rc-c1-text 为 14px 模式文字的 AA 达标变体 */
   --_rc-c1: var(--color-accent-primary);
+  --_rc-c1-text: var(--color-accent-primary-strong);
   --_rc-c2: var(--color-timer-focus-light);
 
   /* 桌面 400px / 移动 min(88vw, 400px)，正圆 */
@@ -19,11 +20,13 @@
 
 .ring-countdown--short_break {
   --_rc-c1: var(--color-accent-success);
+  --_rc-c1-text: var(--color-accent-success-strong);
   --_rc-c2: var(--color-timer-success-light);
 }
 
 .ring-countdown--long_break {
   --_rc-c1: var(--color-accent-deep-green);
+  --_rc-c1-text: var(--color-accent-deep-green);
   --_rc-c2: var(--color-timer-deep-green-light);
 }
 
@@ -135,11 +138,11 @@
   -webkit-text-fill-color: var(--_rc-c1);
 }
 
-/* 模式文字：14px 500，跟随模式色 */
+/* 模式文字：14px 500，跟随模式色的文字变体（图形色对白不足 4.5:1） */
 .ring-countdown__mode {
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
-  color: var(--_rc-c1);
+  color: var(--_rc-c1-text);
 }
 
 /* 预设名 + 科目：12px muted，一行省略 */

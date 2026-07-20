@@ -20,7 +20,8 @@
   --color-accent-success: #2FA36B;       /* 松绿：图形、进度 */
   --color-accent-success-strong: #1E7A4E;/* 成功态文字 / 实底（白字对比 5.4:1） */
   --color-accent-deep-green: #0E6655;    /* 长休息 */
-  --color-accent-warning: #D9730D;       /* 警示（AA 达标） */
+  --color-accent-warning: #D9730D;       /* 警示图形色（大字号/图标 3:1） */
+  --color-accent-warning-strong: #B25A07;/* 警示文字 / 实底徽（白字对比 4.8:1） */
   --color-accent-danger: #C43228;        /* 破坏性操作 */
 
   /* 玻璃材质 */
@@ -42,6 +43,10 @@
   --color-subject-math: #3E7CB1;
   --color-subject-english: #D9730D;
   --color-subject-408: #7C4DBE;
+  /* 科目文字色（徽章/科目色小字专用，对白 ≥4.5:1；图形仍用上方科目色） */
+  --color-subject-math-text: #3A74A6;    /* 5.0:1 */
+  --color-subject-english-text: #B25A07; /* 4.8:1 */
+  --color-subject-408-text: #7C4DBE;     /* 5.7:1（同图形色） */
   --color-subject-math-bg: rgba(62, 124, 177, 0.10);
   --color-subject-english-bg: rgba(217, 115, 13, 0.10);
   --color-subject-408-bg: rgba(124, 77, 190, 0.10);
@@ -80,8 +85,8 @@
 
   /* 番茄钟「光晕核心」（设计文档 5.1）：数字渐变提亮端（模式色混入 30% 白）与低时警示金 */
   /* 深色主题下数字用纯色，不引用下列提亮色；--color-timer-low 双主题同值 */
-  --color-timer-focus-light: #E9887D;
-  --color-timer-success-light: #6EBE97;
+  --color-timer-focus-light: #DB7466;    /* 数字渐变提亮端（大字号 3.2:1 达标） */
+  --color-timer-success-light: #4FA37B;  /* 数字渐变提亮端（大字号 3.1:1 达标） */
   --color-timer-deep-green-light: #569388;
   --color-timer-low: #F5A45C;
 
@@ -210,6 +215,7 @@
   --color-accent-success-strong: #3ECF8E;
   --color-accent-deep-green: #2DD4BF;
   --color-accent-warning: #F5A45C;
+  --color-accent-warning-strong: #F5A45C;
   --color-accent-danger: #F4786A;
 
   /* 玻璃材质 */
@@ -227,6 +233,10 @@
   --color-subject-math: #6FB1E8;
   --color-subject-english: #F5A45C;
   --color-subject-408: #B490E8;
+  /* 科目文字色（深色下文字与图形同用提亮色） */
+  --color-subject-math-text: #6FB1E8;
+  --color-subject-english-text: #F5A45C;
+  --color-subject-408-text: #B490E8;
   --color-subject-math-bg: rgba(111, 177, 232, 0.14);
   --color-subject-english-bg: rgba(245, 164, 92, 0.14);
   --color-subject-408-bg: rgba(180, 144, 232, 0.14);

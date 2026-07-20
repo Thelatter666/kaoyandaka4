@@ -42,7 +42,8 @@ export function SubjectBadge({ subject, subSubject, size = 'sm' }: SubjectBadgeP
         fontSize: size === 'sm' ? 'var(--text-xs)' : 'var(--text-sm)',
         fontWeight: 'var(--font-medium)',
         backgroundColor: `var(--color-subject-${subject}-bg)`,
-        color: `var(--color-subject-${subject})`,
+        /* 12px 小字用科目文字色令牌（AA ≥4.5:1），图标同色系双通道 */
+        color: `var(--color-subject-${subject}-text)`,
         whiteSpace: 'nowrap',
         border: `1px solid var(--color-subject-${subject}-bg)`,
       }}

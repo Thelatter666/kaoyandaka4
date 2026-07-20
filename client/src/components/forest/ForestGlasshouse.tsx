@@ -161,6 +161,9 @@ export function ForestGlasshouse({
                     const bottomPct = 8 + (1 - t) * 10;
                     const tipId = `forest-tip-${subject}-${treeNumber}`;
                     const isActive = activeTip === tipId;
+                    /* 场景边缘的树：tooltip 改为中心对齐 → 向内展开，避免被场景 overflow:hidden 裁切 */
+                    const sceneLeftPct = zoneIndex * 33.3333 + (leftPct * 33.3333) / 100;
+                    const tipAlign = sceneLeftPct < 20 ? 'left' : sceneLeftPct > 80 ? 'right' : 'center';
                     return (
                       <div
                         key={treeNumber}
@@ -191,7 +194,11 @@ export function ForestGlasshouse({
                           <TreeComponent style={{ height: 92 * scale, width: 'auto' }} />
                         </button>
                         {isActive && (
-                          <span role="tooltip" id={tipId} className="forest__tooltip glass-3">
+                          <span
+                            role="tooltip"
+                            id={tipId}
+                            className={`forest__tooltip glass-3${tipAlign !== 'center' ? ` forest__tooltip--align-${tipAlign}` : ''}`}
+                          >
                             第 {treeNumber} 棵 · {SUBJECT_NAMES[subject]}
                           </span>
                         )}
