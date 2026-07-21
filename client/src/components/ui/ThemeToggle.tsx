@@ -5,7 +5,7 @@ import { useTheme } from '../../hooks/useTheme';
 import './ThemeToggle.css';
 
 /**
- * View Transitions 水波扩散（设计文档 4.4：圆形扩散 320ms）。
+ * View Transitions 水波扩散（圆形扩散 180ms，与降级颜色淡变同速）。
  * 特性检测：不支持 startViewTransition 或 prefers-reduced-motion 时
  * 直接切换主题，由 global.css 的 180ms 颜色淡变（reduced-motion 下瞬时）降级接管。
  */
@@ -52,7 +52,7 @@ export function ThemeToggle() {
             ],
           },
           {
-            duration: 320,
+            duration: 180,
             easing: 'ease-out',
             pseudoElement: '::view-transition-new(root)',
           },
