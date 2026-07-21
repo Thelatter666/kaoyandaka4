@@ -107,14 +107,22 @@ input, textarea, select {
   color: var(--color-accent-primary-strong);
 }
 
-/* View Transitions 主题切换：圆形扩散 320ms（圆形 clip-path 由 useTheme 驱动） */
+/* View Transitions 主题切换：圆形扩散 320ms（圆形 clip-path 由 ThemeToggle 驱动）
+   新旧快照一律禁用 UA 默认交叉淡入淡出与 plus-lighter 混合——
+   否则白变黑时旧亮色快照静止、新暗色快照以加法混合淡入，整屏泛白过曝后瞬切；
+   旧快照静置底层，新快照置顶做圆形扩散，双向一致 */
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation-duration: 320ms;
+  animation: none;
+  mix-blend-mode: normal;
 }
 
-[data-theme="dark"]::view-transition-old(root) {
-  animation: none;
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2147483646;
 }
 
 @media (prefers-reduced-motion: reduce) {
