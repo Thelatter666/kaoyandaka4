@@ -1,28 +1,9 @@
 /* ============================================================
-   统计页 · 学习森林「玻璃花房」（设计文档 8.7 / 4.4）
+   统计页 · 学习森林「玻璃花房」（设计文档 8.7 / v2 12.4 Bento 构图）
+   Bento 主次网格：花房 span 12 全景主角（内附数据条）/ 本期数据卡 span 4×3 /
+   累计成果 span 4 + 学习记录时间线 span 8。
+   跨度与断点由 .bento-grid 工具类接管，此处仅页面级微调。
    ============================================================ */
-
-/* ---- 标题区：宋体 30px + 引导文案 ---- */
-.stats-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-sm) var(--space-md);
-  margin-bottom: var(--space-xl);
-}
-
-.stats-title {
-  font-family: var(--font-heading);
-  font-size: var(--text-3xl);
-  font-weight: var(--font-bold);
-}
-
-.stats-subtitle {
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-  max-width: 400px;
-}
 
 /* ---- 控制行：分段控件 + 范围导航器 ---- */
 .stats-controls {
@@ -104,20 +85,49 @@
   }
 }
 
-/* ---- 成果卡：lucide 图标 + 大数字网格 ---- */
-.stats-results {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-lg);
-  margin-top: var(--space-lg);
+/* ---- 主角单元：花房全景 + 数据条 ---- */
+/* 花房材质升级为 glass-2 / 阴影升一档，明确全景主角层级（v2 12.2） */
+.stats-hero .forest {
+  background: var(--color-glass-bg-strong);
+  -webkit-backdrop-filter: blur(var(--blur-glass-strong)) saturate(1.4);
+  backdrop-filter: blur(var(--blur-glass-strong)) saturate(1.4);
+  box-shadow: var(--shadow-glass-md);
 }
 
-@media (max-width: 767px) {
-  .stats-results {
-    grid-template-columns: 1fr;
-  }
+/* ---- 三张本期数据卡（span 4×3）：lucide 图标标题 + 大号等宽数值 ---- */
+.stats-data__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-sm);
 }
 
+.stats-data__title .lucide {
+  color: var(--color-accent-primary);
+  flex-shrink: 0;
+}
+
+.stats-data__value {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+}
+
+/* ---- 累计成果侧卡：不随时间线高度拉伸 ---- */
+.stats-cumulative {
+  align-self: start;
+}
+
+.stats-cumulative .stats-grid {
+  grid-template-columns: 1fr;
+}
+
+/* 区块卡标题（累计成果 / 时间线） */
 .stats-card-title {
   display: flex;
   align-items: center;
@@ -128,21 +138,14 @@
   margin-bottom: var(--space-md);
 }
 
-.stats-card-title--section {
-  margin-top: var(--space-xl);
+.stats-card-title .lucide {
+  color: var(--color-accent-primary);
+  flex-shrink: 0;
 }
 
 .stats-grid {
   display: grid;
   gap: var(--space-md);
-}
-
-.stats-grid--3 {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.stats-grid--2 {
-  grid-template-columns: repeat(2, 1fr);
 }
 
 .stats-stat__label {
@@ -158,7 +161,11 @@
   color: var(--color-text-primary);
 }
 
-/* ---- 学习记录时间线 ---- */
+/* ---- 学习记录时间线（span 8；大量项不做 stagger，随区块整体入场） ---- */
+.stats-records {
+  min-width: 0;
+}
+
 .stats-records__groups {
   display: flex;
   flex-direction: column;
@@ -176,22 +183,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-}
-
-/* 列表项入场：opacity + translateY(6px)，延迟由 style 驱动（最多 8 项） */
-@keyframes stats-record-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.stats-record {
-  animation: stats-record-in var(--dur-med) var(--ease-out) both;
 }
 
 .stats-record__row {
@@ -218,12 +209,8 @@
   flex-shrink: 0;
 }
 
-/* ---- reduced-motion：入场动画与按压形变取消 ---- */
+/* ---- reduced-motion：按压形变取消 ---- */
 @media (prefers-reduced-motion: reduce) {
-  .stats-record {
-    animation: none;
-  }
-
   .range-nav__arrow:hover:not(:disabled),
   .range-nav__arrow:active:not(:disabled) {
     transform: none;

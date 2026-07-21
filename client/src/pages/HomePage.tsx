@@ -1,8 +1,10 @@
 /**
- * 首页（设计文档 8.1）
+ * 首页（设计文档 8.1 / v2 12.4 Bento 构图）
  *
- * 12 栏网格：首行考试倒计时卡（8 栏）+ 今日专注卡（4 栏）；
- * 次行今日任务摘要（7 栏，最多 5 条 + 查看全部）+ 学习预设概览（5 栏，最多 3 个）。
+ * Bento 主次网格：今日专注卡 span 8（唯一主角卡，Card hero 变体 + 光泽扫过）；
+ * 考试倒计时卡 span 4 + row-2 高卡；今日任务摘要 span 8（最多 4 条 + 查看全部）；
+ * 学习预设概览 span 12 横条卡（最多 3 个，预设项横向排列）。
+ * 各卡按阅读顺序 .reveal 依次入场（--i 0→3，≤8 个）。
  * 倒计时规则、任务/预设/会话数据口径保持现状；数字全部 tabular-nums，标题宋体。
  * 1366×768 桌面视口含导航无纵向滚动；小屏单列自然滚动。
  */
@@ -35,8 +37,10 @@ interface HomePageProps {
   navigate: (hash: string) => void;
 }
 
-/** 任务摘要最大行数 / 预设概览最大个数（设计文档 8.1） */
-const MAX_TASK_ROWS = 5;
+/** 任务摘要最大行数 / 预设概览最大个数。
+ *  v2 Bento 密度调整（12.4 为最高优先级）：为保 1366×768 含导航无纵向滚动，
+ *  任务摘要由 8.1 的 5 条精简为 4 条展示（仅展示层精简，数据口径不变，完整列表经「查看全部」可达） */
+const MAX_TASK_ROWS = 4;
 const MAX_PRESET_ROWS = 3;
 
 export function HomePage({ navigate }: HomePageProps) {
@@ -103,34 +107,13 @@ export function HomePage({ navigate }: HomePageProps) {
         <p className="home-date">{formatDateDisplay(dateStr)}</p>
       </header>
 
-      <div className="home-grid">
-        {/* 考试倒计时卡（8 栏）：glass-1 + 蜜金光斑 + 超大等宽数字 */}
-        <Card className="home-grid__countdown home-countdown">
-          <span className="home-countdown__blob" aria-hidden="true" />
-          <div className="home-countdown__body">
-            <p className="home-countdown__label">
-              <Hourglass size={16} strokeWidth={1.75} aria-hidden="true" />
-              考研倒计时
-            </p>
-            {daysRemaining > 0 ? (
-              <>
-                <p className="home-countdown__days">
-                  <span className="home-countdown__num tabular-nums">{daysRemaining}</span>
-                  <span className="home-countdown__unit">天</span>
-                </p>
-                <p className="home-countdown__sub">距 2026 年 12 月 20 日（不含今日）</p>
-              </>
-            ) : (
-              <>
-                <p className="home-countdown__ended">考试已结束</p>
-                <p className="home-countdown__sub">2026 年 12 月 20 日</p>
-              </>
-            )}
-          </div>
-        </Card>
-
-        {/* 今日专注卡（4 栏）：主 CTA / 进行中会话迷你进度环 */}
-        <Card className="home-grid__focus home-focus">
+      <div className="bento-grid home-grid">
+        {/* 今日专注卡（span 8，唯一主角卡）：hero 变体；主 CTA / 进行中会话迷你进度环 */}
+        <Card
+          hero
+          className="bento-span-8 home-focus sheen-hover reveal"
+          style={{ '--i': 0 } as React.CSSProperties}
+        >
           <h2 className="home-card-title">
             <Focus size={18} strokeWidth={1.75} aria-hidden="true" />
             今日专注
@@ -166,8 +149,39 @@ export function HomePage({ navigate }: HomePageProps) {
           )}
         </Card>
 
-        {/* 今日任务摘要（7 栏）：玻璃列表行，最多 5 条 */}
-        <Card className="home-grid__tasks">
+        {/* 考试倒计时卡（span 4 + row-2 高卡，纵向跨两行）：蜜金光斑 + 超大等宽数字 */}
+        <Card
+          className="bento-span-4 bento-row-2 home-countdown reveal"
+          style={{ '--i': 1 } as React.CSSProperties}
+        >
+          <span className="home-countdown__blob" aria-hidden="true" />
+          <div className="home-countdown__body">
+            <p className="home-countdown__label">
+              <Hourglass size={16} strokeWidth={1.75} aria-hidden="true" />
+              考研倒计时
+            </p>
+            {daysRemaining > 0 ? (
+              <>
+                <p className="home-countdown__days">
+                  <span className="home-countdown__num tabular-nums">{daysRemaining}</span>
+                  <span className="home-countdown__unit">天</span>
+                </p>
+                <p className="home-countdown__sub">距 2026 年 12 月 20 日（不含今日）</p>
+              </>
+            ) : (
+              <>
+                <p className="home-countdown__ended">考试已结束</p>
+                <p className="home-countdown__sub">2026 年 12 月 20 日</p>
+              </>
+            )}
+          </div>
+        </Card>
+
+        {/* 今日任务摘要（span 8）：玻璃列表行，最多 5 条 */}
+        <Card
+          className="bento-span-8 home-tasks reveal"
+          style={{ '--i': 2 } as React.CSSProperties}
+        >
           <div className="home-card-head">
             <h2 className="home-card-title">
               <ClipboardList size={18} strokeWidth={1.75} aria-hidden="true" />
@@ -233,8 +247,11 @@ export function HomePage({ navigate }: HomePageProps) {
           )}
         </Card>
 
-        {/* 学习预设概览（5 栏）：最多 3 个 */}
-        <Card className="home-grid__presets">
+        {/* 学习预设概览（span 12 横条卡）：最多 3 个，预设项横向排列 */}
+        <Card
+          className="bento-span-12 home-presets reveal"
+          style={{ '--i': 3 } as React.CSSProperties}
+        >
           <div className="home-card-head">
             <h2 className="home-card-title">
               <SlidersHorizontal size={18} strokeWidth={1.75} aria-hidden="true" />
@@ -246,7 +263,7 @@ export function HomePage({ navigate }: HomePageProps) {
             </button>
           </div>
           {presets === null && !presetsError ? (
-            <div className="home-list" role="status">
+            <div className="home-list home-preset-strip" role="status">
               <span className="sr-only">加载预设中...</span>
               <div className="skeleton home-list-skeleton" aria-hidden="true" />
               <div className="skeleton home-list-skeleton" aria-hidden="true" />
@@ -267,7 +284,7 @@ export function HomePage({ navigate }: HomePageProps) {
               description="创建预设后即可一键开始专注"
             />
           ) : (
-            <ul className="home-list">
+            <ul className="home-list home-preset-strip">
               {presetRows.map((preset) => (
                 <li key={preset.id} className="home-preset glass-1">
                   <span className="home-preset__name truncate">{preset.name}</span>

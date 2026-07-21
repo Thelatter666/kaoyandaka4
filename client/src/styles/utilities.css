@@ -240,6 +240,9 @@
 
   .bento-span-7,
   .bento-span-8 { grid-column: span 12; }
+
+  /* 行跨仅在 12 栏桌面构图中有意义，窄屏堆叠时降级避免产生空行轨 */
+  .bento-row-2 { grid-row: auto; }
 }
 
 @media (max-width: 719px) {

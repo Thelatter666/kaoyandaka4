@@ -1,17 +1,19 @@
 /* ============================================================
-   首页（设计文档 8.1）
-   12 栏网格：倒计时卡(8)+今日专注卡(4) / 任务摘要(7)+预设概览(5)
-   1366×768 桌面视口含导航无纵向滚动；小屏自然单列滚动。
+   首页（设计文档 8.1 / v2 12.4 Bento 构图）
+   Bento 主次网格：今日专注卡 span 8（唯一主角卡，hero 变体）/
+   倒计时卡 span 4 + row-2 高卡 / 今日任务 span 8 / 预设概览 span 12 横条卡。
+   跨度与断点由 .bento-grid 工具类接管，此处仅页面级微调；
+   为保 1366×768 含导航无纵向滚动，卡内边距与列表行做紧凑化处理。
    ============================================================ */
 
-/* ---- 标题区：宋体标题 + 日期 ---- */
+/* ---- 标题区：宋体标题 + 日期（单行紧凑页头，排版同 v2 页头规范）---- */
 .home-header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--space-xs) var(--space-md);
-  margin-bottom: var(--space-lg);
+  margin-bottom: var(--space-md);
 }
 
 .home-title {
@@ -27,28 +29,40 @@
   font-size: var(--text-sm);
 }
 
-/* ---- 12 栏网格 ---- */
+/* ---- Bento 网格页面级微调：收窄纵向节奏 ---- */
 .home-grid {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: var(--space-lg);
+  gap: var(--space-md);
 }
 
-.home-grid__countdown { grid-column: span 8; }
-.home-grid__focus { grid-column: span 4; }
-.home-grid__tasks { grid-column: span 7; }
-.home-grid__presets { grid-column: span 5; }
-
-@media (max-width: 900px) {
-  .home-grid__countdown,
-  .home-grid__focus,
-  .home-grid__tasks,
-  .home-grid__presets {
-    grid-column: span 12;
-  }
+/* ---- 主角卡·今日专注：hero 变体（glass-2 + 极光光斑由 Card 提供）---- */
+.home-focus {
+  height: 100%;
+  /* 垂直内边距 32→20 紧凑化（水平保持 hero 32px 规格） */
+  padding: 20px var(--space-xl);
 }
 
-/* 卡片标题（宋体 + lucide 图标） */
+/* 进行中会话迷你环：120→104 紧凑化（mini 变体本就供首页使用） */
+.home-focus .ring-countdown--mini {
+  width: 104px;
+}
+
+/* 主角卡 hover：上浮 3px + 阴影升一档（配合 .sheen-hover 光泽扫过） */
+.home-focus:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-glass-lg);
+}
+
+.home-focus .home-card-title {
+  margin-bottom: var(--space-xs);
+}
+
+/* 功能卡：内边距紧凑化（纵向 24→12） */
+.home-tasks,
+.home-presets {
+  padding: 12px var(--space-lg);
+}
+
+/* ---- 卡片标题（宋体 + lucide 图标）---- */
 .home-card-title {
   display: flex;
   align-items: center;
@@ -71,7 +85,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-sm);
-  margin-bottom: var(--space-sm);
+  margin-bottom: var(--space-xs);
 }
 
 .home-card-head .home-card-title {
@@ -99,13 +113,12 @@
   transform: translateY(-1px);
 }
 
-/* ---- 倒计时卡：蜜金光斑 + 超大等宽数字 ---- */
+/* ---- 倒计时高卡（span 4 + row-2）：纵向三段分布（标签 / 超大数字 / 副文案）---- */
 .home-countdown {
   position: relative;
   overflow: hidden;
   height: 100%;
   display: flex;
-  align-items: center;
 }
 
 /* 卡片左上小团蜜金光斑（overflow hidden 内装饰） */
@@ -125,6 +138,11 @@
 .home-countdown__body {
   position: relative;
   z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-md);
 }
 
 .home-countdown__label {
@@ -134,7 +152,6 @@
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
-  margin-bottom: var(--space-xs);
 }
 
 .home-countdown__days {
@@ -144,9 +161,10 @@
   line-height: 1.1;
 }
 
+/* 高卡主视觉：超大等宽数字 */
 .home-countdown__num {
   font-family: var(--font-mono);
-  font-size: 48px;
+  font-size: var(--text-timer);
   font-weight: var(--font-bold);
   color: var(--color-accent-primary);
 }
@@ -166,16 +184,11 @@
 }
 
 .home-countdown__sub {
-  margin-top: var(--space-xs);
   color: var(--color-text-muted);
   font-size: var(--text-xs);
 }
 
-/* ---- 今日专注卡 ---- */
-.home-focus {
-  height: 100%;
-}
-
+/* ---- 今日专注卡内容 ---- */
 .home-focus__idle {
   display: flex;
   flex-direction: column;
@@ -209,19 +222,20 @@
   color: var(--color-text-primary);
 }
 
-/* ---- 玻璃列表行（任务摘要 / 预设概览） ---- */
+/* ---- 玻璃列表行（任务摘要 / 预设概览）---- */
 .home-list {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
+/* 任务行：纵向 padding 7→4 紧凑化 */
 .home-task {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  padding: 7px 12px;
+  padding: 4px 12px;
   border-radius: var(--radius-md);
 }
 
@@ -295,6 +309,23 @@
   color: var(--color-text-muted);
 }
 
+/* ---- 预设横条卡（span 12）：预设项横向等分排列，窄屏回退纵向 ---- */
+.home-preset-strip {
+  flex-direction: row;
+}
+
+.home-preset-strip .home-preset,
+.home-preset-strip .home-list-skeleton {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+@media (max-width: 719px) {
+  .home-preset-strip {
+    flex-direction: column;
+  }
+}
+
 /* 列表局部加载骨架行 */
 .home-list-skeleton {
   height: 36px;
@@ -319,7 +350,8 @@
 
 /* ---- reduced-motion：按压/上浮形变取消 ---- */
 @media (prefers-reduced-motion: reduce) {
-  .home-card-link:hover {
+  .home-card-link:hover,
+  .home-focus:hover {
     transform: none;
   }
 }

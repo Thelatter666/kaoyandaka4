@@ -1,11 +1,13 @@
 /**
- * 统计页 · 学习森林「玻璃花房」（设计文档 8.7）
- * 标题区 + 日/周/月玻璃分段控件 + 范围导航器（玻璃圆钮 + 等宽日期 + 今天胶囊）；
- * 主体：玻璃花房场景 → 数据条 → 本期/累计成果卡 → 学习记录时间线。
- * 数据逻辑（接口调用、mode/range 切换、禁用规则）与重构前完全一致。
+ * 统计页 · 学习森林「玻璃花房」（设计文档 8.7 / v2 12.4 Bento 构图）
+ * PageShell 页头 + 日/周/月玻璃分段控件 + 范围导航器（玻璃圆钮 + 等宽日期 + 今天胶囊）；
+ * Bento 主次网格：森林玻璃花房 span 12 全景主角（内附数据条）→
+ * 三张本期数据卡 span 4×3 → 累计成果卡 span 4 + 学习记录时间线 span 8。
+ * 主体区块按阅读顺序 .reveal 依次入场（--i 0→6，≤8 个）；时间线内大量项不做 stagger。
+ * 数据逻辑（接口调用、mode/range 切换、禁用规则、统计口径）与重构前完全一致。
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import { BarChart3, BookOpen, ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
+import { BookOpen, CheckCircle2, ChevronLeft, ChevronRight, Clock, TreePine, Trophy } from 'lucide-react';
 import { PageShell } from '../components/layout/PageShell';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -78,15 +80,12 @@ export function StatisticsPage() {
   };
 
   return (
-    <PageShell>
-      {/* 标题区：宋体 30px + 引导文案 */}
-      <header className="stats-header">
-        <h2 className="stats-title">学习森林</h2>
-        <p className="stats-subtitle">每专注学习满 1 小时，就会在对应科目的森林里种下一棵树</p>
-      </header>
-
+    <PageShell
+      title="学习森林"
+      subtitle="每专注学习满 1 小时，就会在对应科目的森林里种下一棵树"
+    >
       {/* 日/周/月玻璃分段控件 + 范围导航器 */}
-      <div className="stats-controls">
+      <div className="stats-controls reveal" style={{ '--i': 0 } as React.CSSProperties}>
         <div className="segmented glass-1" role="group" aria-label="统计范围">
           <span
             className="segmented__indicator"
@@ -134,7 +133,9 @@ export function StatisticsPage() {
         </div>
       </div>
 
-      {loading ? (
+      {/* 仅首次加载（无既有数据）时替换为骨架；范围切换保留旧内容原地更新，
+          避免 reveal 入场动画随每次请求重播（设计文档 13.3：仅首次挂载播放一次） */}
+      {loading && !data ? (
         /* 加载：场景骨架 shimmer */
         <div role="status">
           <span className="sr-only">加载统计中...</span>
@@ -146,53 +147,76 @@ export function StatisticsPage() {
       ) : !data ? (
         <EmptyState title="暂无数据" />
       ) : (
-        <>
-          {/* 玻璃花房场景 */}
-          <ForestGlasshouse
-            treesBySubject={data.period.treesBySubject}
-            rangeLabel={formatRangeLabel()}
-            periodTotalTrees={data.period.totalTrees}
-            cumulativeTotalTrees={data.cumulative.totalTrees}
-            onStartFocus={() => { window.location.hash = '#/pomodoro'; }}
-          />
+        <div className="bento-grid stats-layout">
+          {/* 主角：森林玻璃花房全景（span 12）+ 场景数据条 */}
+          <div className="bento-span-12 stats-hero reveal" style={{ '--i': 1 } as React.CSSProperties}>
+            {/* 玻璃花房场景 */}
+            <ForestGlasshouse
+              treesBySubject={data.period.treesBySubject}
+              rangeLabel={formatRangeLabel()}
+              periodTotalTrees={data.period.totalTrees}
+              cumulativeTotalTrees={data.cumulative.totalTrees}
+              onStartFocus={() => { window.location.hash = '#/pomodoro'; }}
+            />
 
-          {/* 数据条：本期专注时长 / 完成次数 / 树木总数 / 各科距下一棵树剩余时长 */}
-          <ForestDataBar
-            totalFocusSeconds={data.period.totalFocusSeconds}
-            totalCompletedSessions={data.period.totalCompletedSessions}
-            totalTrees={data.period.totalTrees}
-            remainingSecondsBySubject={data.period.remainingSecondsBySubject}
-          />
-
-          {/* 本期成果卡 + 累计成果卡 */}
-          <div className="stats-results">
-            <Card>
-              <h3 className="stats-card-title">
-                <BarChart3 size={18} strokeWidth={1.75} aria-hidden="true" />
-                本期成果
-              </h3>
-              <div className="stats-grid stats-grid--3">
-                <StatItem label="专注时长" value={formatDurationHuman(data.period.totalFocusSeconds)} />
-                <StatItem label="完成次数" value={`${data.period.totalCompletedSessions} 次`} />
-                <StatItem label="种下树木" value={`${data.period.totalTrees} 棵`} />
-              </div>
-            </Card>
-            <Card>
-              <h3 className="stats-card-title">
-                <Trophy size={18} strokeWidth={1.75} aria-hidden="true" />
-                累计成果
-              </h3>
-              <div className="stats-grid stats-grid--2">
-                <StatItem label="累计专注" value={formatDurationHuman(data.cumulative.totalFocusSeconds)} />
-                <StatItem label="累计树木" value={`${data.cumulative.totalTrees} 棵`} />
-              </div>
-            </Card>
+            {/* 数据条：本期专注时长 / 完成次数 / 树木总数 / 各科距下一棵树剩余时长 */}
+            <ForestDataBar
+              totalFocusSeconds={data.period.totalFocusSeconds}
+              totalCompletedSessions={data.period.totalCompletedSessions}
+              totalTrees={data.period.totalTrees}
+              remainingSecondsBySubject={data.period.remainingSecondsBySubject}
+            />
           </div>
 
-          {/* 学习记录时间线（按日分组 glass-1 行卡） */}
+          {/* 三张本期数据卡（span 4×3） */}
+          <Card className="bento-span-4 stats-data reveal" style={{ '--i': 2 } as React.CSSProperties}>
+            <h3 className="stats-data__title">
+              <Clock size={18} strokeWidth={1.75} aria-hidden="true" />
+              本期专注时长
+            </h3>
+            <p className="stats-data__value tabular-nums">
+              {formatDurationHuman(data.period.totalFocusSeconds)}
+            </p>
+          </Card>
+          <Card className="bento-span-4 stats-data reveal" style={{ '--i': 3 } as React.CSSProperties}>
+            <h3 className="stats-data__title">
+              <CheckCircle2 size={18} strokeWidth={1.75} aria-hidden="true" />
+              完成次数
+            </h3>
+            <p className="stats-data__value tabular-nums">
+              {data.period.totalCompletedSessions} 次
+            </p>
+          </Card>
+          <Card className="bento-span-4 stats-data reveal" style={{ '--i': 4 } as React.CSSProperties}>
+            <h3 className="stats-data__title">
+              <TreePine size={18} strokeWidth={1.75} aria-hidden="true" />
+              种下树木
+            </h3>
+            <p className="stats-data__value tabular-nums">
+              {data.period.totalTrees} 棵
+            </p>
+          </Card>
+
+          {/* 累计成果卡（span 4，时间线旁侧卡） */}
+          <Card className="bento-span-4 stats-cumulative reveal" style={{ '--i': 5 } as React.CSSProperties}>
+            <h3 className="stats-card-title">
+              <Trophy size={18} strokeWidth={1.75} aria-hidden="true" />
+              累计成果
+            </h3>
+            <div className="stats-grid">
+              <StatItem label="累计专注" value={formatDurationHuman(data.cumulative.totalFocusSeconds)} />
+              <StatItem label="累计树木" value={`${data.cumulative.totalTrees} 棵`} />
+            </div>
+          </Card>
+
+          {/* 学习记录时间线（span 8，按日分组 glass-1 行卡；大量项不做 stagger） */}
           {data.records.length > 0 && (
-            <section className="stats-records" aria-label="学习记录">
-              <h3 className="stats-card-title stats-card-title--section">
+            <section
+              className="bento-span-8 stats-records reveal"
+              style={{ '--i': 6 } as React.CSSProperties}
+              aria-label="学习记录"
+            >
+              <h3 className="stats-card-title">
                 <BookOpen size={18} strokeWidth={1.75} aria-hidden="true" />
                 学习记录
               </h3>
@@ -201,12 +225,11 @@ export function StatisticsPage() {
                   <div key={day.date}>
                     <h4 className="stats-records__date tabular-nums">{day.date}</h4>
                     <div className="stats-records__items">
-                      {day.items.map((item, i) => (
+                      {day.items.map((item) => (
                         <Card
                           key={item.id}
                           padding="10px 16px"
                           className="stats-record"
-                          style={{ animationDelay: `${Math.min(i, 7) * 40}ms` }}
                         >
                           <div className="stats-record__row">
                             <SubjectBadge subject={item.subject as Subject} subSubject={item.subSubject as SubSubject | null} />
@@ -226,7 +249,7 @@ export function StatisticsPage() {
               </div>
             </section>
           )}
-        </>
+        </div>
       )}
     </PageShell>
   );
