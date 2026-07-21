@@ -30,6 +30,10 @@ interface PresetCardProps {
   onDelete?: () => void;
   onEdit?: () => void;
   compact?: boolean;
+  /** v2 特色卡（设计文档 12.4）：Card hero 变体，仅用于每页唯一主角 */
+  hero?: boolean;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 export function PresetCard({
@@ -43,6 +47,9 @@ export function PresetCard({
   onDelete,
   onEdit,
   compact = false,
+  hero = false,
+  className,
+  style,
 }: PresetCardProps) {
   const SubjectIcon = SUBJECT_ICONS[subject];
 
@@ -51,6 +58,7 @@ export function PresetCard({
     `preset-card--${subject}`,
     isSelected ? 'preset-card--selected' : '',
     compact ? 'preset-card--compact' : '',
+    className ?? '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -58,9 +66,11 @@ export function PresetCard({
   return (
     <Card
       className={classNames}
-      padding={compact ? 'var(--space-md)' : 'var(--space-lg)'}
+      padding={hero ? undefined : compact ? 'var(--space-md)' : 'var(--space-lg)'}
       onClick={onClick}
       hoverable
+      hero={hero}
+      style={style}
     >
       {isSelected && (
         <span className="preset-card__selected-badge" aria-hidden="true">

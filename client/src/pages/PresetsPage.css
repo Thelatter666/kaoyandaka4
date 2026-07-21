@@ -1,41 +1,10 @@
 /* ============================================================
-   学习预设页（设计文档 8.3）
-   标题区 + 4 创建按钮（科目色区分）+ 三科分组（图标/宋体/数量胶囊）
+   学习预设页（设计文档 8.3 / v2 12.4）
+   页头由 PageShell 提供（创建入口在操作槽）；三科分组 bento 网格
+   （特色卡 span 8 / 其余 span 4，全页唯一 hero 主角卡）
    ============================================================ */
 
-/* ---- 标题区 ---- */
-
-.presets-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-md);
-  margin-bottom: var(--space-xl);
-}
-
-.presets-title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-family: var(--font-heading);
-  font-size: var(--text-3xl);
-  font-weight: var(--font-bold);
-  color: var(--color-text-primary);
-}
-
-.presets-title .lucide {
-  color: var(--color-accent-primary);
-  flex-shrink: 0;
-}
-
-.presets-subtitle {
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-  margin-top: var(--space-xs);
-}
-
-/* ---- 顶部创建按钮组：通用主按钮 + 三科锁定玻璃钮（科目色区分） ---- */
+/* ---- 页头操作槽创建按钮组：通用主按钮 + 三科锁定玻璃钮（科目色区分） ---- */
 
 .presets-actions {
   display: flex;
@@ -55,7 +24,7 @@
   font-weight: var(--font-medium);
   color: var(--_subject-color);
   transition:
-    transform var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-spring),
     box-shadow var(--dur-fast) var(--ease-out),
     color var(--dur-fast) var(--ease-out);
 }
@@ -65,8 +34,17 @@
   box-shadow: var(--shadow-glass-md);
 }
 
+/* CTA 按压回弹（设计文档 13.4）：scale(0.96) + --ease-spring */
 .presets-create:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
+}
+
+.presets-actions .btn {
+  transition-timing-function: var(--ease-spring);
+}
+
+.presets-actions .btn:active:not(:disabled):not(.btn--loading) {
+  transform: scale(0.96);
 }
 
 /* 14px 科目色文字用文字色令牌（AA ≥4.5:1） */
@@ -74,12 +52,12 @@
 .presets-create--english { --_subject-color: var(--color-subject-english-text); }
 .presets-create--408 { --_subject-color: var(--color-subject-408-text); }
 
-/* ---- 三科分组 ---- */
+/* ---- 三科分组（v2 12.3：主体内部区块间隔 40px 语义） ---- */
 
 .presets-groups {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xl);
+  gap: calc(var(--space-lg) + var(--space-md)); /* 40px */
 }
 
 .presets-group__title {
@@ -135,12 +113,6 @@
   color: var(--color-text-secondary);
 }
 
-.presets-group__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: var(--space-md);
-}
-
 .presets-group__empty {
   color: var(--color-text-muted);
   text-align: center;
@@ -148,7 +120,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .presets-create:active {
+  .presets-create:active,
+  .presets-actions .btn:active:not(:disabled) {
     transform: none;
   }
 }

@@ -1,10 +1,12 @@
 /**
- * 课程详情页（设计文档 8.6）
+ * 课程详情页（设计文档 8.6 / v2 12.4）
  *
- * 顶部课程信息卡 glass-1（课程名宋体 24px + 科目徽章 + 双进度条 + 统计数字行）；
- * 集数列表 glass-1 行卡（28px 完成圆点 Check 填充松绿 / 标题 / 原始时长 / 开始学习 Play 按钮）；
+ * v2 Bento 构图：课程信息卡 span 12 hero 化（Card hero 变体 = 玻璃罩光斑
+ * + 大标题 + 双进度条横排），为本页唯一主角卡；集数列表为功能卡区，
+ * 仅列表容器 .reveal 入场一次（13.3：列表内大量集项不做 stagger）。
+ * 集数行卡 glass-1（28px 完成圆点 Check 填充松绿 / 标题 / 原始时长 / 开始学习 Play 按钮）；
  * 完成行动效 160ms；删除入口 danger 幽灵按钮 + 确认弹窗。
- * 集数完成切换、删除确认与保留历史记录规则不变。
+ * 集数完成切换、删除确认与保留历史记录规则、统计/进度数据口径不变。
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, Check, Play, Trash2, ListVideo, MonitorPlay } from 'lucide-react';
@@ -92,19 +94,25 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
         返回网课列表
       </a>
 
-      {/* 顶部课程信息卡 glass-1 */}
-      <Card className="course-detail__info">
+      <div className="bento-grid">
+      {/* 课程信息卡（span 12，唯一主角卡）：hero 变体 = 玻璃罩光斑 + 大标题 + 双进度条横排 */}
+      <Card
+        hero
+        className="bento-span-12 course-detail__info reveal"
+        style={{ '--i': 0 } as React.CSSProperties}
+      >
         <div className="course-detail__head">
           <h2 className="course-detail__name">{course.name}</h2>
           <SubjectBadge subject={course.subject as Subject} subSubject={course.subSubject as SubSubject | null} size="md" />
         </div>
 
-        {/* 双进度条：集数（松绿系）/ 时长（珊瑚系） */}
+        {/* 双进度条横排：集数（松绿系）/ 时长（珊瑚系） */}
         <DualProgressBars
           completedEpisodes={course.completedEpisodeCount}
           totalEpisodes={course.episodeCount}
           watchedSeconds={course.watchedDurationSeconds}
           totalSeconds={course.totalDurationSeconds}
+          layout="row"
         />
 
         {/* 统计数字行 */}
@@ -136,7 +144,12 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
         </div>
       </Card>
 
-      {/* 集数列表 */}
+      {/* 集数列表（span 12 功能卡区）：仅容器 reveal 入场一次，集项不做 stagger */}
+      <section
+        className="bento-span-12 course-detail__episodes-section reveal"
+        style={{ '--i': 1 } as React.CSSProperties}
+        aria-label="集数列表"
+      >
       <h3 className="course-detail__episodes-title">
         <ListVideo size={20} strokeWidth={1.75} aria-hidden="true" />
         集数列表
@@ -175,6 +188,8 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
           ))}
         </ul>
       )}
+      </section>
+      </div>
 
       {/* 删除确认：danger 动词化文案；历史记录保留规则不变 */}
       <ConfirmDialog

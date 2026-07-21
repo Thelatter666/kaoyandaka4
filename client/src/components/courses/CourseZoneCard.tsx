@@ -26,9 +26,12 @@ interface CourseZoneCardProps {
   onImport: () => void;
   onNavigate: (hash: string) => void;
   onDelete: (course: Course) => void;
+  /** v2 bento 跨度/入场编排由父级注入（设计文档 12.4） */
+  className?: string;
+  style?: React.CSSProperties;
 }
 
-export function CourseZoneCard({ label, subject, courses, onImport, onNavigate, onDelete }: CourseZoneCardProps) {
+export function CourseZoneCard({ label, subject, courses, onImport, onNavigate, onDelete, className, style }: CourseZoneCardProps) {
   const ZoneIcon = ZONE_ICONS[subject];
 
   // 分区聚合双进度（集数 / 时长，口径与各课程累加一致）
@@ -41,7 +44,7 @@ export function CourseZoneCard({ label, subject, courses, onImport, onNavigate, 
   /* 空分区：虚线描边玻璃卡 + 导入次按钮 */
   if (courses.length === 0) {
     return (
-      <div className={`zone-card zone-card--${subject} zone-card--empty glass-1`}>
+      <div className={`zone-card zone-card--${subject} zone-card--empty glass-1${className ? ` ${className}` : ''}`} style={style}>
         <div className="zone-card__head">
           <span className="zone-card__icon" aria-hidden="true">
             <ZoneIcon size={18} strokeWidth={1.75} />
@@ -58,7 +61,7 @@ export function CourseZoneCard({ label, subject, courses, onImport, onNavigate, 
   }
 
   return (
-    <div className={`zone-card zone-card--${subject} glass-1`}>
+    <div className={`zone-card zone-card--${subject} glass-1 sheen-hover${className ? ` ${className}` : ''}`} style={style}>
       {/* 标题行：科目图标 + 名称 + 进度百分比 */}
       <div className="zone-card__head">
         <span className="zone-card__icon" aria-hidden="true">

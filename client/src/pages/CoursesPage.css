@@ -1,42 +1,25 @@
 /* ============================================================
-   网课管理页（设计文档 8.5）
-   标题区 + 7 分区网格 repeat(auto-fill, minmax(320px, 1fr))
+   网课管理页（设计文档 8.5 / v2 12.4）
+   页头由 PageShell 提供（导入入口在操作槽）；
+   7 分区错落 bento 网格（跨度由工具类提供，多主体无单一主角）
    ============================================================ */
 
-.courses-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-md);
-  margin-bottom: var(--space-xl);
-}
-
-.courses-title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-family: var(--font-heading);
-  font-size: var(--text-3xl);
-  font-weight: var(--font-bold);
-  color: var(--color-text-primary);
-}
-
-.courses-title .lucide {
-  color: var(--color-accent-primary);
-  flex-shrink: 0;
-}
-
-.courses-subtitle {
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-  margin-top: var(--space-xs);
-}
-
-/* 7 分区网格（设计文档 8.5） */
+/* 分区卡高度不一，顶部对齐保持错落节奏 */
 .courses-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: var(--space-lg);
   align-items: start;
+}
+
+/* CTA 按压回弹（设计文档 13.4）：scale(0.96) + --ease-spring */
+.courses-import-cta {
+  transition-timing-function: var(--ease-spring);
+}
+
+.courses-import-cta:active:not(:disabled):not(.btn--loading) {
+  transform: scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .courses-import-cta:active:not(:disabled) {
+    transform: none;
+  }
 }

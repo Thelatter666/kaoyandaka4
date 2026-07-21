@@ -1,8 +1,11 @@
 /**
- * 学习预设页（设计文档 8.3）
+ * 学习预设页（设计文档 8.3 / v2 12.4）
  *
- * 三科分组标题（科目 lucide 图标 + 宋体标题 + 组内数量胶囊）；
- * 顶部 4 创建按钮（数学/英语/408 锁定 + 通用新建，科目色区分）；
+ * v2 Bento 构图：创建入口收进 PageShell 页头操作槽；每科分组为 bento
+ * 网格，组内「最近使用」预设放大为特色卡（span 8，其余 span 4），全页
+ * 最近使用的一张为唯一主角卡（Card hero 变体 + 光泽扫过）；分组标题与
+ * 特色卡 .reveal 依次入场（≤8 个，组内其余预设卡不做 stagger）；
+ * CTA 按压 scale(0.96) + --ease-spring，reduced-motion 取消。
  * 创建/编辑弹窗 glass-2；科目锁定行为与全部业务逻辑不变。
  */
 import React, { useState, useCallback, useEffect } from 'react';
@@ -157,6 +160,36 @@ export function PresetsPage() {
     items: presets.filter((p) => p.subject === subj),
   }));
 
+  // 「最近使用」判定：lastUsedAt（API 既有字段）最新者优先；
+  // 组内均无使用记录时回退为 updatedAt 最新者（仅展示层排序，数据口径不变）
+  const presetTime = (p: Preset) => new Date(p.lastUsedAt ?? p.updatedAt).getTime();
+  const pickFeatured = (items: Preset[]): Preset | null => {
+    if (items.length === 0) return null;
+    const used = items.filter((p) => p.lastUsedAt);
+    const pool = used.length > 0 ? used : items;
+    return pool.reduce((latest, p) => (presetTime(p) > presetTime(latest) ? p : latest));
+  };
+
+  // 全页唯一主角卡：各组特色卡中最近使用/更新最晚的一张
+  const featuredByGroup = grouped.map((g) => pickFeatured(g.items));
+  const heroPreset = featuredByGroup.reduce<Preset | null>(
+    (latest, p) => (p && (!latest || presetTime(p) > presetTime(latest)) ? p : latest),
+    null,
+  );
+
+  // 入场编排：分组标题 + 特色卡按阅读顺序 --i 递增（3 组 × 2 = 最多 6 个，≤8）
+  let revealIndex = 0;
+  const groupViews = grouped.map((group, gi) => {
+    const titleI = revealIndex++;
+    const featured = featuredByGroup[gi];
+    const featuredI = featured ? revealIndex++ : null;
+    // 特色卡排在组内首位（阅读顺序）
+    const ordered = featured
+      ? [featured, ...group.items.filter((p) => p.id !== featured.id)]
+      : group.items;
+    return { ...group, titleI, featured, featuredI, ordered };
+  });
+
   const fieldStyle: React.CSSProperties = {
     padding: '10px 14px',
     borderRadius: 'var(--radius-md)',
@@ -176,16 +209,10 @@ export function PresetsPage() {
   };
 
   return (
-    <PageShell>
-      {/* 标题区：宋体 30px + 引导文案；右侧 4 创建按钮（三科锁定 + 通用） */}
-      <header className="presets-header">
-        <div className="presets-header__text">
-          <h2 className="presets-title">
-            <SlidersHorizontal size={26} strokeWidth={1.75} aria-hidden="true" />
-            学习预设
-          </h2>
-          <p className="presets-subtitle">按科目整理专注时长，创建后可在番茄钟一键开始</p>
-        </div>
+    <PageShell
+      title="学习预设"
+      subtitle="按科目整理专注时长，创建后可在番茄钟一键开始"
+      actions={
         <div className="presets-actions">
           <Button variant="primary" onClick={() => openCreate()}>
             <Plus size={16} strokeWidth={1.75} aria-hidden="true" />
@@ -208,8 +235,8 @@ export function PresetsPage() {
             );
           })}
         </div>
-      </header>
-
+      }
+    >
       {/* Content */}
       {loading ? (
         <LoadingState message="加载预设中..." />
@@ -225,12 +252,15 @@ export function PresetsPage() {
         />
       ) : (
         <div className="presets-groups">
-          {grouped.map((group) => {
+          {groupViews.map((group) => {
             const GroupIcon = SUBJECT_ICONS[group.subject];
             return (
               <section key={group.subject} className="presets-group">
-                {/* 分组标题：科目图标 + 宋体标题 + 组内数量胶囊 */}
-                <h3 className="presets-group__title">
+                {/* 分组标题：科目图标 + 宋体标题 + 组内数量胶囊（reveal 入场） */}
+                <h3
+                  className="presets-group__title reveal"
+                  style={{ '--i': group.titleI } as React.CSSProperties}
+                >
                   <span className={`presets-group__icon presets-group__icon--${group.subject}`} aria-hidden="true">
                     <GroupIcon size={18} strokeWidth={1.75} />
                   </span>
@@ -242,20 +272,30 @@ export function PresetsPage() {
                     <p className="presets-group__empty">暂无{group.label}预设</p>
                   </Card>
                 ) : (
-                  <div className="presets-group__grid">
-                    {group.items.map((preset) => (
-                      <PresetCard
-                        key={preset.id}
-                        id={preset.id}
-                        name={preset.name}
-                        subject={preset.subject as Subject}
-                        subSubject={preset.subSubject as SubSubject | null}
-                        durationMinutes={preset.durationMinutes}
-                        isRecentlyUsed={false}
-                        onEdit={() => openEdit(preset)}
-                        onDelete={() => setDeleteTarget(preset)}
-                      />
-                    ))}
+                  /* 每科分组 bento 网格：特色卡 span 8，其余 span 4（大量卡不 stagger） */
+                  <div className="bento-grid">
+                    {group.ordered.map((preset) => {
+                      const isFeatured = group.featured?.id === preset.id;
+                      const isHero = isFeatured && heroPreset?.id === preset.id;
+                      return (
+                        <PresetCard
+                          key={preset.id}
+                          id={preset.id}
+                          name={preset.name}
+                          subject={preset.subject as Subject}
+                          subSubject={preset.subSubject as SubSubject | null}
+                          durationMinutes={preset.durationMinutes}
+                          isRecentlyUsed={isFeatured}
+                          hero={isHero}
+                          className={`${isFeatured ? 'bento-span-8' : 'bento-span-4'}${isFeatured ? ' reveal sheen-hover' : ''}`}
+                          style={isFeatured && group.featuredI !== null
+                            ? { '--i': group.featuredI } as React.CSSProperties
+                            : undefined}
+                          onEdit={() => openEdit(preset)}
+                          onDelete={() => setDeleteTarget(preset)}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </section>

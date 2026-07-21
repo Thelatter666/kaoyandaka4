@@ -13,3 +13,21 @@
   color: var(--color-text-muted);
   flex-shrink: 0;
 }
+
+/* v2 12.4 课程详情 hero 卡：双进度条横排，窄屏回退纵排 */
+.dual-progress--row {
+  flex-direction: row;
+  gap: var(--space-lg);
+}
+
+.dual-progress--row > * {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 719px) {
+  .dual-progress--row {
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+}

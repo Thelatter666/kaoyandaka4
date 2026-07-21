@@ -3,6 +3,7 @@
  *
  * 玻璃槽 + 渐变填充：集数 = 松绿系，时长 = 珊瑚系；
  * 各带 lucide 图标 + 文字标签，不只用颜色区分。
+ * layout="row"（v2 12.4 课程详情 hero 卡）：两条进度条横向并排，窄屏回退纵排。
  */
 import React from 'react';
 import { ListVideo, Clock } from 'lucide-react';
@@ -16,6 +17,8 @@ interface DualProgressBarsProps {
   watchedSeconds: number;
   totalSeconds: number;
   size?: 'sm' | 'md';
+  /** v2 课程详情 hero 卡：双进度条横排（设计文档 12.4），窄屏自动回退纵排 */
+  layout?: 'column' | 'row';
 }
 
 export function DualProgressBars({
@@ -24,9 +27,10 @@ export function DualProgressBars({
   watchedSeconds,
   totalSeconds,
   size = 'md',
+  layout = 'column',
 }: DualProgressBarsProps) {
   return (
-    <div className="dual-progress">
+    <div className={`dual-progress${layout === 'row' ? ' dual-progress--row' : ''}`}>
       {/* 集数进度：松绿系渐变 */}
       <ProgressBar
         value={completedEpisodes}

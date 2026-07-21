@@ -1,6 +1,6 @@
 /* ============================================================
-   课程详情页（设计文档 8.6）
-   顶部信息卡 glass-1 + 集数行卡（28px 完成圆点 / Play 开始学习）
+   课程详情页（设计文档 8.6 / v2 12.4）
+   信息卡 span 12 hero 化（唯一主角卡）+ 集数行卡（28px 完成圆点 / Play 开始学习）
    ============================================================ */
 
 /* ---- 返回链接 ---- */
@@ -22,13 +22,12 @@
   text-decoration: none;
 }
 
-/* ---- 顶部课程信息卡 ---- */
+/* ---- 顶部课程信息卡（v2 hero 主角卡，间距由 bento-grid gap 提供） ---- */
 
 .course-detail__info {
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
-  margin-bottom: var(--space-xl);
 }
 
 .course-detail__head {
@@ -40,7 +39,7 @@
 
 .course-detail__name {
   font-family: var(--font-heading);
-  font-size: var(--text-2xl); /* 24px */
+  font-size: var(--text-3xl); /* v2 hero 大标题 30px */
   font-weight: var(--font-bold);
   color: var(--color-text-primary);
 }
