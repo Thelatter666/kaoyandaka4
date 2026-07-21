@@ -37,18 +37,22 @@
   margin-bottom: var(--space-lg);
 }
 
-/* ---- 12 栏：任务 7 + 复盘 5；小屏单列 ---- */
+/* ---- v2 Bento 构图（12.4）：任务区 span 8 主列（主角） + 复盘卡 span 4 侧栏 ----
+   基座复用 utilities.css .bento-grid；此处仅做页面级微调 */
 .plan-grid {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: var(--space-xl);
   align-items: start;
 }
 
-.plan-grid__tasks { grid-column: span 7; }
-.plan-grid__review { grid-column: span 5; }
+/* 复盘卡 sticky 侧栏：仅 ≥1024px 生效（顶导航 sticky 56px + 12px 上浮 + 24px 间隔） */
+@media (min-width: 1024px) {
+  .plan-grid__review {
+    position: sticky;
+    top: calc(var(--nav-height) + 24px);
+  }
+}
 
-@media (max-width: 900px) {
+/* <1024px：上下堆叠（覆盖 bento-span-4 → span 6 的通用断点，保证复盘卡独占一行） */
+@media (max-width: 1023px) {
   .plan-grid__tasks,
   .plan-grid__review {
     grid-column: span 12;
@@ -278,9 +282,30 @@
   flex-wrap: wrap;
 }
 
-/* ---- reduced-motion：转动取消 ---- */
+/* ---- CTA 按压回弹：scale(0.96) + --ease-spring（设计文档 13.4） ---- */
+.plan-add .btn,
+.plan-review__footer .btn {
+  transition:
+    transform var(--dur-fast) var(--ease-spring),
+    box-shadow var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.plan-add .btn:active:not(:disabled):not(.btn--loading),
+.plan-review__footer .btn:active:not(:disabled):not(.btn--loading) {
+  transform: scale(0.96);
+}
+
+/* ---- reduced-motion：转动与弹性按压回弹取消 ---- */
 @media (prefers-reduced-motion: reduce) {
   .plan-spin {
     animation: none;
+  }
+
+  .plan-add .btn:active:not(:disabled):not(.btn--loading),
+  .plan-review__footer .btn:active:not(:disabled):not(.btn--loading) {
+    transform: none;
   }
 }

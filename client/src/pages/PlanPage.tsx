@@ -1,6 +1,10 @@
 /**
- * 计划页（设计文档 8.2）
+ * 计划页（设计文档 8.2 / v2 12.4）
  *
+ * v2 Bento 构图：任务区 span 8 主列（本页主角）+ 复盘卡 span 4 sticky
+ * 侧栏（仅 ≥1024px 生效，窄屏自动转上下堆叠）；页签 / 新建任务条 /
+ * 任务区块 / 复盘卡 .reveal 依次入场（≤8 个，任务列表内大量任务项不做
+ * stagger）；CTA 按压回弹 --ease-spring。
  * 「今天/明天」玻璃分段控件（滑块指示器 240ms）；新建任务玻璃输入条
  * （聚焦描边主色辉光）；任务行卡 TaskItem（glass-1，完成/重要/拖拽/键盘
  * 排序语义不变）；复盘 glass-1 卡（保存状态 RefreshCw 转动 / Check / 重试）。
@@ -235,10 +239,10 @@ export function PlanPage() {
 
       {/* 今天/明天：玻璃分段控件（滑块指示器 240ms 滑动） */}
       <div
-        className="segmented glass-1 plan-tabs"
+        className="segmented glass-1 plan-tabs reveal"
         role="group"
         aria-label="选择计划日期"
-        style={{ '--_segments': 2 } as React.CSSProperties}
+        style={{ '--_segments': 2, '--i': 0 } as React.CSSProperties}
       >
         <span
           className="segmented__indicator"
@@ -259,11 +263,14 @@ export function PlanPage() {
         ))}
       </div>
 
-      <div className="plan-grid">
-        {/* 任务区（7 栏） */}
-        <section className="plan-grid__tasks" aria-label="任务列表">
+      <div className="bento-grid plan-grid">
+        {/* 任务区（span 8 主列，本页主角） */}
+        <section className="bento-span-8 plan-grid__tasks" aria-label="任务列表">
           {/* 新建任务：玻璃输入条，聚焦时描边主色辉光 */}
-          <div className="plan-add glass-1">
+          <div
+            className="plan-add glass-1 reveal"
+            style={{ '--i': 1 } as React.CSSProperties}
+          >
             <input
               type="text"
               className="plan-add__input"
@@ -307,71 +314,75 @@ export function PlanPage() {
             </div>
           </div>
 
-          {/* 任务列表 */}
-          {tasksLoading ? (
-            <LoadingState message="加载任务中..." />
-          ) : tasksError ? (
-            <ErrorState message={tasksError} onRetry={fetchTasks} />
-          ) : tasks.length === 0 ? (
-            <Card>
-              <EmptyState
-                icon={<ClipboardList size={40} strokeWidth={1.75} />}
-                title="暂无任务"
-                description="在上方输入条添加第一个任务吧"
-              />
-            </Card>
-          ) : (
-            <div className="plan-task-groups">
-              {/* 重要任务 */}
-              {importantTasks.length > 0 && (
-                <section aria-label={`重要任务 ${importantTasks.length} 项`}>
-                  <h3 className="plan-group-title">
-                    <Pin size={14} strokeWidth={1.75} fill="currentColor" aria-hidden="true" />
-                    重要 <span className="tabular-nums">({importantTasks.length})</span>
-                  </h3>
-                  <div className="plan-task-list">
-                    {importantTasks.map((task, i) => (
-                      <TaskItem
-                        key={task.id}
-                        task={task as TaskData}
-                        onToggle={handleToggle}
-                        onPin={handlePin}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                        style={{ animationDelay: `${Math.min(i, 7) * 40}ms` }}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
+          {/* 任务列表（区块入场 reveal；列表内大量任务项不做 stagger） */}
+          <div className="reveal" style={{ '--i': 2 } as React.CSSProperties}>
+            {tasksLoading ? (
+              <LoadingState message="加载任务中..." />
+            ) : tasksError ? (
+              <ErrorState message={tasksError} onRetry={fetchTasks} />
+            ) : tasks.length === 0 ? (
+              <Card>
+                <EmptyState
+                  icon={<ClipboardList size={40} strokeWidth={1.75} />}
+                  title="暂无任务"
+                  description="在上方输入条添加第一个任务吧"
+                />
+              </Card>
+            ) : (
+              <div className="plan-task-groups">
+                {/* 重要任务 */}
+                {importantTasks.length > 0 && (
+                  <section aria-label={`重要任务 ${importantTasks.length} 项`}>
+                    <h3 className="plan-group-title">
+                      <Pin size={14} strokeWidth={1.75} fill="currentColor" aria-hidden="true" />
+                      重要 <span className="tabular-nums">({importantTasks.length})</span>
+                    </h3>
+                    <div className="plan-task-list">
+                      {importantTasks.map((task) => (
+                        <TaskItem
+                          key={task.id}
+                          task={task as TaskData}
+                          onToggle={handleToggle}
+                          onPin={handlePin}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
 
-              {/* 普通任务 */}
-              {normalTasks.length > 0 && (
-                <section aria-label={`普通任务 ${normalTasks.length} 项`}>
-                  <h3 className="plan-group-title">
-                    普通 <span className="tabular-nums">({normalTasks.length})</span>
-                  </h3>
-                  <div className="plan-task-list">
-                    {normalTasks.map((task, i) => (
-                      <TaskItem
-                        key={task.id}
-                        task={task as TaskData}
-                        onToggle={handleToggle}
-                        onPin={handlePin}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                        style={{ animationDelay: `${Math.min(i, 7) * 40}ms` }}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-            </div>
-          )}
+                {/* 普通任务 */}
+                {normalTasks.length > 0 && (
+                  <section aria-label={`普通任务 ${normalTasks.length} 项`}>
+                    <h3 className="plan-group-title">
+                      普通 <span className="tabular-nums">({normalTasks.length})</span>
+                    </h3>
+                    <div className="plan-task-list">
+                      {normalTasks.map((task) => (
+                        <TaskItem
+                          key={task.id}
+                          task={task as TaskData}
+                          onToggle={handleToggle}
+                          onPin={handlePin}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </div>
+            )}
+          </div>
         </section>
 
-        {/* 复盘区（5 栏）：glass-1 卡 + 保存状态图标 + 文字 */}
-        <section className="plan-grid__review" aria-label="每日复盘">
+        {/* 复盘区（span 4 sticky 侧栏，仅 ≥1024px 生效）：glass-1 卡 + 保存状态图标 + 文字 */}
+        <section
+          className="bento-span-4 plan-grid__review reveal"
+          style={{ '--i': 3 } as React.CSSProperties}
+          aria-label="每日复盘"
+        >
           <Card>
             <h3 className="plan-review__title">
               <Pencil size={18} strokeWidth={1.75} aria-hidden="true" />

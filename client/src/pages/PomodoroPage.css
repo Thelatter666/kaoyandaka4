@@ -1,11 +1,13 @@
 /* ============================================================
-   番茄钟页（设计文档 5.3）
-   进行中：圆盘居中为绝对主角，操作区置于圆盘正下方一排；
-   页面其余内容 opacity 0.4 淡出但保持可交互（不做全屏遮罩）；
-   移动端操作按钮纵向堆叠，全部 ≥44px。
+   番茄钟页（设计文档 5.3 / v2 12.4 / 13.4）
+   v2 舞台化：圆盘为本页唯一视觉主角（背后聚灯光斑 + 居中大留白）；
+   预设选择区为底部 dock 横排紧凑卡（glass-2 托盘，区别于功能卡，
+   可横向滚动，窄屏纵向堆叠）；进行中辅助信息收进单一侧卡；
+   其余内容 opacity 0.4 淡出但保持可交互；CTA 按压回弹使用
+   --ease-spring；reduced-motion 全部降级。
    ============================================================ */
 
-/* ---- 圆盘主舞台 ---- */
+/* ---- 圆盘主舞台：居中大留白 + 背后聚灯光斑 ---- */
 .pomodoro-hero {
   display: flex;
   flex-direction: column;
@@ -14,10 +16,40 @@
 }
 
 .pomodoro-hero__stage {
+  /* 聚灯光斑色：跟随计时模式（默认专注主色） */
+  --_stage-glow: var(--color-accent-primary);
   position: relative;
+  isolation: isolate;
   display: flex;
   align-items: center;
   justify-content: center;
+  /* 舞台大留白：圆盘四周留出呼吸空间 */
+  padding: var(--space-2xl) var(--space-2xl) var(--space-xl);
+}
+
+.pomodoro-hero__stage--short_break {
+  --_stage-glow: var(--color-accent-success);
+}
+
+.pomodoro-hero__stage--long_break {
+  --_stage-glow: var(--color-accent-deep-green);
+}
+
+/* 聚灯光斑：绝对定位径向光斑（主题令牌 + 极光透明度令牌），
+   blur 柔化、pointer-events:none 不拦截交互、不产生布局溢出 */
+.pomodoro-stage__glow {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  margin: auto;
+  width: 100%;
+  max-width: 560px;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--_stage-glow) 0%, transparent 70%);
+  filter: blur(48px);
+  opacity: var(--aurora-opacity-a);
+  pointer-events: none;
 }
 
 /* ---- 操作区：圆盘正下方一排 ---- */
@@ -29,17 +61,94 @@
   align-items: center;
 }
 
+/* ---- 进行中：舞台主列 + 单一侧卡（≥1024px 并排，窄屏上下堆叠） ---- */
+.pomodoro-active {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--space-xl);
+  align-items: center;
+}
+
+/* 单一侧卡：当前预设 / 轮次 / 计划时长（不堆多张卡） */
+.pomodoro-side__title {
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-sm);
+}
+
+.pomodoro-side__preset {
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+}
+
+.pomodoro-side__badge {
+  margin-top: var(--space-xs);
+}
+
+.pomodoro-side__rows {
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.pomodoro-side__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.pomodoro-side__label {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.pomodoro-side__value {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+}
+
+/* ---- 舞台下方内容区（dock / 淡出区） ---- */
+.pomodoro-below {
+  margin-top: var(--space-2xl);
+}
+
 /* ---- 其余内容淡出：保持可交互，仅降低不透明度 ---- */
 .pomodoro-dimmed {
   opacity: 0.4;
   transition: opacity var(--dur-med) var(--ease-out);
 }
 
-/* ---- 预设选择区 ---- */
-.pomodoro-preset-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+/* ---- 预设选择：底部 dock 横排紧凑卡（glass-2 托盘，区别于功能卡） ---- */
+.pomodoro-dock__caption {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-md);
+}
+
+.pomodoro-dock__tray {
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+}
+
+.pomodoro-dock__strip {
+  display: flex;
   gap: var(--space-md);
+  overflow-x: auto;
+  /* 内边距吸收 hover 上浮与阴影，避免被滚动容器裁切 */
+  padding: var(--space-xs);
+  scrollbar-width: thin;
+}
+
+.pomodoro-dock__strip .preset-card {
+  flex: 0 0 240px;
 }
 
 /* ---- 调整时长：glass-2 横条卡 ---- */
@@ -126,8 +235,50 @@
   box-shadow: 0 0 0 1px var(--color-accent-deep-green), var(--glow-success);
 }
 
-/* ---- 移动端：操作按钮纵向堆叠，全部 ≥44px ---- */
+/* ---- CTA 按压回弹：scale(0.96) + --ease-spring（设计文档 13.4） ---- */
+.pomodoro-hero .btn,
+.pomodoro-adjust-card .btn {
+  transition:
+    transform var(--dur-fast) var(--ease-spring),
+    box-shadow var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.pomodoro-hero .btn:active:not(:disabled):not(.btn--loading),
+.pomodoro-adjust-card .btn:active:not(:disabled):not(.btn--loading) {
+  transform: scale(0.96);
+}
+
+/* ---- 窄屏（<1024px）：舞台与侧卡上下堆叠 ---- */
+@media (max-width: 1023px) {
+  .pomodoro-active {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pomodoro-active__side {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+}
+
+/* ---- 移动端：舞台留白收敛、dock 纵向堆叠、操作按钮纵向 ≥44px ---- */
 @media (max-width: 767px) {
+  .pomodoro-hero__stage {
+    padding: var(--space-lg) 0;
+  }
+
+  .pomodoro-dock__strip {
+    flex-direction: column;
+    overflow-x: visible;
+  }
+
+  .pomodoro-dock__strip .preset-card {
+    flex: 1 1 auto;
+  }
+
   .pomodoro-ops {
     flex-direction: column;
     align-items: stretch;
@@ -137,10 +288,6 @@
   .pomodoro-ops .btn {
     width: 100%;
     min-height: 44px;
-  }
-
-  .pomodoro-preset-grid {
-    grid-template-columns: 1fr;
   }
 
   .pomodoro-adjust-card {
@@ -154,5 +301,13 @@
 
   .pomodoro-adjust-card__actions .btn {
     width: 100%;
+  }
+}
+
+/* ---- reduced-motion：弹性按压回弹取消 ---- */
+@media (prefers-reduced-motion: reduce) {
+  .pomodoro-hero .btn:active:not(:disabled):not(.btn--loading),
+  .pomodoro-adjust-card .btn:active:not(:disabled):not(.btn--loading) {
+    transform: none;
   }
 }

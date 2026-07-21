@@ -85,15 +85,28 @@
   animation: ring-breathe 2s ease-in-out infinite;
 }
 
-/* 中环·轮次刻度珠：未点亮 --color-border；点亮模式色 + 同模式辉光 */
+/* 中环·轮次刻度珠：未点亮 --color-border；点亮模式色 + 同模式辉光；
+   点亮交互使用弹性曲线 --ease-spring（设计文档 13.4 弹性强调） */
 .ring-countdown__bead {
   fill: var(--color-border);
-  transition: fill var(--dur-med) var(--ease-out);
+  transition: fill var(--dur-med) var(--ease-spring);
+}
+
+@keyframes ring-bead-pop {
+  from {
+    transform: scale(0.5);
+  }
+  to {
+    transform: scale(1);
+  }
 }
 
 .ring-countdown__bead--lit {
   fill: var(--_rc-c1);
   filter: drop-shadow(0 0 6px currentColor);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ring-bead-pop var(--dur-med) var(--ease-spring);
 }
 
 /* 内环·装饰细环 */
@@ -177,7 +190,8 @@
 
 /* ---- reduced-motion：脉动取消，仅保留变色（全局 0.01ms 规则之外的显式降级） ---- */
 @media (prefers-reduced-motion: reduce) {
-  .ring-countdown--lowtime .ring-countdown__progress {
+  .ring-countdown--lowtime .ring-countdown__progress,
+  .ring-countdown__bead--lit {
     animation: none;
   }
 
