@@ -70,6 +70,12 @@
     stroke var(--dur-med) var(--ease-out);
 }
 
+/* 无极平滑（smooth）：dashoffset 由 rAF 逐帧直驱，取消其过渡避免滞后；
+   仅保留模式色切换过渡（JS 写 SVG 几何属性，非 CSS 布局属性动画） */
+.ring-countdown--smooth .ring-countdown__progress {
+  transition: stroke var(--dur-med) var(--ease-out);
+}
+
 /* 低时警示：环呼吸脉动（opacity 0.7 ↔ 1，2s infinite） */
 @keyframes ring-breathe {
   0%,

@@ -28,6 +28,18 @@ async function initDatabase() {
   console.log('Running schema...');
   await connection.query(schema);
 
+  // 幂等 migration：subject_snapshot ENUM 扩展 'free'（漫游专注）
+  // 对既有数据库生效；CREATE TABLE IF NOT EXISTS 不会更新已有表结构，重复执行安全
+  console.log('Running migrations...');
+  await connection.query(
+    `ALTER TABLE \`focus_sessions\`
+     MODIFY COLUMN \`subject_snapshot\` ENUM('math','english','408','free') NOT NULL`
+  );
+  await connection.query(
+    `ALTER TABLE \`study_records\`
+     MODIFY COLUMN \`subject_snapshot\` ENUM('math','english','408','free') NOT NULL`
+  );
+
   console.log('Database initialized successfully!');
   await connection.end();
 }

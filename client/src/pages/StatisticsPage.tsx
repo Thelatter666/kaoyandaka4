@@ -20,7 +20,7 @@ import { statisticsApi } from '../api/statistics';
 import { today, formatDate } from '../utils/date';
 import { formatDurationHuman } from '../utils/duration';
 import { ForestResponse } from '@shared/types';
-import type { Subject, SubSubject } from '@shared/types';
+import type { SessionSubject, SubSubject } from '@shared/types';
 import './StatisticsPage.css';
 
 type StatMode = 'day' | 'week' | 'month';
@@ -232,7 +232,7 @@ export function StatisticsPage() {
                           className="stats-record"
                         >
                           <div className="stats-record__row">
-                            <SubjectBadge subject={item.subject as Subject} subSubject={item.subSubject as SubSubject | null} />
+                            <SubjectBadge subject={item.subject as SessionSubject} subSubject={item.subSubject as SubSubject | null} />
                             <span className="stats-record__title truncate">{item.title}</span>
                             <span className="stats-record__duration tabular-nums">
                               {formatDurationHuman(item.durationSeconds)}

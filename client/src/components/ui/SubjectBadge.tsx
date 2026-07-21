@@ -1,11 +1,12 @@
 import React from 'react';
-import { Sigma, BookA, Cpu, type LucideProps } from 'lucide-react';
-import type { Subject, SubSubject } from '@shared/types';
+import { Sigma, BookA, Cpu, Compass, type LucideProps } from 'lucide-react';
+import type { SessionSubject, SubSubject } from '@shared/types';
 
-const SUBJECT_LABELS: Record<Subject, string> = {
+const SUBJECT_LABELS: Record<SessionSubject, string> = {
   math: '数学',
   english: '英语',
   '408': '408',
+  free: '漫游',
 };
 
 const SUB_SUBJECT_LABELS: Record<SubSubject, string> = {
@@ -15,14 +16,15 @@ const SUB_SUBJECT_LABELS: Record<SubSubject, string> = {
   computer_network: '计算机网络',
 };
 
-const SUBJECT_ICONS: Record<Subject, React.ComponentType<LucideProps>> = {
+const SUBJECT_ICONS: Record<SessionSubject, React.ComponentType<LucideProps>> = {
   math: Sigma,
   english: BookA,
   '408': Cpu,
+  free: Compass,
 };
 
 interface SubjectBadgeProps {
-  subject: Subject;
+  subject: SessionSubject;
   subSubject?: SubSubject | null;
   size?: 'sm' | 'md';
 }

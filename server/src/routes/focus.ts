@@ -52,15 +52,26 @@ router.post('/start', validate(StartFocusSchema), async (req: Request, res: Resp
   try {
     const { presetId, plannedDurationMinutes, source, courseEpisodeId, taskId } = req.body;
 
-    // Get preset
-    const [presets] = await pool.query<PresetRow[]>('SELECT * FROM study_presets WHERE id = ?', [presetId]);
-    if (presets.length === 0) throw new AppError(404, 'NOT_FOUND', '预设不存在');
+    // presetId 缺省 = 漫游专注：不归属任何预设/科目，快照写固定值
+    let snapshotName = '漫游专注';
+    let snapshotSubject = 'free';
+    let snapshotSubSubject: string | null = null;
 
-    const preset = presets[0];
+    if (presetId) {
+      // Get preset
+      const [presets] = await pool.query<PresetRow[]>('SELECT * FROM study_presets WHERE id = ?', [presetId]);
+      if (presets.length === 0) throw new AppError(404, 'NOT_FOUND', '预设不存在');
+
+      const preset = presets[0];
+      snapshotName = preset.name;
+      snapshotSubject = preset.subject;
+      snapshotSubSubject = preset.sub_subject;
+
+      // Update preset last_used_at
+      await pool.query('UPDATE study_presets SET last_used_at = NOW() WHERE id = ?', [presetId]);
+    }
+
     const plannedDurationSeconds = plannedDurationMinutes * 60;
-
-    // Update preset last_used_at
-    await pool.query('UPDATE study_presets SET last_used_at = NOW() WHERE id = ?', [presetId]);
 
     const id = generateUUID();
     const now = new Date();
@@ -71,7 +82,7 @@ router.post('/start', validate(StartFocusSchema), async (req: Request, res: Resp
        (id, preset_id, preset_name_snapshot, subject_snapshot, sub_subject_snapshot,
         planned_duration_seconds, started_at, planned_end_at, status, source, course_episode_id, task_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'in_progress', ?, ?, ?)`,
-      [id, presetId, preset.name, preset.subject, preset.sub_subject,
+      [id, presetId || null, snapshotName, snapshotSubject, snapshotSubSubject,
         plannedDurationSeconds, now, plannedEndAt, source, courseEpisodeId || null, taskId || null]
     );
 

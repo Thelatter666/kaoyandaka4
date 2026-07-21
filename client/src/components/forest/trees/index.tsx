@@ -6,7 +6,7 @@
  * 每棵树下有地面阴影椭圆（--color-forest-tree-shadow）。
  */
 import React from 'react';
-import type { Subject } from '@shared/types';
+import type { SessionSubject } from '@shared/types';
 
 export interface TreeSvgProps {
   className?: string;
@@ -89,6 +89,28 @@ export function TreeFruit(props: TreeSvgProps) {
   );
 }
 
+/** 漫游·垂柳：圆冠 + 垂枝弧线（银灰绿），与松/阔叶/果树形状区分 */
+export function TreeWillow(props: TreeSvgProps) {
+  return (
+    <TreeSvg {...props}>
+      <rect x="29" y="58" width="6" height="16" rx="2" fill="var(--color-forest-trunk)" />
+      <polygon
+        points="32,6 47,11 54,24 51,40 40,48 24,48 13,40 10,24 17,11"
+        fill="var(--color-forest-willow-1)"
+      />
+      <polygon
+        points="26,12 38,13 44,21 40,31 29,32 21,27 20,17"
+        fill="var(--color-forest-willow-2)"
+      />
+      {/* 垂枝：4 条自冠缘下垂的弧线 */}
+      <path d="M16 36 C 14 46, 14 54, 16 62" fill="none" stroke="var(--color-forest-willow-1)" strokeWidth="3" strokeLinecap="round" />
+      <path d="M26 42 C 25 50, 25 58, 26 66" fill="none" stroke="var(--color-forest-willow-2)" strokeWidth="3" strokeLinecap="round" />
+      <path d="M38 42 C 39 50, 39 58, 38 66" fill="none" stroke="var(--color-forest-willow-1)" strokeWidth="3" strokeLinecap="round" />
+      <path d="M48 36 C 50 46, 50 54, 48 62" fill="none" stroke="var(--color-forest-willow-2)" strokeWidth="3" strokeLinecap="round" />
+    </TreeSvg>
+  );
+}
+
 /** 幼苗占位：两片小叶 + 虚线圆坑（该科本期 0 棵时显示，opacity 0.5 由样式控制） */
 export function Sapling({ className, style, title }: TreeSvgProps) {
   return (
@@ -129,14 +151,16 @@ export function Sapling({ className, style, title }: TreeSvgProps) {
   );
 }
 
-export const TREE_COMPONENTS: Record<Subject, React.ComponentType<TreeSvgProps>> = {
+export const TREE_COMPONENTS: Record<SessionSubject, React.ComponentType<TreeSvgProps>> = {
   math: TreePine,
   english: TreeBroadleaf,
   '408': TreeFruit,
+  free: TreeWillow,
 };
 
-export const SUBJECT_NAMES: Record<Subject, string> = {
+export const SUBJECT_NAMES: Record<SessionSubject, string> = {
   math: '数学',
   english: '英语',
   '408': '408',
+  free: '漫游',
 };

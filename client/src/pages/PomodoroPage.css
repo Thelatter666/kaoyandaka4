@@ -1,10 +1,10 @@
 /* ============================================================
    番茄钟页（设计文档 5.3 / v2 12.4 / 13.4）
-   v2 舞台化：圆盘为本页唯一视觉主角（背后聚灯光斑 + 居中大留白）；
-   预设选择区为底部 dock 横排紧凑卡（glass-2 托盘，区别于功能卡，
-   可横向滚动，窄屏纵向堆叠）；进行中辅助信息收进单一侧卡；
-   其余内容 opacity 0.4 淡出但保持可交互；CTA 按压回弹使用
-   --ease-spring；reduced-motion 全部降级。
+   v3：圆盘常驻页面中央，空闲态满环预览目标时长；控制卡（时长选择
+   + 开始专注）内联于圆盘正下方；预设选择区为底部 dock 横排紧凑卡
+   （首张「漫游专注」+ glass-2 托盘，可横向滚动，窄屏纵向堆叠）；
+   进行中辅助信息收进单一侧卡；其余内容 opacity 0.4 淡出但保持可交互；
+   CTA 按压回弹使用 --ease-spring；reduced-motion 全部降级。
    ============================================================ */
 
 /* ---- 圆盘主舞台：居中大留白 + 背后聚灯光斑 ---- */
@@ -151,66 +151,77 @@
   flex: 0 0 240px;
 }
 
-/* ---- 调整时长：glass-2 横条卡 ---- */
-.pomodoro-adjust-card {
-  border-radius: var(--radius-card);
-  padding: var(--space-lg);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xl);
-}
-
-.pomodoro-adjust-card__preset {
+/* ---- 空闲态控制卡：glass-2 横条（时长选择 + 开始专注大按钮） ---- */
+.pomodoro-control {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
+  gap: var(--space-xl);
+  border-radius: var(--radius-card);
+  padding: var(--space-lg);
+  width: min(100%, 720px);
 }
 
-.pomodoro-adjust-card__preset-info {
+.pomodoro-control__duration {
   flex: 1;
   min-width: 0;
 }
 
-.pomodoro-adjust-card__preset-label {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-  margin-bottom: var(--space-xs);
+/* 主 CTA「开始专注」：全站最大主按钮，不随时长区拉伸 */
+.pomodoro-control .pomodoro-cta {
+  flex-shrink: 0;
 }
 
-.pomodoro-adjust-card__preset-name {
+/* ---- 漫游专注卡（dock 首张）：与预设紧凑卡同宽，选中态描边 + 辉光 ---- */
+.pomodoro-roam {
+  position: relative;
+  flex: 0 0 240px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-border);
+  background: var(--color-glass-bg);
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.pomodoro-roam:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glass-md);
+}
+
+.pomodoro-roam:active {
+  transform: scale(0.98);
+}
+
+.pomodoro-roam--selected {
+  border: 2px solid var(--color-accent-primary);
+  box-shadow: var(--shadow-glass-sm), var(--glow-primary);
+}
+
+.pomodoro-roam__icon {
+  display: inline-flex;
+  line-height: 0;
+  color: var(--color-subject-free-text);
+}
+
+.pomodoro-roam__name {
   font-family: var(--font-heading);
-  font-size: var(--text-lg);
+  font-size: var(--text-base);
   font-weight: var(--font-semibold);
   color: var(--color-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.pomodoro-adjust-card__preset-duration {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
+.pomodoro-roam__desc {
+  font-size: var(--text-xs);
   color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.pomodoro-adjust-card__duration-label {
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--color-text-primary);
-  margin-bottom: var(--space-md);
-}
-
-.pomodoro-adjust-card__actions {
-  display: flex;
-  gap: var(--space-md);
-  align-items: center;
-}
-
-/* 主 CTA「开始专注」：全站最大主按钮 */
-.pomodoro-cta {
-  flex: 1;
 }
 
 /* ---- 完成态 ---- */
@@ -237,7 +248,7 @@
 
 /* ---- CTA 按压回弹：scale(0.96) + --ease-spring（设计文档 13.4） ---- */
 .pomodoro-hero .btn,
-.pomodoro-adjust-card .btn {
+.pomodoro-control .btn {
   transition:
     transform var(--dur-fast) var(--ease-spring),
     box-shadow var(--dur-fast) var(--ease-out),
@@ -247,7 +258,7 @@
 }
 
 .pomodoro-hero .btn:active:not(:disabled):not(.btn--loading),
-.pomodoro-adjust-card .btn:active:not(:disabled):not(.btn--loading) {
+.pomodoro-control .btn:active:not(:disabled):not(.btn--loading) {
   transform: scale(0.96);
 }
 
@@ -275,7 +286,8 @@
     overflow-x: visible;
   }
 
-  .pomodoro-dock__strip .preset-card {
+  .pomodoro-dock__strip .preset-card,
+  .pomodoro-dock__strip .pomodoro-roam {
     flex: 1 1 auto;
   }
 
@@ -290,24 +302,25 @@
     min-height: 44px;
   }
 
-  .pomodoro-adjust-card {
+  /* 控制卡：纵向堆叠，CTA 全宽 */
+  .pomodoro-control {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-md);
     padding: var(--space-md);
   }
 
-  .pomodoro-adjust-card__actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .pomodoro-adjust-card__actions .btn {
+  .pomodoro-control .pomodoro-cta {
     width: 100%;
   }
 }
 
-/* ---- reduced-motion：弹性按压回弹取消 ---- */
+/* ---- reduced-motion：弹性按压回弹与漫游卡形变取消 ---- */
 @media (prefers-reduced-motion: reduce) {
   .pomodoro-hero .btn:active:not(:disabled):not(.btn--loading),
-  .pomodoro-adjust-card .btn:active:not(:disabled):not(.btn--loading) {
+  .pomodoro-control .btn:active:not(:disabled):not(.btn--loading),
+  .pomodoro-roam:hover,
+  .pomodoro-roam:active {
     transform: none;
   }
 }

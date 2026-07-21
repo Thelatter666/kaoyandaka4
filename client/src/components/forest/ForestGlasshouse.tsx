@@ -6,7 +6,7 @@
  * 单期 >24 棵渲染最近 24 棵并显示「+N 棵」角标；该科 0 棵显示幼苗占位。
  */
 import React, { useEffect, useState } from 'react';
-import type { Subject } from '@shared/types';
+import type { SessionSubject } from '@shared/types';
 import { Button } from '../ui/Button';
 import { TREE_COMPONENTS, SUBJECT_NAMES, Sapling } from './trees';
 import './ForestGlasshouse.css';
@@ -14,7 +14,8 @@ import './ForestGlasshouse.css';
 /** 单期单科最多渲染的树木数量（超出以「+N 棵」角标呈现） */
 const MAX_RENDERED_TREES = 24;
 
-const SUBJECT_ORDER: Subject[] = ['math', 'english', '408'];
+/** 分区顺序：数学 / 英语 / 408 / 漫游（free），四区等宽 */
+const SUBJECT_ORDER: SessionSubject[] = ['math', 'english', '408', 'free'];
 
 type SkyKey = 'dawn' | 'morning' | 'afternoon' | 'dusk' | 'night';
 
@@ -143,7 +144,7 @@ export function ForestGlasshouse({
               <div
                 key={subject}
                 className="forest__zone"
-                style={{ left: `${zoneIndex * 33.3333}%` }}
+                style={{ left: `${zoneIndex * 25}%` }}
               >
                 {rendered === 0 ? (
                   /* 幼苗占位：该科本期 0 棵 */
@@ -162,7 +163,7 @@ export function ForestGlasshouse({
                     const tipId = `forest-tip-${subject}-${treeNumber}`;
                     const isActive = activeTip === tipId;
                     /* 场景边缘的树：tooltip 改为中心对齐 → 向内展开，避免被场景 overflow:hidden 裁切 */
-                    const sceneLeftPct = zoneIndex * 33.3333 + (leftPct * 33.3333) / 100;
+                    const sceneLeftPct = zoneIndex * 25 + (leftPct * 25) / 100;
                     const tipAlign = sceneLeftPct < 20 ? 'left' : sceneLeftPct > 80 ? 'right' : 'center';
                     return (
                       <div

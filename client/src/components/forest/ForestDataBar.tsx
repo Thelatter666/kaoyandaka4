@@ -4,12 +4,12 @@
  * 数据同时以文字呈现，不依赖图形。
  */
 import React from 'react';
-import type { Subject } from '@shared/types';
+import type { SessionSubject } from '@shared/types';
 import { formatDurationHuman } from '../../utils/duration';
 import { SUBJECT_NAMES } from './trees';
 import './ForestDataBar.css';
 
-const SUBJECT_ORDER: Subject[] = ['math', 'english', '408'];
+const SUBJECT_ORDER: SessionSubject[] = ['math', 'english', '408', 'free'];
 
 export interface ForestDataBarProps {
   totalFocusSeconds: number;

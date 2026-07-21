@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS focus_sessions (
     id                      CHAR(36) PRIMARY KEY,
     preset_id               CHAR(36) NULL,
     preset_name_snapshot    VARCHAR(200) NOT NULL,
-    subject_snapshot        ENUM('math','english','408') NOT NULL,
+    subject_snapshot        ENUM('math','english','408','free') NOT NULL,
     sub_subject_snapshot    ENUM('data_structure','computer_organization','operating_system','computer_network') NULL,
     planned_duration_seconds INT NOT NULL,
     actual_duration_seconds INT NULL,
@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS focus_sessions (
 CREATE TABLE IF NOT EXISTS study_records (
     id                      CHAR(36) PRIMARY KEY,
     preset_name_snapshot    VARCHAR(200) NOT NULL,
-    subject_snapshot        ENUM('math','english','408') NOT NULL,
+    subject_snapshot        ENUM('math','english','408','free') NOT NULL,
     sub_subject_snapshot    ENUM('data_structure','computer_organization','operating_system','computer_network') NULL,
     actual_duration_seconds INT NOT NULL,
     focus_session_id        CHAR(36) NULL,

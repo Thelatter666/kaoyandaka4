@@ -65,10 +65,9 @@
   border-radius: var(--radius-full);
 }
 
-/* ---- 加载：场景骨架 shimmer ---- */
+/* ---- 加载：场景骨架 shimmer（高度与花房场景一致） ---- */
 .stats-skeleton__scene {
-  aspect-ratio: 16 / 9;
-  min-height: 340px;
+  height: clamp(280px, 38vh, 420px);
   border-radius: var(--radius-lg);
 }
 
@@ -80,8 +79,8 @@
 
 @media (max-width: 767px) {
   .stats-skeleton__scene {
+    height: auto;
     aspect-ratio: 4 / 3;
-    min-height: 0;
   }
 }
 

@@ -6,8 +6,8 @@ import {
   Coffee,
   Armchair,
   CheckCircle2,
-  ChevronLeft,
   ClipboardList,
+  Compass,
 } from 'lucide-react';
 import { PageShell } from '../components/layout/PageShell';
 import { Button } from '../components/ui/Button';
@@ -26,23 +26,26 @@ import { statisticsApi } from '../api/statistics';
 import { showToast } from '../components/ui/Toast';
 import { today } from '../utils/date';
 import { SHORT_BREAK_MINUTES, LONG_BREAK_MINUTES, LONG_BREAK_AFTER_ROUNDS } from '@shared/schemas/common';
-import type { Subject, SubSubject } from '@shared/types';
+import type { Subject, SubSubject, SessionSubject } from '@shared/types';
 import './PomodoroPage.css';
 
 /**
  * 番茄钟页「光晕核心」（设计文档 5.3 / v2 12.4 / 13.4）
  *
- * 业务规则保持不变：预设必选、时长 5–120/5 分钟倍数、短休 5 分钟 /
- * 长休 15 分钟固定、会话恢复、完成/取消/休息的记录规则、重复完成保护。
+ * v3 布局：圆盘常驻页面中央（不再经「选预设 → 调时长」两步跳转）——
+ * 空闲态圆盘满环预览目标时长，下方控制卡内联 DurationSelector 与
+ * 「开始专注」大按钮；底部 dock 横排预设紧凑卡（含首张「漫游专注」卡），
+ * 点击预设即选中并同步时长，再次点击取消回到漫游。
  *
- * v2 布局（非 bento）：圆盘舞台居中为本页唯一视觉主角（背后聚灯光斑 +
- * 大留白）；预设选择区为底部 dock 横排紧凑卡（glass-2 托盘，可横向滚动，
- * 窄屏纵向堆叠）；进行中辅助信息（当前预设/轮次/计划时长）收进单一侧卡；
- * 其余内容 opacity 0.4 淡出但保持可交互。页面编排 .reveal：圆盘舞台 →
- * 控制区 → 侧卡 / dock（每步 ≤4 个，远低于每页 8 个上限）。
+ * 漫游专注：未选预设直接开始，会话快照记为「漫游专注 / free」，
+ * 计入总时长与完成次数并参与学习森林种树，不归属任何科目。
+ *
+ * 无极平滑：进行中/休息中以 rAF 逐帧刷新剩余毫秒，圆环匀速连续消减；
+ * 业务规则保持不变（时长 5–120/5 分钟倍数、短休 5 / 长休 15 固定、
+ * 会话恢复、完成/取消/休息记录规则、重复完成保护）。
  */
 
-type PomodoroStep = 'select-preset' | 'adjust-duration' | 'active' | 'completed';
+type PomodoroStep = 'idle' | 'active' | 'completed';
 
 type RingMode = 'focus' | 'short_break' | 'long_break';
 
@@ -58,7 +61,7 @@ const SUBJECT_ORDER: Subject[] = ['math', 'english', '408'];
 export function PomodoroPage() {
   const {
     activeSession,
-    breakMode, breakRemainingSeconds, roundCount,
+    breakMode, breakRemainingSeconds, breakEndsAt, roundCount,
     startFocus, completeFocus, cancelFocus,
     startBreak, completeBreak,
   } = useFocusSession();
@@ -68,12 +71,12 @@ export function PomodoroPage() {
   const [presetsError, setPresetsError] = useState<string | null>(null);
 
   // UI state
-  const [step, setStep] = useState<PomodoroStep>('select-preset');
+  const [step, setStep] = useState<PomodoroStep>('idle');
   const [selectedPreset, setSelectedPreset] = useState<Preset | null>(null);
   const [durationMinutes, setDurationMinutes] = useState(45);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // 光晕核心：逐秒刷新 / 完成粒子爆散 / 今日已完成轮次
+  // 光晕核心：逐帧刷新 / 完成粒子爆散 / 今日已完成轮次
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [burstKey, setBurstKey] = useState(0);
   const [statsRounds, setStatsRounds] = useState(0);
@@ -116,12 +119,17 @@ export function PomodoroPage() {
     }
   }, [activeSession]);
 
-  // 进行中逐秒刷新剩余时间
+  // 进行中/休息中以 rAF 逐帧刷新 nowMs：驱动圆环无极平滑（无极进度条）
   useEffect(() => {
-    if (!activeSession) return;
-    const id = setInterval(() => setNowMs(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [activeSession]);
+    if (!activeSession && !breakMode) return;
+    let rafId = 0;
+    const tick = () => {
+      setNowMs(Date.now());
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [activeSession, breakMode]);
 
   // 会话自然结束检测：activeSession 由有变无且非完成/取消按钮触发
   // （后端对到期会话自动完成并记录），触发粒子爆散并进入完成页
@@ -149,16 +157,20 @@ export function PomodoroPage() {
       showToast('info', '休息结束后再开始新的专注');
       return;
     }
+    // 再次点击已选中的预设：取消选中，回到漫游专注
+    if (selectedPreset?.id === preset.id) {
+      setSelectedPreset(null);
+      return;
+    }
     setSelectedPreset(preset);
     setDurationMinutes(preset.durationMinutes);
-    setStep('adjust-duration');
   };
 
   const handleStartFocus = async () => {
-    if (!selectedPreset) return;
     setActionLoading(true);
     try {
-      await startFocus(selectedPreset.id, durationMinutes, 'pomodoro');
+      // 未选预设即漫游专注：presetId 传 null
+      await startFocus(selectedPreset?.id ?? null, durationMinutes, 'pomodoro');
       setStep('active');
     } catch {
       // Error handled by hook
@@ -188,7 +200,7 @@ export function PomodoroPage() {
     selfEndedRef.current = true;
     try {
       await cancelFocus();
-      setStep('select-preset');
+      setStep('idle');
       setSelectedPreset(null);
     } catch {
       selfEndedRef.current = false;
@@ -200,25 +212,32 @@ export function PomodoroPage() {
 
   const handleStartBreak = (mode: 'short' | 'long') => {
     startBreak(mode);
-    setStep('select-preset');
+    setStep('idle');
     setSelectedPreset(null);
   };
 
   const handleContinue = () => {
-    setStep('select-preset');
+    setStep('idle');
     setSelectedPreset(null);
   };
 
   const handleNoBreak = () => {
-    setStep('select-preset');
+    setStep('idle');
     setSelectedPreset(null);
   };
 
-  // 剩余时间（基于逐秒刷新的 nowMs）
+  // 剩余时间（毫秒级浮点，供 smooth 圆环匀速消减；显示层向上取整）
   const remainingSeconds = activeSession
-    ? Math.max(0, Math.round((new Date(activeSession.plannedEndAt).getTime() - nowMs) / 1000))
+    ? Math.max(0, (new Date(activeSession.plannedEndAt).getTime() - nowMs) / 1000)
     : 0;
   const totalPlannedSeconds = activeSession?.plannedDurationSeconds || 0;
+
+  // 休息剩余：优先按结束时间戳逐帧计算，回退为 hook 的整数秒
+  const breakRemainingFloat = breakMode
+    ? breakEndsAt != null
+      ? Math.max(0, (breakEndsAt - nowMs) / 1000)
+      : breakRemainingSeconds
+    : 0;
 
   // Determine if we should show long break option（沿用既有规则）
   const showLongBreak = roundCount % LONG_BREAK_AFTER_ROUNDS === 0 && roundCount > 0;
@@ -241,7 +260,7 @@ export function PomodoroPage() {
     </div>
   );
 
-  /** 底部预设 dock：横排紧凑卡托盘；dimmed 时淡出 0.4 保持可交互 */
+  /** 底部预设 dock：首张「漫游专注」+ 横排紧凑卡托盘；dimmed 时淡出 0.4 保持可交互 */
   const renderPresetDock = (dimmed: boolean, revealIndex: number) => {
     const content = (() => {
       if (presetsLoading) {
@@ -250,21 +269,24 @@ export function PomodoroPage() {
       if (presetsError) {
         return <ErrorState message={presetsError} onRetry={fetchPresets} />;
       }
-      if (presets.length === 0) {
-        return (
-          <EmptyState
-            icon={<ClipboardList size={40} strokeWidth={1.75} />}
-            title="还没有学习预设"
-            description="需要先创建预设才能开始专注"
-            actionLabel="创建第一个预设"
-            onAction={() => { window.location.hash = '#/presets'; }}
-          />
-        );
-      }
       // 铺平为横向 dock（沿用既有科目分组顺序，选择语义不变）
       const orderedPresets = SUBJECT_ORDER.flatMap((subj) => presets.filter((p) => p.subject === subj));
       return (
         <div className="pomodoro-dock__strip">
+          {/* 漫游专注：不设科目，随时出发；未选预设时呈选中态 */}
+          <button
+            type="button"
+            className={`pomodoro-roam${!selectedPreset ? ' pomodoro-roam--selected' : ''}`}
+            aria-pressed={!selectedPreset}
+            onClick={() => setSelectedPreset(null)}
+          >
+            <span className="pomodoro-roam__icon" aria-hidden="true">
+              <Compass size={18} strokeWidth={1.75} />
+            </span>
+            <span className="pomodoro-roam__name">漫游专注</span>
+            <span className="pomodoro-roam__desc">不设科目 · 随时出发</span>
+            {!selectedPreset && <span className="sr-only">已选择</span>}
+          </button>
           {orderedPresets.map((preset) => (
             <PresetCard
               key={preset.id}
@@ -274,9 +296,19 @@ export function PomodoroPage() {
               subSubject={preset.subSubject as SubSubject | null}
               durationMinutes={preset.durationMinutes}
               compact
+              isSelected={selectedPreset?.id === preset.id}
               onClick={() => handleSelectPreset(preset)}
             />
           ))}
+          {presets.length === 0 && (
+            <EmptyState
+              icon={<ClipboardList size={40} strokeWidth={1.75} />}
+              title="还没有学习预设"
+              description="创建预设可按科目追踪时长；也可以直接开始漫游专注"
+              actionLabel="创建第一个预设"
+              onAction={() => { window.location.hash = '#/presets'; }}
+            />
+          )}
         </div>
       );
     })();
@@ -287,20 +319,20 @@ export function PomodoroPage() {
         style={{ '--i': revealIndex } as React.CSSProperties}
         aria-label="选择学习预设"
       >
-        {!dimmed && <p className="pomodoro-dock__caption">选择一个预设开始专注学习</p>}
+        {!dimmed && <p className="pomodoro-dock__caption">选择一个预设，或直接开始漫游专注</p>}
         <div className="pomodoro-dock__tray glass-2">{content}</div>
       </section>
     );
   };
 
   // ======================
-  // RENDER: Select Preset（休息中展示休息圆盘舞台 + dock 淡出）
+  // RENDER: Idle（圆盘常驻中央：满环预览 + 控制卡 + 预设 dock）
   // ======================
-  if (step === 'select-preset') {
+  if (step === 'idle') {
     return (
       <PageShell
         title="番茄钟"
-        subtitle={breakMode ? '休息一下，恢复精力' : '选择预设，开始一段专注时光'}
+        subtitle={breakMode ? '休息一下，恢复精力' : '设定时长，即刻开始一段专注'}
       >
         <p className="sr-only">今日已完成 {completedRoundsToday} 轮</p>
 
@@ -311,8 +343,9 @@ export function PomodoroPage() {
                 breakMode,
                 <RingCountdown
                   totalSeconds={breakMode === 'short_break' ? SHORT_BREAK_MINUTES * 60 : LONG_BREAK_MINUTES * 60}
-                  remainingSeconds={breakRemainingSeconds}
+                  remainingSeconds={breakRemainingFloat}
                   mode={breakMode}
+                  smooth
                   completedRoundsToday={completedRoundsToday}
                 />,
                 0,
@@ -329,61 +362,51 @@ export function PomodoroPage() {
             </div>
           </>
         ) : (
-          renderPresetDock(false, 0)
-        )}
-      </PageShell>
-    );
-  }
+          <>
+            <div className="pomodoro-hero">
+              {renderStage(
+                'focus',
+                <RingCountdown
+                  totalSeconds={durationMinutes * 60}
+                  remainingSeconds={durationMinutes * 60}
+                  mode="focus"
+                  smooth
+                  modeLabel="准备开始"
+                  completedRoundsToday={completedRoundsToday}
+                  subtitle={
+                    selectedPreset
+                      ? `${selectedPreset.name} · ${SUBJECT_LABELS[selectedPreset.subject as Subject]}`
+                      : '漫游专注'
+                  }
+                />,
+                0,
+              )}
 
-  // ======================
-  // RENDER: Adjust Duration（glass-2 横条卡 + 大主按钮）
-  // ======================
-  if (step === 'adjust-duration' && selectedPreset) {
-    return (
-      <PageShell maxWidth={720} title="调整时长">
-        <div
-          className="glass-2 pomodoro-adjust-card reveal"
-          style={{ '--i': 0 } as React.CSSProperties}
-        >
-          {/* 横条：已选预设信息 */}
-          <div className="pomodoro-adjust-card__preset">
-            <div className="pomodoro-adjust-card__preset-info">
-              <p className="pomodoro-adjust-card__preset-label">已选预设</p>
-              <p className="pomodoro-adjust-card__preset-name">{selectedPreset.name}</p>
+              {/* 控制卡：时长选择 + 开始专注（圆盘正下方横条） */}
+              <div
+                className="glass-2 pomodoro-control reveal"
+                style={{ '--i': 1 } as React.CSSProperties}
+              >
+                <div className="pomodoro-control__duration">
+                  <DurationSelector value={durationMinutes} onChange={setDurationMinutes} />
+                </div>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="pomodoro-cta"
+                  onClick={handleStartFocus}
+                  loading={actionLoading}
+                >
+                  <Play size={18} strokeWidth={1.75} aria-hidden="true" />
+                  开始专注
+                </Button>
+              </div>
             </div>
-            <SubjectBadge
-              subject={selectedPreset.subject as Subject}
-              subSubject={selectedPreset.subSubject as SubSubject | null}
-            />
-            <span className="pomodoro-adjust-card__preset-duration">
-              {selectedPreset.durationMinutes} 分钟
-            </span>
-          </div>
-
-          {/* Duration selector */}
-          <div>
-            <p className="pomodoro-adjust-card__duration-label">本次专注时长</p>
-            <DurationSelector value={durationMinutes} onChange={setDurationMinutes} />
-          </div>
-
-          {/* Actions */}
-          <div className="pomodoro-adjust-card__actions">
-            <Button variant="ghost" onClick={() => { setStep('select-preset'); setSelectedPreset(null); }}>
-              <ChevronLeft size={16} strokeWidth={1.75} aria-hidden="true" />
-              返回
-            </Button>
-            <Button
-              variant="primary"
-              size="lg"
-              className="pomodoro-cta"
-              onClick={handleStartFocus}
-              loading={actionLoading}
-            >
-              <Play size={18} strokeWidth={1.75} aria-hidden="true" />
-              开始专注
-            </Button>
-          </div>
-        </div>
+            <div className="pomodoro-below">
+              {renderPresetDock(false, 2)}
+            </div>
+          </>
+        )}
       </PageShell>
     );
   }
@@ -405,8 +428,13 @@ export function PomodoroPage() {
                 totalSeconds={totalPlannedSeconds}
                 remainingSeconds={remainingSeconds}
                 mode="focus"
+                smooth
                 completedRoundsToday={completedRoundsToday}
-                subtitle={`${activeSession.presetNameSnapshot} · ${SUBJECT_LABELS[activeSession.subjectSnapshot]}`}
+                subtitle={
+                  activeSession.subjectSnapshot === 'free'
+                    ? '漫游专注'
+                    : `${activeSession.presetNameSnapshot} · ${SUBJECT_LABELS[activeSession.subjectSnapshot as Subject]}`
+                }
               />,
               0,
             )}
@@ -440,7 +468,7 @@ export function PomodoroPage() {
               </p>
               <div className="pomodoro-side__badge">
                 <SubjectBadge
-                  subject={activeSession.subjectSnapshot as Subject}
+                  subject={activeSession.subjectSnapshot as SessionSubject}
                   subSubject={activeSession.subSubjectSnapshot as SubSubject | null}
                 />
               </div>

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { DateString, SubjectEnum, SubSubjectEnum } from './common.js';
+import { DateString, SessionSubjectEnum, SubSubjectEnum } from './common.js';
 
 export const StatisticsQuerySchema = z.object({
   mode: z.enum(['day', 'week', 'month'], { message: '仅支持 day / week / month' }),
@@ -17,7 +17,7 @@ export const PeriodResultSchema = z.object({
 export const LearningRecordItemSchema = z.object({
   id: z.string().uuid(),
   title: z.string(),
-  subject: SubjectEnum,
+  subject: SessionSubjectEnum,
   subSubject: SubSubjectEnum.nullable(),
   durationSeconds: z.number(),
   time: z.string(),

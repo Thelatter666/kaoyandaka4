@@ -30,7 +30,7 @@ import { tasksApi, Task } from '../api/tasks';
 import { presetsApi, Preset } from '../api/presets';
 import { focusApi, ActiveSession } from '../api/focus';
 import { today, formatDateDisplay, getDaysRemaining } from '../utils/date';
-import type { Subject, SubSubject } from '@shared/types';
+import type { Subject, SubSubject, SessionSubject } from '@shared/types';
 import './HomePage.css';
 
 interface HomePageProps {
@@ -131,7 +131,7 @@ export function HomePage({ navigate }: HomePageProps) {
                   {activeSession.presetNameSnapshot}
                 </p>
                 <SubjectBadge
-                  subject={activeSession.subjectSnapshot as Subject}
+                  subject={activeSession.subjectSnapshot as SessionSubject}
                   subSubject={activeSession.subSubjectSnapshot as SubSubject | null}
                 />
                 <Button variant="primary" onClick={() => navigate('#/pomodoro')}>

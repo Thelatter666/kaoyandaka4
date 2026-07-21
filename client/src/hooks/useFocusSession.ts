@@ -1,10 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { Subject, SubSubject } from '@shared/types';
+import type { SessionSubject, SubSubject } from '@shared/types';
 
 export interface ActiveSession {
   id: string;
   presetNameSnapshot: string;
-  subjectSnapshot: Subject;
+  subjectSnapshot: SessionSubject;
   subSubjectSnapshot: SubSubject | null;
   plannedDurationSeconds: number;
   startedAt: string;
@@ -21,8 +21,10 @@ interface UseFocusSessionReturn {
   error: string | null;
   breakMode: FocusMode | null;
   breakRemainingSeconds: number;
+  /** 休息结束时间戳（ms）：供页面用 rAF 计算毫秒级剩余，驱动平滑圆环 */
+  breakEndsAt: number | null;
   roundCount: number;
-  startFocus: (presetId: string, minutes: number, source: string) => Promise<void>;
+  startFocus: (presetId: string | null, minutes: number, source: string) => Promise<void>;
   completeFocus: () => Promise<void>;
   cancelFocus: () => Promise<void>;
   startBreak: (mode: 'short' | 'long') => void;
@@ -38,6 +40,7 @@ export function useFocusSession(): UseFocusSessionReturn {
   const [error, setError] = useState<string | null>(null);
   const [breakMode, setBreakMode] = useState<FocusMode | null>(null);
   const [breakRemainingSeconds, setBreakRemainingSeconds] = useState(0);
+  const [breakEndsAt, setBreakEndsAt] = useState<number | null>(null);
   const [roundCount, setRoundCount] = useState(1);
   const breakTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -71,7 +74,7 @@ export function useFocusSession(): UseFocusSessionReturn {
     };
   }, [checkActive]);
 
-  const startFocus = useCallback(async (presetId: string, minutes: number, source: string) => {
+  const startFocus = useCallback(async (presetId: string | null, minutes: number, source: string) => {
     setLoading(true);
     setError(null);
     try {
@@ -79,7 +82,8 @@ export function useFocusSession(): UseFocusSessionReturn {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          presetId,
+          // presetId 为 null 即漫游专注：body 中不携带该字段
+          ...(presetId ? { presetId } : {}),
           plannedDurationMinutes: minutes,
           source,
         }),
@@ -148,12 +152,14 @@ export function useFocusSession(): UseFocusSessionReturn {
     const seconds = mode === 'short' ? 300 : 900; // 5 or 15 minutes
     setBreakMode(mode === 'short' ? 'short_break' : 'long_break');
     setBreakRemainingSeconds(seconds);
+    setBreakEndsAt(Date.now() + seconds * 1000);
     clearBreakTimer();
     breakTimerRef.current = setInterval(() => {
       setBreakRemainingSeconds((prev) => {
         if (prev <= 1) {
           clearBreakTimer();
           setBreakMode(null);
+          setBreakEndsAt(null);
           return 0;
         }
         return prev - 1;
@@ -165,6 +171,7 @@ export function useFocusSession(): UseFocusSessionReturn {
     clearBreakTimer();
     setBreakMode(null);
     setBreakRemainingSeconds(0);
+    setBreakEndsAt(null);
   }, [clearBreakTimer]);
 
   // Cleanup on unmount
@@ -181,6 +188,7 @@ export function useFocusSession(): UseFocusSessionReturn {
     error,
     breakMode,
     breakRemainingSeconds,
+    breakEndsAt,
     roundCount,
     startFocus,
     completeFocus,

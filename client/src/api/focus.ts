@@ -4,7 +4,7 @@ import type { StartFocusInput } from '@shared/types';
 export interface ActiveSession {
   id: string;
   presetNameSnapshot: string;
-  subjectSnapshot: 'math' | 'english' | '408';
+  subjectSnapshot: 'math' | 'english' | '408' | 'free';
   subSubjectSnapshot: string | null;
   plannedDurationSeconds: number;
   startedAt: string;

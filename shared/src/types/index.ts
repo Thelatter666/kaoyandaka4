@@ -1,5 +1,5 @@
 // Re-export all types from schemas
-export type { Subject, SubSubject } from '../schemas/common.js';
+export type { Subject, SubSubject, SessionSubject } from '../schemas/common.js';
 export type { CreatePresetInput, UpdatePresetInput } from '../schemas/preset.js';
 export type { CreateTaskInput, UpdateTaskInput, ReorderItemsInput } from '../schemas/task.js';
 export type { StartFocusInput, FocusSource, BreakType, FocusStatus } from '../schemas/focus.js';

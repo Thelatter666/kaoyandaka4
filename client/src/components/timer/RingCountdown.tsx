@@ -27,8 +27,12 @@ interface RingCountdownProps {
   completedRoundsToday?: number;
   /** 中心副标题（预设名 + 科目），一行省略 */
   subtitle?: string;
+  /** 模式文字覆盖（如空闲态显示「准备开始」）；默认取 MODE_LABELS[mode] */
+  modeLabel?: string;
   /** full＝完整光晕核心；mini＝120px 简化版（无刻度珠/装饰环/模式与副标题文本） */
   variant?: 'full' | 'mini';
+  /** smooth＝无极平滑：调用方以 rAF 驱动浮点 remainingSeconds，环体取消 dashoffset 过渡直驱 */
+  smooth?: boolean;
 }
 
 const MODE_LABELS: Record<TimerMode, string> = {
@@ -69,7 +73,9 @@ export function RingCountdown({
   ariaLabel,
   completedRoundsToday = 0,
   subtitle,
+  modeLabel,
   variant = 'full',
+  smooth = false,
 }: RingCountdownProps) {
   const isMini = variant === 'mini';
   // useId 含冒号，不能直接用于 CSS url(#...)，清洗后作为渐变 id
@@ -80,14 +86,17 @@ export function RingCountdown({
   const isLowTime = mode === 'focus' && remainingSeconds <= LOW_TIME_THRESHOLD_SECONDS;
   const litBeads = Math.min(Math.max(0, Math.floor(completedRoundsToday)), MAX_BEADS);
 
-  const timeStr = formatSeconds(remainingSeconds);
-  const label = ariaLabel ?? buildDefaultAriaLabel(mode, remainingSeconds);
+  // 显示与播报统一向上取整：smooth 传入浮点剩余时不会出现小数秒
+  const displaySeconds = Math.ceil(remainingSeconds);
+  const timeStr = formatSeconds(displaySeconds);
+  const label = ariaLabel ?? buildDefaultAriaLabel(mode, displaySeconds);
 
   const classNames = [
     'ring-countdown',
     `ring-countdown--${mode}`,
     isLowTime ? 'ring-countdown--lowtime' : '',
     isMini ? 'ring-countdown--mini' : '',
+    smooth ? 'ring-countdown--smooth' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -173,7 +182,7 @@ export function RingCountdown({
         {/* 中心 HTML 覆盖层：剩余时间 / 模式文字 / 预设名+科目 */}
         <div className="ring-countdown__center">
           <span className="ring-countdown__time">{timeStr}</span>
-          {!isMini && <span className="ring-countdown__mode">{MODE_LABELS[mode]}</span>}
+          {!isMini && <span className="ring-countdown__mode">{modeLabel ?? MODE_LABELS[mode]}</span>}
           {!isMini && subtitle && (
             <span className="ring-countdown__subtitle" title={subtitle}>
               {subtitle}

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <!-- 极光渐变：紫 → 冰蓝 → 极光绿（对应 tokens.css 极光光斑色系） -->
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#C7B8F5"/>
+      <stop offset=".5" stop-color="#7DD3FC"/>
+      <stop offset="1" stop-color="#34D399"/>
+    </linearGradient>
+    <radialGradient id="glowPurple" cx=".28" cy=".22" r=".6">
+      <stop offset="0" stop-color="#8B7CF6" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#8B7CF6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowGreen" cx=".78" cy=".82" r=".6">
+      <stop offset="0" stop-color="#34D399" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#34D399" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="clip"><rect x="2" y="2" width="60" height="60" rx="16"/></clipPath>
+  </defs>
+
+  <!-- 深色玻璃底板（圆角，对齐全局深色背景 #101828） -->
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="#101828"/>
+  <g clip-path="url(#clip)">
+    <rect x="2" y="2" width="60" height="60" fill="url(#glowPurple)"/>
+    <rect x="2" y="2" width="60" height="60" fill="url(#glowGreen)"/>
+  </g>
+
+  <!-- 番茄钟圆环：270° 进度弧，缺口朝上 -->
+  <circle cx="32" cy="32" r="21" fill="none" stroke="url(#ring)" stroke-width="5"
+          stroke-linecap="round" stroke-dasharray="99 33" transform="rotate(-45 32 32)"/>
+
+  <!-- 学习森林小树（双层松冠 + 树干） -->
+  <g fill="#F2F4F7">
+    <path d="M32 19.5 L38.5 28.5 H25.5 Z"/>
+    <path d="M32 25.5 L40.5 36.5 H23.5 Z"/>
+    <rect x="30.4" y="36.5" width="3.2" height="5.5" rx="1.2"/>
+  </g>
+</svg>

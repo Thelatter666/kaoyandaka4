@@ -3,6 +3,10 @@ import { z } from 'zod';
 export const SubjectEnum = z.enum(['math', 'english', '408']);
 export type Subject = z.infer<typeof SubjectEnum>;
 
+/** 会话/记录快照科目：在三科之外允许 'free'（漫游专注，不归属任何科目） */
+export const SessionSubjectEnum = z.enum(['math', 'english', '408', 'free']);
+export type SessionSubject = z.infer<typeof SessionSubjectEnum>;
+
 export const SubSubjectEnum = z.enum([
   'data_structure',
   'computer_organization',

@@ -52,9 +52,10 @@ router.get('/forest', validate(StatisticsQuerySchema, 'query'), async (req: Requ
         throw new AppError(400, 'INVALID_MODE', '不支持的统计模式');
     }
 
-    // Future date check
-    const todayStr = new Date().toISOString().split('T')[0];
-    if (rangeEnd > todayStr) {
+    // Future date check：仅拒绝锚定日期本身在未来（与 rangeStart/rangeEnd 一致使用本地日期，
+    // 避免 UTC 换算误判）；本周/本月的 rangeEnd 自然晚于今日，不应误判为未来
+    const todayStr = formatDate(new Date());
+    if (date > todayStr) {
       throw new AppError(400, 'FUTURE_DATE', '不能查询未来日期');
     }
 
@@ -74,7 +75,7 @@ router.get('/forest', validate(StatisticsQuerySchema, 'query'), async (req: Requ
     // Period calculations
     let totalFocusSeconds = 0;
     let totalCompletedSessions = 0;
-    const subjectSeconds: Record<string, number> = { math: 0, english: 0, '408': 0 };
+    const subjectSeconds: Record<string, number> = { math: 0, english: 0, '408': 0, free: 0 };
 
     // Group records by date
     const dateMap = new Map<string, Array<{
@@ -92,7 +93,8 @@ router.get('/forest', validate(StatisticsQuerySchema, 'query'), async (req: Requ
       totalCompletedSessions += 1;
       subjectSeconds[rec.subject_snapshot] = (subjectSeconds[rec.subject_snapshot] || 0) + rec.actual_duration_seconds;
 
-      const recDate = rec.created_at.split('T')[0];
+      // MySQL DATETIME 可能返回 'YYYY-MM-DD HH:MM:SS'（含空格）或 ISO 串，统一截取前 10 位日期
+      const recDate = rec.created_at.slice(0, 10);
       if (!dateMap.has(recDate)) dateMap.set(recDate, []);
       dateMap.get(recDate)!.push({
         id: rec.id,
@@ -105,10 +107,10 @@ router.get('/forest', validate(StatisticsQuerySchema, 'query'), async (req: Requ
       });
     }
 
-    // Trees: 1 tree = 3600 seconds per subject
-    const treesBySubject: Record<string, number> = { math: 0, english: 0, '408': 0 };
-    const remainingSecondsBySubject: Record<string, number> = { math: 3600, english: 3600, '408': 3600 };
-    for (const subject of ['math', 'english', '408']) {
+    // Trees: 1 tree = 3600 seconds per subject（free 漫游专注同样累计种树）
+    const treesBySubject: Record<string, number> = { math: 0, english: 0, '408': 0, free: 0 };
+    const remainingSecondsBySubject: Record<string, number> = { math: 3600, english: 3600, '408': 3600, free: 3600 };
+    for (const subject of ['math', 'english', '408', 'free']) {
       treesBySubject[subject] = Math.floor(subjectSeconds[subject] / 3600);
       remainingSecondsBySubject[subject] = 3600 - (subjectSeconds[subject] % 3600);
     }
@@ -138,7 +140,7 @@ router.get('/forest', validate(StatisticsQuerySchema, 'query'), async (req: Requ
     }
 
     // Build response
-    const todayStr2 = new Date().toISOString().split('T')[0];
+    const todayStr2 = formatDate(new Date());
 
     res.json({
       mode,

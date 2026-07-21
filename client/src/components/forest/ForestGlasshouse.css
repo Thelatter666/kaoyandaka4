@@ -79,19 +79,18 @@
   color: var(--color-text-primary);
 }
 
-/* ---- 场景区：桌面 16:9（min-height 340px）/ 移动 4:3 ---- */
+/* ---- 场景区：桌面弹性高度（收敛首屏占比，下方数据卡得以入帘）/ 移动 4:3 ---- */
 .forest__scene {
   position: relative;
   border-radius: 20px;
   overflow: hidden;
-  aspect-ratio: 16 / 9;
-  min-height: 340px;
+  height: clamp(280px, 38vh, 420px);
 }
 
 @media (max-width: 767px) {
   .forest__scene {
+    height: auto;
     aspect-ratio: 4 / 3;
-    min-height: 0;
   }
 }
 
@@ -191,7 +190,7 @@
   position: absolute;
   bottom: 0;
   top: 0;
-  width: 33.3334%;
+  width: 25%;
 }
 
 .forest__tree-wrap {

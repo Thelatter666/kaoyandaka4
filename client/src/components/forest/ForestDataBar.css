@@ -62,6 +62,7 @@
 .forest-bar__dot--math { background: var(--color-subject-math); }
 .forest-bar__dot--english { background: var(--color-subject-english); }
 .forest-bar__dot--408 { background: var(--color-subject-408); }
+.forest-bar__dot--free { background: var(--color-subject-free); }
 
 .forest-bar__subject {
   color: var(--color-text-secondary);

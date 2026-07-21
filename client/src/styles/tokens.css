@@ -50,6 +50,10 @@
   --color-subject-math-bg: rgba(62, 124, 177, 0.10);
   --color-subject-english-bg: rgba(217, 115, 13, 0.10);
   --color-subject-408-bg: rgba(124, 77, 190, 0.10);
+  /* 漫游专注（free，不归属科目）：中性青灰 */
+  --color-subject-free: #5B7A8C;
+  --color-subject-free-text: #456272;    /* 对白 ≈6:1 */
+  --color-subject-free-bg: rgba(91, 122, 140, 0.10);
 
   /* 极光光斑（浅色）：粉紫 / 雾蓝 / 蜜金 / 青绿 */
   --color-aurora-1: #C7B8F5;
@@ -118,6 +122,9 @@
   --color-forest-fruit-1: #8E6FC7;
   --color-forest-fruit-2: #A98FDB;
   --color-forest-fruit-dot: #F4786A;
+  /* 漫游·垂柳树冠两面（银灰绿，区别于松树冷青绿） */
+  --color-forest-willow-1: #7A9B8E;
+  --color-forest-willow-2: #A3C4B5;
   /* 深色主题天空压暗罩 / 夜晚地面压暗罩 / 玻璃罩反光与尘埃 */
   --color-forest-sky-dim: rgba(16, 24, 40, 0.35);
   --color-forest-ground-dim: rgba(16, 24, 40, 0.30);
@@ -247,6 +254,10 @@
   --color-subject-math-bg: rgba(111, 177, 232, 0.14);
   --color-subject-english-bg: rgba(245, 164, 92, 0.14);
   --color-subject-408-bg: rgba(180, 144, 232, 0.14);
+  /* 漫游专注（free）：提亮青灰 */
+  --color-subject-free: #93ACBC;
+  --color-subject-free-text: #93ACBC;
+  --color-subject-free-bg: rgba(147, 172, 188, 0.14);
 
   /* 极光光斑（深色）：极光绿 / 极光紫 / 极光蓝 */
   --color-aurora-1: #34D399;
