@@ -25,3 +25,28 @@
     transform: none;
   }
 }
+
+/* ---- v2 主角卡（设计文档 12.2）：glass-2 材质由工具类组合，
+   28px 圆角 + 32px 内边距 + 内嵌一团极光光斑（opacity ≤0.5，不拦截交互）---- */
+.card--hero {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+}
+
+.card--hero::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  width: 55%;
+  height: 70%;
+  top: -25%;
+  right: -10%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--color-aurora-2) 0%, transparent 70%);
+  filter: blur(36px);
+  opacity: var(--aurora-opacity-a);
+  pointer-events: none;
+}

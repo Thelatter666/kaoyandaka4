@@ -213,3 +213,131 @@
 .gap-sm { gap: var(--space-sm); }
 .gap-md { gap: var(--space-md); }
 .gap-lg { gap: var(--space-lg); }
+
+/* ============================================================
+   v2 · Bento 栅格系统（设计文档 12.1）
+   12 栏网格 + 跨度/行跨类；断点 <1024px 合并、<720px 全部单列
+   ============================================================ */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--space-lg);
+}
+
+.bento-span-3 { grid-column: span 3; }
+.bento-span-4 { grid-column: span 4; }
+.bento-span-5 { grid-column: span 5; }
+.bento-span-6 { grid-column: span 6; }
+.bento-span-7 { grid-column: span 7; }
+.bento-span-8 { grid-column: span 8; }
+.bento-span-12 { grid-column: span 12; }
+.bento-row-2 { grid-row: span 2; }
+
+@media (max-width: 1023px) {
+  .bento-span-3,
+  .bento-span-4,
+  .bento-span-5 { grid-column: span 6; }
+
+  .bento-span-7,
+  .bento-span-8 { grid-column: span 12; }
+}
+
+@media (max-width: 719px) {
+  .bento-grid { gap: var(--space-md); }
+
+  .bento-span-3,
+  .bento-span-4,
+  .bento-span-5,
+  .bento-span-6,
+  .bento-span-7,
+  .bento-span-8,
+  .bento-span-12 { grid-column: span 12; }
+}
+
+/* ============================================================
+   v2 · 页面级动效编排（设计文档 13.2 / 13.3 / 13.4）
+   仅使用 opacity / transform；reduced-motion 下全部取消
+   ============================================================ */
+
+/* ---- 页面切换过渡（App.tsx 状态机驱动）---- */
+.page-transition {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes page-exit {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-6px); }
+}
+
+.page-enter {
+  animation: page-enter var(--dur-page-enter) var(--ease-out) both;
+}
+
+.page-exit {
+  animation: page-exit var(--dur-page-exit) var(--ease-out) both;
+}
+
+/* ---- 入场编排 stagger：用法 style={{ '--i': n }}，每页最多 8 个 ---- */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(12px); }
+}
+
+.reveal {
+  animation: rise-in var(--dur-rise) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * var(--stagger-step));
+}
+
+/* ---- 可点击卡 hover 光泽扫过（伪元素斜向白色渐变带，仅 hover 播放一次）---- */
+.sheen-hover {
+  position: relative;
+  overflow: hidden;
+}
+
+.sheen-hover::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 60%;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 100%
+  );
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+
+@keyframes sheen-sweep {
+  from { transform: translateX(-120%); }
+  to { transform: translateX(220%); }
+}
+
+.sheen-hover:hover::after {
+  animation: sheen-sweep 500ms var(--ease-out);
+}
+
+/* ---- reduced-motion：无动画直出（全局 0.01ms 规则之外的显式覆盖）---- */
+@media (prefers-reduced-motion: reduce) {
+  .page-enter,
+  .page-exit,
+  .reveal {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .sheen-hover::after,
+  .sheen-hover:hover::after {
+    animation: none;
+  }
+}

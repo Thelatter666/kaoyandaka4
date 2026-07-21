@@ -9,6 +9,8 @@ interface CardProps {
   paddingSize?: 'sm' | 'md' | 'lg';
   onClick?: () => void;
   hoverable?: boolean;
+  /** v2 主角卡变体（设计文档 12.2）：glass-2 材质 + 28px 圆角 + 32px 内边距 + 内嵌极光光斑 */
+  hero?: boolean;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -19,13 +21,15 @@ export function Card({
   paddingSize = 'md',
   onClick,
   hoverable = false,
+  hero = false,
   className,
   style,
 }: CardProps) {
   const classNames = [
     'card',
-    'glass-1',
+    hero ? 'glass-2' : 'glass-1',
     `card--pad-${paddingSize}`,
+    hero ? 'card--hero' : '',
     hoverable || onClick ? 'card--hoverable' : '',
     className ?? '',
   ]

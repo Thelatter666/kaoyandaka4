@@ -1,6 +1,7 @@
 /* ============================================================
-   页面容器（设计文档 7.3）
-   max-width 1120px / 水平 padding 24px（移动 16px）/ z-index 1
+   页面容器 v2（设计文档 7.3 / 12.3）
+   max-width 1200px（默认，可经 maxWidth prop 覆盖）/
+   水平 padding 24px（移动 16px）/ z-index 1
    ============================================================ */
 
 .page-shell {
@@ -15,5 +16,43 @@
 @media (max-width: 719px) {
   .page-shell {
     padding: var(--space-md);
+  }
+}
+
+/* ---- v2 统一页头（设计文档 12.3）：宋体 30px 标题 + 14px secondary 副文案 + 右侧操作槽 ---- */
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-xl);
+}
+
+.page-header__title {
+  font-family: var(--font-heading);
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  line-height: 1.3;
+  color: var(--color-text-primary);
+}
+
+.page-header__subtitle {
+  margin-top: var(--space-xs);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.page-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+@media (max-width: 719px) {
+  .page-header {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
