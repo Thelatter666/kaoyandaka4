@@ -17,6 +17,7 @@
  */
 import { chromium } from '@playwright/test';
 import { execFileSync } from 'child_process';
+import { unlinkSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
 
@@ -122,5 +123,16 @@ try {
   sql(`DELETE FROM users WHERE id='${userId}'`);
   console.log(`cleanup done: ${SHOT_EMAIL} 及其业务数据/会话已删除`);
 }
+
+/* ---------- 5. 压缩：PNG → WebP（P1-1 体积预算，应用引用 .webp） ----------
+   调用 compress-screenshots.mjs 生成同名 .webp 后删除中间产物 PNG，
+   保证 client/public/screenshots/ 只留 webp（否则会被打包进 dist 双倍占用）。 */
+execFileSync(process.execPath, [
+  path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'compress-screenshots.mjs'),
+], { stdio: 'inherit' });
+for (const target of PAGES) {
+  unlinkSync(path.join(OUT_DIR, `${target.name}.png`));
+}
+console.log('已删除中间产物 PNG，仅保留 webp');
 
 console.log('done →', OUT_DIR);

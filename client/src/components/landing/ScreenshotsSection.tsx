@@ -3,15 +3,16 @@ import { m, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 
 /**
  * S4 界面实拍（设计文档 §4/§5）：真实 UI 截图多层视差。
- * 截图为 Playwright 实拍产物（见 e2e/tests/landing-screenshots），
+ * 截图为 Playwright 实拍产物（见 e2e/take-landing-screenshots.mjs，
+ * 经 e2e/compress-screenshots.mjs 压缩为 WebP），
  * 存放于 client/public/screenshots/，懒加载 + 完整 alt。
  * reduced-motion 下取消视差，静态平铺。
  */
 
 const SHOTS = [
-  { src: '/screenshots/home.png', alt: '砚台考研打卡首页：考试倒计时与今日专注摘要', caption: '首页 · 今日概览' },
-  { src: '/screenshots/pomodoro.png', alt: '番茄钟页面：光晕核心环形倒计时', caption: '番茄钟 · 光晕核心' },
-  { src: '/screenshots/statistics.png', alt: '统计页面：学习森林玻璃花房', caption: '统计 · 学习森林' },
+  { src: '/screenshots/home.webp', alt: '砚台考研打卡首页：考试倒计时与今日专注摘要', caption: '首页 · 今日概览' },
+  { src: '/screenshots/pomodoro.webp', alt: '番茄钟页面：光晕核心环形倒计时', caption: '番茄钟 · 光晕核心' },
+  { src: '/screenshots/statistics.webp', alt: '统计页面：学习森林玻璃花房', caption: '统计 · 学习森林' },
 ] as const;
 
 export function ScreenshotsSection() {
@@ -53,7 +54,8 @@ export function ScreenshotsSection() {
             className="landing-screenshots__item glass-1"
             style={reducedMotion ? undefined : { y: speeds[i] }}
           >
-            <img src={shot.src} alt={shot.alt} loading="lazy" />
+            {/* width/height 按 webp 实际像素（1280x800）声明，消除懒加载带来的 CLS */}
+            <img src={shot.src} alt={shot.alt} loading="lazy" width={1280} height={800} />
             <figcaption className="landing-screenshots__caption">{shot.caption}</figcaption>
           </m.figure>
         ))}
