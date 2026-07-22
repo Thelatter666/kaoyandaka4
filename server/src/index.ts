@@ -20,6 +20,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const app = express();
+// 仅信任第一跳 nginx 反代：限流按真实客户端 IP、secure cookie 正确判定；本地直连无副作用
+app.set('trust proxy', 1);
 const PORT = parseInt(process.env.SERVER_PORT || '3001', 10);
 
 // 会话密钥为安全关键配置：缺失时直接启动失败并给出指引，避免弱默认值上线
@@ -28,7 +30,7 @@ if (!SESSION_SECRET) {
   throw new Error('缺少 SESSION_SECRET 环境变量，请在项目根目录 .env 中配置（参考 .env.example）');
 }
 
-// 会话有效期 7 天（Cookie maxAge 与 MySQL 会话记录过期时间保持一致；rolling 使活跃会话自动续期）
+// 会话有效期 7 天（Cookie maxAge 与 MySQL 会话记录过期时间保持一致；固定有效期，到期重新登录）
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 // express-mysql-session 内部使用独立的 mysql2 连接池（自建自管），与业务 pool 互不干扰；
@@ -44,8 +46,8 @@ const sessionStore = new MySQLStore({
 });
 
 app.use(corsMiddleware);
-// JSON 响应 gzip 压缩（统计/森林等聚合接口收益最大）；生产环境前置 nginx 亦可叠加
-app.use(compression());
+// JSON 响应 gzip 压缩（统计/森林等聚合接口收益最大）；小于 1KB 的响应不压缩，避免得不偿失
+app.use(compression({ threshold: 1024 }));
 app.use(express.json());
 app.use(
   session({
@@ -53,7 +55,8 @@ app.use(
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
-    rolling: true,
+    // 固定 7 天会话不滚动续期：避免每请求 UPDATE sessions 表续期带来的写放大，到期重新登录
+    rolling: false,
     cookie: {
       httpOnly: true,
       // 前端经 vite proxy 同源访问 /api，lax 足够且能抵御大部分 CSRF

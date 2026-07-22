@@ -59,10 +59,12 @@ router.get('/forest', validate(StatisticsQuerySchema, 'query'), async (req: Requ
       throw new AppError(400, 'FUTURE_DATE', '不能查询未来日期');
     }
 
-    // Query study_records within range（仅当前用户）
+    // Query study_records within range（仅当前用户），只选明细所需列，避免 SELECT * 拉取冗余字段
     // Dedup: exclude course_video records that have a linked focus_session_id
     const [records] = await pool.query<RecordRow[]>(
-      `SELECT * FROM study_records
+      `SELECT id, preset_name_snapshot, subject_snapshot, sub_subject_snapshot,
+              actual_duration_seconds, source, created_at
+       FROM study_records
        WHERE created_at >= ? AND created_at < ?
          AND user_id = ?
          AND (

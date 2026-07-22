@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { validate } from '../middleware/validate.js';
 import { CreateTaskSchema, UpdateTaskSchema, ReorderItemsSchema } from '../../../shared/src/schemas/task.js';
 import pool from '../db/connection.js';
+import { withTransaction } from '../db/transaction.js';
 import { generateUUID } from '../utils/uuid.js';
 import { AppError } from '../middleware/errorHandler.js';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
@@ -151,13 +152,26 @@ router.patch('/:id/pin', async (req: Request, res: Response, next: NextFunction)
 router.patch('/reorder', validate(ReorderItemsSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { items } = req.body;
-    // 批量排序按 id + user_id 定位：混入的他人任务 id 自然命中 0 行被静默忽略，不泄露存在性
-    for (const item of items) {
-      await pool.query(
-        'UPDATE daily_tasks SET sort_order = ?, is_important = ? WHERE id = ? AND user_id = ?',
-        [item.sortOrder, item.isImportant, item.id, req.userId]
-      );
+    // 空列表直接返回，避免拼出非法 SQL
+    if (items.length === 0) {
+      return res.status(204).send();
     }
+    // 批量排序改为单语句 CASE 批量 UPDATE（事务包裹保证原子性）；
+    // 仍按 id + user_id 定位：混入的他人任务 id 自然命中 0 行被静默忽略，不泄露存在性
+    const ids = items.map((item: { id: string }) => item.id);
+    const sortCases = items.map(() => 'WHEN ? THEN ?').join(' ');
+    const importantCases = items.map(() => 'WHEN ? THEN ?').join(' ');
+    const sortParams = items.flatMap((item: { id: string; sortOrder: number }) => [item.id, item.sortOrder]);
+    const importantParams = items.flatMap((item: { id: string; isImportant: boolean }) => [item.id, item.isImportant]);
+    await withTransaction(async (connection) => {
+      await connection.query(
+        `UPDATE daily_tasks
+         SET sort_order = CASE id ${sortCases} ELSE sort_order END,
+             is_important = CASE id ${importantCases} ELSE is_important END
+         WHERE id IN (?) AND user_id = ?`,
+        [...sortParams, ...importantParams, ids, req.userId]
+      );
+    });
     res.status(204).send();
   } catch (err) {
     next(err);

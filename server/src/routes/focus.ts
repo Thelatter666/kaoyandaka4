@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { validate } from '../middleware/validate.js';
 import { StartFocusSchema } from '../../../shared/src/schemas/focus.js';
 import pool from '../db/connection.js';
+import { withTransaction } from '../db/transaction.js';
 import { generateUUID } from '../utils/uuid.js';
 import { AppError } from '../middleware/errorHandler.js';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
@@ -126,29 +127,32 @@ router.post('/:id/complete', async (req: Request, res: Response, next: NextFunct
     const startedAt = new Date(session.started_at);
     const actualDurationSeconds = Math.round((now.getTime() - startedAt.getTime()) / 1000);
 
-    // Use optimistic locking
-    const [result] = await pool.query<ResultSetHeader>(
-      `UPDATE focus_sessions
-       SET status = 'completed', actual_duration_seconds = ?, completed_at = NOW()
-       WHERE id = ? AND user_id = ? AND status = 'in_progress'`,
-      [actualDurationSeconds, id, req.userId]
-    );
+    // 事务包裹「完成会话 + 写学习记录」两步写入，保证原子性；任一失败整体回滚
+    await withTransaction(async (connection) => {
+      // 乐观锁：仅当仍为 in_progress 时更新，命中 0 行说明已被并发处理（409 抛出后事务回滚）
+      const [result] = await connection.query<ResultSetHeader>(
+        `UPDATE focus_sessions
+         SET status = 'completed', actual_duration_seconds = ?, completed_at = NOW()
+         WHERE id = ? AND user_id = ? AND status = 'in_progress'`,
+        [actualDurationSeconds, id, req.userId]
+      );
 
-    if (result.affectedRows === 0) {
-      throw new AppError(409, 'CONFLICT', '该专注会话已被处理');
-    }
+      if (result.affectedRows === 0) {
+        throw new AppError(409, 'CONFLICT', '该专注会话已被处理');
+      }
 
-    // Create study_record（user_id 取自会话，与会话归属一致）
-    const recordId = generateUUID();
-    await pool.query<ResultSetHeader>(
-      `INSERT INTO study_records
-       (id, user_id, preset_name_snapshot, subject_snapshot, sub_subject_snapshot,
-        actual_duration_seconds, focus_session_id, task_id, course_episode_id,
-        course_name_snapshot, episode_title_snapshot, source)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, 'focus_session')`,
-      [recordId, req.userId, session.preset_name_snapshot, session.subject_snapshot, session.sub_subject_snapshot,
-        actualDurationSeconds, id, session.task_id, session.course_episode_id]
-    );
+      // Create study_record（user_id 取自会话，与会话归属一致）
+      const recordId = generateUUID();
+      await connection.query<ResultSetHeader>(
+        `INSERT INTO study_records
+         (id, user_id, preset_name_snapshot, subject_snapshot, sub_subject_snapshot,
+          actual_duration_seconds, focus_session_id, task_id, course_episode_id,
+          course_name_snapshot, episode_title_snapshot, source)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, 'focus_session')`,
+        [recordId, req.userId, session.preset_name_snapshot, session.subject_snapshot, session.sub_subject_snapshot,
+          actualDurationSeconds, id, session.task_id, session.course_episode_id]
+      );
+    });
 
     res.status(204).send();
   } catch (err) {
@@ -190,22 +194,24 @@ router.get('/active', async (req: Request, res: Response, next: NextFunction) =>
     const now = new Date();
 
     if (plannedEndAt <= now) {
-      // Auto-complete expired session
+      // 过期自动完成：事务包裹「完成会话 + 写学习记录」，保证原子性
       const actualDurationSeconds = session.planned_duration_seconds;
-      await pool.query(
-        "UPDATE focus_sessions SET status = 'completed', actual_duration_seconds = ?, completed_at = NOW() WHERE id = ? AND user_id = ?",
-        [actualDurationSeconds, session.id, req.userId]
-      );
-      // Create study record
-      const recordId = generateUUID();
-      await pool.query(
-        `INSERT INTO study_records
-         (id, user_id, preset_name_snapshot, subject_snapshot, sub_subject_snapshot,
-          actual_duration_seconds, focus_session_id, task_id, course_episode_id, source)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'focus_session')`,
-        [recordId, req.userId, session.preset_name_snapshot, session.subject_snapshot, session.sub_subject_snapshot,
-          actualDurationSeconds, session.id, session.task_id, session.course_episode_id]
-      );
+      await withTransaction(async (connection) => {
+        await connection.query(
+          "UPDATE focus_sessions SET status = 'completed', actual_duration_seconds = ?, completed_at = NOW() WHERE id = ? AND user_id = ?",
+          [actualDurationSeconds, session.id, req.userId]
+        );
+        // Create study record
+        const recordId = generateUUID();
+        await connection.query(
+          `INSERT INTO study_records
+           (id, user_id, preset_name_snapshot, subject_snapshot, sub_subject_snapshot,
+            actual_duration_seconds, focus_session_id, task_id, course_episode_id, source)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'focus_session')`,
+          [recordId, req.userId, session.preset_name_snapshot, session.subject_snapshot, session.sub_subject_snapshot,
+            actualDurationSeconds, session.id, session.task_id, session.course_episode_id]
+        );
+      });
       return res.json(null);
     }
 
