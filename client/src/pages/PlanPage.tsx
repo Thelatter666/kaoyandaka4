@@ -31,7 +31,7 @@ import { TaskItem, TaskData } from '../components/tasks/TaskItem';
 import { showToast } from '../components/ui/Toast';
 import { tasksApi, Task } from '../api/tasks';
 import { reviewsApi } from '../api/reviews';
-import { today, tomorrow, formatDateDisplay } from '../utils/date';
+import { today, tomorrow, formatDate, formatDateDisplay } from '../utils/date';
 import type { Subject, SubSubject } from '@shared/types';
 import './PlanPage.css';
 
@@ -49,7 +49,8 @@ const SUB_SUBJECT_OPTIONS: { value: SubSubject; label: string }[] = [
 function getYesterday(): string {
   const d = new Date();
   d.setDate(d.getDate() - 1);
-  return d.toISOString().split('T')[0];
+  // 复用本地时区的 formatDate：toISOString() 是 UTC，东八区 0-8 点会得到错误日期
+  return formatDate(d);
 }
 
 export function PlanPage() {

@@ -19,7 +19,7 @@ import { ForestDataBar } from '../components/forest/ForestDataBar';
 import { statisticsApi } from '../api/statistics';
 import { today, formatDate } from '../utils/date';
 import { formatDurationHuman } from '../utils/duration';
-import { ForestResponse } from '@shared/types';
+import type { ForestResponse } from '@shared/types';
 import type { SessionSubject, SubSubject } from '@shared/types';
 import './StatisticsPage.css';
 
