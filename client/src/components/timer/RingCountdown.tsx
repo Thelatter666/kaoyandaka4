@@ -33,6 +33,8 @@ interface RingCountdownProps {
   variant?: 'full' | 'mini';
   /** smooth＝无极平滑：调用方以 rAF 驱动浮点 remainingSeconds，环体取消 dashoffset 过渡直驱 */
   smooth?: boolean;
+  /** 进度环 circle 的外部 ref：供 SmoothRing 在 rAF 中直写 stroke-dashoffset（不影响其他调用方） */
+  progressCircleRef?: React.Ref<SVGCircleElement>;
 }
 
 const MODE_LABELS: Record<TimerMode, string> = {
@@ -50,7 +52,8 @@ const CENTER = 180;
 const PROGRESS_RADIUS = 160;
 const BEAD_RADIUS = 136;
 const INNER_RING_RADIUS = 112;
-const PROGRESS_CIRCUMFERENCE = 2 * Math.PI * PROGRESS_RADIUS;
+/** 进度环周长：导出供 SmoothRing 在 rAF 中换算 stroke-dashoffset */
+export const PROGRESS_CIRCUMFERENCE = 2 * Math.PI * PROGRESS_RADIUS;
 
 /**
  * 默认 aria-label：分钟粒度更新（秒数向下取整到整分钟），
@@ -76,6 +79,7 @@ export function RingCountdown({
   modeLabel,
   variant = 'full',
   smooth = false,
+  progressCircleRef,
 }: RingCountdownProps) {
   const isMini = variant === 'mini';
   // useId 含冒号，不能直接用于 CSS url(#...)，清洗后作为渐变 id
@@ -138,6 +142,7 @@ export function RingCountdown({
           />
           {/* 外环·进度环：12 点起笔顺时针消减，辉光由 CSS drop-shadow(currentColor) 提供 */}
           <circle
+            ref={progressCircleRef}
             className="ring-countdown__progress"
             cx={CENTER}
             cy={CENTER}

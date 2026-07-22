@@ -18,13 +18,12 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { SubjectBadge } from '../components/ui/SubjectBadge';
 import { DurationSelector } from '../components/presets/DurationSelector';
 import { PresetCard } from '../components/presets/PresetCard';
-import { RingCountdown } from '../components/timer/RingCountdown';
+import { RingCountdown, PROGRESS_CIRCUMFERENCE } from '../components/timer/RingCountdown';
 import { BurstParticles } from '../components/timer/BurstParticles';
 import { useFocusSession } from '../hooks/useFocusSession';
 import { presetsApi, Preset } from '../api/presets';
 import { statisticsApi } from '../api/statistics';
 import { showToast } from '../components/ui/Toast';
-import { today } from '../utils/date';
 import { SHORT_BREAK_MINUTES, LONG_BREAK_MINUTES, LONG_BREAK_AFTER_ROUNDS } from '@shared/constants';
 import type { Subject, SubSubject, SessionSubject } from '@shared/types';
 import './PomodoroPage.css';
@@ -97,13 +96,14 @@ export function PomodoroPage() {
 
   useEffect(() => { fetchPresets(); }, [fetchPresets]);
 
-  // 今日已完成轮次：优先沿用统计接口的当日完成数；接口不可用时回退为页面内状态推导
+  // 今日已完成轮次：优先用轻量 today-summary 端点取当日完成数（单条聚合查询，
+  // 避免为一个数字拉取 /forest 全量明细）；接口不可用时回退为页面内状态推导
   useEffect(() => {
     let cancelled = false;
     statisticsApi
-      .getForest('day', today())
+      .getTodaySummary()
       .then((data) => {
-        if (!cancelled) setStatsRounds(data.period.totalCompletedSessions);
+        if (!cancelled) setStatsRounds(data.completedSessions);
       })
       .catch(() => {
         /* 回退：仅使用页面内状态（roundCount / naturalRounds）推导 */
@@ -543,8 +543,10 @@ interface SmoothRingProps {
 }
 
 /**
- * 无极平滑圆环：rAF 每帧 setState 收敛在本组件内部（仅重渲染 SVG 环），
- * 页面级组件树（预设 dock / 侧卡 / 控制区）不再随 60fps 逐帧重渲染。
+ * 无极平滑圆环：rAF 每帧不再 setState，而是通过 ref 直写进度环 circle 的
+ * stroke-dashoffset（每帧零重渲染）；中心倒计时数字仍按整数秒跳字，
+ * 仅在秒数变化时 setState（每秒至多一次重渲染）。视觉与旧实现一致：
+ * 平滑圆环 + 每秒跳字；页面级组件树与本组件均不随 60fps 逐帧重渲染。
  */
 const SmoothRing = React.memo(function SmoothRing({
   mode,
@@ -555,21 +557,40 @@ const SmoothRing = React.memo(function SmoothRing({
   subtitle,
   modeLabel,
 }: SmoothRingProps) {
-  const [nowMs, setNowMs] = useState(() => Date.now());
+  // 仅整数秒入 state：驱动中心数字每秒跳字与低时警示态切换
+  const [displaySeconds, setDisplaySeconds] = useState(() =>
+    endsAtMs != null
+      ? Math.ceil(Math.max(0, (endsAtMs - Date.now()) / 1000))
+      : fallbackRemainingSeconds
+  );
+  // 进度环 circle 的 DOM 引用：rAF 中绕过 React 直写 stroke-dashoffset
+  const progressCircleRef = useRef<SVGCircleElement | null>(null);
 
   useEffect(() => {
     if (endsAtMs == null) return;
     let rafId = 0;
+    let lastSeconds = -1;
     const tick = () => {
-      setNowMs(Date.now());
+      const remaining = Math.max(0, (endsAtMs - Date.now()) / 1000);
+      // 圆环平滑推进：直写 SVG 属性，不触发 React 重渲染
+      const circle = progressCircleRef.current;
+      if (circle) {
+        const progress = totalSeconds > 0 ? Math.min(1, Math.max(0, remaining / totalSeconds)) : 0;
+        circle.setAttribute('stroke-dashoffset', String(PROGRESS_CIRCUMFERENCE * (1 - progress)));
+      }
+      // 中心倒计时文字：整数秒变化时才 setState
+      const secs = Math.ceil(remaining);
+      if (secs !== lastSeconds) {
+        lastSeconds = secs;
+        setDisplaySeconds(secs);
+      }
       rafId = requestAnimationFrame(tick);
     };
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [endsAtMs]);
+  }, [endsAtMs, totalSeconds]);
 
-  const remainingSeconds =
-    endsAtMs != null ? Math.max(0, (endsAtMs - nowMs) / 1000) : fallbackRemainingSeconds;
+  const remainingSeconds = endsAtMs != null ? displaySeconds : fallbackRemainingSeconds;
 
   return (
     <RingCountdown
@@ -580,6 +601,7 @@ const SmoothRing = React.memo(function SmoothRing({
       completedRoundsToday={completedRoundsToday}
       subtitle={subtitle}
       modeLabel={modeLabel}
+      progressCircleRef={progressCircleRef}
     />
   );
 });

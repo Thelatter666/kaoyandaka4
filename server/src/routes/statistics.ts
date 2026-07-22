@@ -178,6 +178,29 @@ router.get('/forest', validate(StatisticsQuerySchema, 'query'), async (req: Requ
   }
 });
 
+// GET /api/v1/statistics/today-summary
+// 今日完成概要（轻量单条聚合查询，供番茄钟页挂载时取当日完成数，避免拉取 /forest 全量明细）
+// 去重口径与 /forest 保持一致：focus_session 全计；course_video 仅计未关联 focus_session_id 的记录
+router.get('/today-summary', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // 按服务器本地日期聚合今天 [00:00, 明天 00:00)
+    const todayStr = formatDate(new Date());
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT COUNT(*) AS completed_sessions, COALESCE(SUM(actual_duration_seconds),0) AS total_seconds
+       FROM study_records
+       WHERE user_id = ? AND created_at >= ? AND created_at < ?
+         AND (source = 'focus_session' OR (source = 'course_video' AND focus_session_id IS NULL))`,
+      [req.userId, `${todayStr} 00:00:00`, `${getNextDate(todayStr)} 00:00:00`]
+    );
+    res.json({
+      completedSessions: Number(rows[0].completed_sessions) || 0,
+      totalSeconds: Number(rows[0].total_seconds) || 0,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 function formatDate(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');

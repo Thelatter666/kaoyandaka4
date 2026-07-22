@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { SessionSubject, SubSubject } from '@shared/types';
+import { focusApi } from '../api/focus';
 
 export interface ActiveSession {
   id: string;
@@ -54,23 +55,46 @@ export function useFocusSession(): UseFocusSessionReturn {
 
   const checkActive = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/focus/active`);
-      if (!res.ok) throw new Error('获取会话状态失败');
-      const data = await res.json();
-      setActiveSession(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '未知错误');
+      // 统一 api client：自动携带会话 cookie，401 触发全局登出
+      const data = await focusApi.getActive();
+      setActiveSession(data as ActiveSession | null);
+    } catch {
+      // 轮询失败静默保留上次状态：不再每 10 秒 setError 触发整页重渲染
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // 每 10 秒轮询会话恢复 + 可见性暂停
+  // 与极光背景 page-hidden 机制同构：后台标签页零请求零写库
   useEffect(() => {
+    const stopPolling = () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+    const startPolling = () => {
+      stopPolling();
+      pollRef.current = setInterval(checkActive, 10000);
+    };
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // 页面隐藏：停止轮询，零请求
+        stopPolling();
+      } else {
+        // 恢复可见：立即校准一次并重启轮询
+        checkActive();
+        startPolling();
+      }
+    };
+
     checkActive();
-    // Poll every 10 seconds for session recovery
-    pollRef.current = setInterval(checkActive, 10000);
+    if (!document.hidden) startPolling();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [checkActive]);
 
