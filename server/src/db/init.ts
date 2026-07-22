@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { readFileSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { migrateUsers } from './migrate.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
@@ -39,6 +40,11 @@ async function initDatabase() {
     `ALTER TABLE \`study_records\`
      MODIFY COLUMN \`subject_snapshot\` ENUM('math','english','408','free') NOT NULL`
   );
+
+  // 幂等 migration：users 表 + 7 张业务表 user_id 归属（账号系统阶段 T2.1）
+  // 新库经 schema.sql 已是最终形态，此处仅补种子管理员；存量库执行完整 ALTER 流程
+  console.log('Running users migration...');
+  await migrateUsers(connection, dbName);
 
   console.log('Database initialized successfully!');
   await connection.end();

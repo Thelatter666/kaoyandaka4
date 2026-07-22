@@ -14,7 +14,8 @@
     "test:watch": "npx vitest",
     "test:e2e": "cd e2e && npx playwright test",
     "lint": "npx eslint . --ext .ts,.tsx",
-    "db:init": "cd server && npx tsx src/db/init.ts"
+    "db:init": "cd server && npx tsx src/db/init.ts",
+    "db:migrate": "cd server && npx tsx src/db/migrate.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
