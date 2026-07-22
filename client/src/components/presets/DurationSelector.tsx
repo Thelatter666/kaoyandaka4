@@ -6,7 +6,7 @@
  */
 import React from 'react';
 import { Minus, Plus } from 'lucide-react';
-import { DURATION_QUICK_OPTIONS, DURATION_STEP, DURATION_MIN, DURATION_MAX } from '@shared/schemas/common';
+import { DURATION_QUICK_OPTIONS, DURATION_STEP, DURATION_MIN, DURATION_MAX } from '@shared/constants';
 import './DurationSelector.css';
 
 interface DurationSelectorProps {

@@ -24,13 +24,14 @@ export const DurationMinutes = z
   .max(120, '最长 120 分钟')
   .refine((n) => n % 5 === 0, '必须为 5 的倍数');
 
-export const DURATION_QUICK_OPTIONS = [25, 45, 60] as const;
-export const DURATION_STEP = 5;
-export const DURATION_MIN = 5;
-export const DURATION_MAX = 120;
-
-export const SHORT_BREAK_MINUTES = 5;
-export const LONG_BREAK_MINUTES = 15;
-export const LONG_BREAK_AFTER_ROUNDS = 4;
-
-export const EXAM_DATE = '2026-12-20';
+/* 纯常量已迁移至零依赖的 constants.ts（避免前端值导入拖入 zod 运行时），此处转发保持兼容 */
+export {
+  DURATION_QUICK_OPTIONS,
+  DURATION_STEP,
+  DURATION_MIN,
+  DURATION_MAX,
+  SHORT_BREAK_MINUTES,
+  LONG_BREAK_MINUTES,
+  LONG_BREAK_AFTER_ROUNDS,
+  EXAM_DATE,
+} from '../constants.js';

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LazyMotion, MotionConfig, domAnimation } from 'framer-motion';
+import { LazyMotion, MotionConfig } from 'framer-motion';
 import { LandingNav } from './LandingNav';
 import { HeroSection } from './HeroSection';
 import { PainPointSection } from './PainPointSection';
@@ -17,12 +17,14 @@ import './LandingPage.css';
  * 滚动式介绍页（设计文档《滚动式介绍页设计》）
  *
  * 7 屏叙事：S0 Hero → S1 痛点 → S2 功能×4 → S3 数据 → S4 实拍 → S5 三步走 → S6 CTA。
- * LazyMotion + domAnimation 按需加载动效运行时；MotionConfig reducedMotion="user"
+ * LazyMotion 动效特性包动态加载（不随首屏同步打包）；MotionConfig reducedMotion="user"
  * 自动禁用 transform 类动画（opacity 淡入保留），滚动驱动部分在各组件内手动降级。
  */
+const loadFeatures = () => import('framer-motion').then((m) => m.domAnimation);
+
 export function LandingPage() {
   return (
-    <LazyMotion features={domAnimation} strict>
+    <LazyMotion features={loadFeatures} strict>
       <MotionConfig reducedMotion="user">
         <div className="landing">
           <LandingNav />

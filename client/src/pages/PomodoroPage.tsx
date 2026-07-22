@@ -25,7 +25,7 @@ import { presetsApi, Preset } from '../api/presets';
 import { statisticsApi } from '../api/statistics';
 import { showToast } from '../components/ui/Toast';
 import { today } from '../utils/date';
-import { SHORT_BREAK_MINUTES, LONG_BREAK_MINUTES, LONG_BREAK_AFTER_ROUNDS } from '@shared/schemas/common';
+import { SHORT_BREAK_MINUTES, LONG_BREAK_MINUTES, LONG_BREAK_AFTER_ROUNDS } from '@shared/constants';
 import type { Subject, SubSubject, SessionSubject } from '@shared/types';
 import './PomodoroPage.css';
 

@@ -7,12 +7,14 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        /* 框架/图标/动效拆为独立 vendor chunk：
-           跨页面共享、长缓存，业务 chunk 保持小巧 */
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-          'lucide-vendor': ['lucide-react'],
-          'motion-vendor': ['framer-motion'],
+        /* 框架/图标/动效拆为独立 vendor chunk（函数形式按 node_modules 路径完整归类）：
+           确保 react/jsx-runtime、scheduler 落入 react-vendor，
+           motion 相关包仅介绍页按需加载，不被全站首屏预加载 */
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+          if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return 'react-vendor';
+          if (/[\\/]node_modules[\\/]lucide-react[\\/]/.test(id)) return 'lucide-vendor';
+          if (/[\\/]node_modules[\\/](framer-motion|motion-dom|motion-utils)[\\/]/.test(id)) return 'motion-vendor';
         },
       },
     },
