@@ -1,24 +1,48 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { AuroraBackground } from './components/layout/AuroraBackground';
 import { TopNav } from './components/layout/TopNav';
 import { SkipLink } from './components/ui/SkipLink';
 import { ToastContainer } from './components/ui/Toast';
 import { LoadingState } from './components/ui/LoadingState';
-import { LandingPage } from './components/landing/LandingPage';
 import { useAuth } from './hooks/useAuth';
 import './styles/global.css';
 import './styles/utilities.css';
 
-// Page placeholders — will be replaced with real pages in subsequent phases
-import { HomePage } from './pages/HomePage';
-import { PlanPage } from './pages/PlanPage';
-import { PresetsPage } from './pages/PresetsPage';
-import { PomodoroPage } from './pages/PomodoroPage';
-import { CoursesPage } from './pages/CoursesPage';
-import { CourseDetailPage } from './pages/CourseDetailPage';
-import { StatisticsPage } from './pages/StatisticsPage';
-import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
+/* 路由级代码分割：页面 chunk 按需加载；pageLoaders 同时服务于 hover/idle 预取，
+   预取命中后切换无网络等待（浏览器对同一 chunk 请求去重缓存） */
+const pageLoaders = {
+  landing: () => import('./components/landing/LandingPage').then((m) => ({ default: m.LandingPage })),
+  home: () => import('./pages/HomePage').then((m) => ({ default: m.HomePage })),
+  plan: () => import('./pages/PlanPage').then((m) => ({ default: m.PlanPage })),
+  presets: () => import('./pages/PresetsPage').then((m) => ({ default: m.PresetsPage })),
+  pomodoro: () => import('./pages/PomodoroPage').then((m) => ({ default: m.PomodoroPage })),
+  courses: () => import('./pages/CoursesPage').then((m) => ({ default: m.CoursesPage })),
+  courseDetail: () => import('./pages/CourseDetailPage').then((m) => ({ default: m.CourseDetailPage })),
+  statistics: () => import('./pages/StatisticsPage').then((m) => ({ default: m.StatisticsPage })),
+  login: () => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })),
+  register: () => import('./pages/RegisterPage').then((m) => ({ default: m.RegisterPage })),
+};
+
+const LandingPage = lazy(pageLoaders.landing);
+const HomePage = lazy(pageLoaders.home);
+const PlanPage = lazy(pageLoaders.plan);
+const PresetsPage = lazy(pageLoaders.presets);
+const PomodoroPage = lazy(pageLoaders.pomodoro);
+const CoursesPage = lazy(pageLoaders.courses);
+const CourseDetailPage = lazy(pageLoaders.courseDetail);
+const StatisticsPage = lazy(pageLoaders.statistics);
+const LoginPage = lazy(pageLoaders.login);
+const RegisterPage = lazy(pageLoaders.register);
+
+/* 顶栏导航 hash → 页面 chunk 预取（hover/focus 即加载，点击时 chunk 已就绪） */
+const NAV_PREFETCH: Record<string, () => Promise<{ default: React.ComponentType<never> } | unknown>> = {
+  '#/': pageLoaders.home,
+  '#/plan': pageLoaders.plan,
+  '#/presets': pageLoaders.presets,
+  '#/pomodoro': pageLoaders.pomodoro,
+  '#/courses': pageLoaders.courses,
+  '#/statistics': pageLoaders.statistics,
+};
 
 /* 未登录可访问的公开路由（账号系统 T2.4）：介绍页 + 登录 + 注册 */
 const PUBLIC_PAGES = new Set(['/', '/login', '/register']);
@@ -51,6 +75,24 @@ function routeKey(route: Route): string {
 
 /** 与 .page-exit 动画时长（--dur-page-exit: 140ms）保持一致 */
 const EXIT_DURATION_MS = 140;
+
+/** 路由 chunk 加载中的居中加载壳（Suspense fallback） */
+const pageFallback = (
+  <main
+    id="main-content"
+    style={{
+      flex: 1,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 'var(--space-xl) var(--space-lg)',
+    }}
+  >
+    <div style={{ width: 'min(360px, 100%)' }}>
+      <LoadingState message="页面加载中..." />
+    </div>
+  </main>
+);
 
 export default function App() {
   /* 登录态：未登录 → 介绍页/登录/注册；已登录 → 应用。
@@ -124,6 +166,36 @@ export default function App() {
     window.location.hash = newHash;
   }, []);
 
+  const prefetchNav = useCallback((hash: string) => {
+    void NAV_PREFETCH[hash]?.();
+  }, []);
+
+  /* 页面隐藏（切后台/最小化）时暂停极光漂移，回到前台恢复：
+     后台标签页不再驱动全站玻璃重采样 */
+  useEffect(() => {
+    const root = document.documentElement;
+    const sync = () => root.classList.toggle('page-hidden', document.hidden);
+    sync();
+    document.addEventListener('visibilitychange', sync);
+    return () => document.removeEventListener('visibilitychange', sync);
+  }, []);
+
+  /* 登录态确定后空闲预取首屏页面 chunk，首次跳转基本零等待 */
+  useEffect(() => {
+    if (isLoading) return;
+    const prefetch = isLoggedIn ? pageLoaders.home : pageLoaders.landing;
+    if ('requestIdleCallback' in window) {
+      const id = window.requestIdleCallback(() => {
+        void prefetch();
+      }, { timeout: 2000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const timer = setTimeout(() => {
+      void prefetch();
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [isLoggedIn, isLoading]);
+
   /* 路由守卫（账号系统 T2.4）：
      - 未登录访问应用路由（#/plan 等）→ 重定向回 #/
      - 已登录访问 #/login、#/register → 重定向回 #/
@@ -192,13 +264,15 @@ export default function App() {
       <>
         <SkipLink />
         <AuroraBackground />
-        {incoming.page === '/login' ? (
-          <LoginPage />
-        ) : incoming.page === '/register' ? (
-          <RegisterPage />
-        ) : (
-          <LandingPage />
-        )}
+        <Suspense fallback={pageFallback}>
+          {incoming.page === '/login' ? (
+            <LoginPage />
+          ) : incoming.page === '/register' ? (
+            <RegisterPage />
+          ) : (
+            <LandingPage />
+          )}
+        </Suspense>
         <ToastContainer />
       </>
     );
@@ -209,13 +283,13 @@ export default function App() {
       <SkipLink />
       {/* 极光背景：固定全屏 z-index 0，全页面共享（设计文档 7.1） */}
       <AuroraBackground />
-      <TopNav activeHash={hash} onNavigate={navigate} />
+      <TopNav activeHash={hash} onNavigate={navigate} onPrefetch={prefetchNav} />
       {/* 页面过渡容器：key = page + 参数，重挂载即播 .page-enter */}
       <div
         key={routeKey(displayed)}
         className={`page-transition ${phase === 'exit' ? 'page-exit' : 'page-enter'}`}
       >
-        {renderPage()}
+        <Suspense fallback={pageFallback}>{renderPage()}</Suspense>
       </div>
       <ToastContainer />
     </>

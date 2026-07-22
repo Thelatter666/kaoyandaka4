@@ -76,8 +76,7 @@ export function PomodoroPage() {
   const [durationMinutes, setDurationMinutes] = useState(45);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // 光晕核心：逐帧刷新 / 完成粒子爆散 / 今日已完成轮次
-  const [nowMs, setNowMs] = useState(() => Date.now());
+  // 光晕核心：完成粒子爆散 / 今日已完成轮次（逐帧刷新已下沉至 SmoothRing 内部）
   const [burstKey, setBurstKey] = useState(0);
   const [statsRounds, setStatsRounds] = useState(0);
   const [naturalRounds, setNaturalRounds] = useState(0);
@@ -118,18 +117,6 @@ export function PomodoroPage() {
       setStep('active');
     }
   }, [activeSession]);
-
-  // 进行中/休息中以 rAF 逐帧刷新 nowMs：驱动圆环无极平滑（无极进度条）
-  useEffect(() => {
-    if (!activeSession && !breakMode) return;
-    let rafId = 0;
-    const tick = () => {
-      setNowMs(Date.now());
-      rafId = requestAnimationFrame(tick);
-    };
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
-  }, [activeSession, breakMode]);
 
   // 会话自然结束检测：activeSession 由有变无且非完成/取消按钮触发
   // （后端对到期会话自动完成并记录），触发粒子爆散并进入完成页
@@ -226,18 +213,7 @@ export function PomodoroPage() {
     setSelectedPreset(null);
   };
 
-  // 剩余时间（毫秒级浮点，供 smooth 圆环匀速消减；显示层向上取整）
-  const remainingSeconds = activeSession
-    ? Math.max(0, (new Date(activeSession.plannedEndAt).getTime() - nowMs) / 1000)
-    : 0;
   const totalPlannedSeconds = activeSession?.plannedDurationSeconds || 0;
-
-  // 休息剩余：优先按结束时间戳逐帧计算，回退为 hook 的整数秒
-  const breakRemainingFloat = breakMode
-    ? breakEndsAt != null
-      ? Math.max(0, (breakEndsAt - nowMs) / 1000)
-      : breakRemainingSeconds
-    : 0;
 
   // Determine if we should show long break option（沿用既有规则）
   const showLongBreak = roundCount % LONG_BREAK_AFTER_ROUNDS === 0 && roundCount > 0;
@@ -341,11 +317,11 @@ export function PomodoroPage() {
             <div className="pomodoro-hero">
               {renderStage(
                 breakMode,
-                <RingCountdown
-                  totalSeconds={breakMode === 'short_break' ? SHORT_BREAK_MINUTES * 60 : LONG_BREAK_MINUTES * 60}
-                  remainingSeconds={breakRemainingFloat}
+                <SmoothRing
                   mode={breakMode}
-                  smooth
+                  totalSeconds={breakMode === 'short_break' ? SHORT_BREAK_MINUTES * 60 : LONG_BREAK_MINUTES * 60}
+                  endsAtMs={breakEndsAt}
+                  fallbackRemainingSeconds={breakRemainingSeconds}
                   completedRoundsToday={completedRoundsToday}
                 />,
                 0,
@@ -424,11 +400,10 @@ export function PomodoroPage() {
           <div className="pomodoro-hero">
             {renderStage(
               'focus',
-              <RingCountdown
-                totalSeconds={totalPlannedSeconds}
-                remainingSeconds={remainingSeconds}
+              <SmoothRing
                 mode="focus"
-                smooth
+                totalSeconds={totalPlannedSeconds}
+                endsAtMs={new Date(activeSession.plannedEndAt).getTime()}
                 completedRoundsToday={completedRoundsToday}
                 subtitle={
                   activeSession.subjectSnapshot === 'free'
@@ -555,3 +530,56 @@ export function PomodoroPage() {
 
   return null;
 }
+
+interface SmoothRingProps {
+  mode: RingMode;
+  totalSeconds: number;
+  /** 目标结束时间戳（ms）；为 null 时回退为外部整数秒驱动（不启 rAF） */
+  endsAtMs: number | null;
+  fallbackRemainingSeconds?: number;
+  completedRoundsToday: number;
+  subtitle?: string;
+  modeLabel?: string;
+}
+
+/**
+ * 无极平滑圆环：rAF 每帧 setState 收敛在本组件内部（仅重渲染 SVG 环），
+ * 页面级组件树（预设 dock / 侧卡 / 控制区）不再随 60fps 逐帧重渲染。
+ */
+const SmoothRing = React.memo(function SmoothRing({
+  mode,
+  totalSeconds,
+  endsAtMs,
+  fallbackRemainingSeconds = 0,
+  completedRoundsToday,
+  subtitle,
+  modeLabel,
+}: SmoothRingProps) {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (endsAtMs == null) return;
+    let rafId = 0;
+    const tick = () => {
+      setNowMs(Date.now());
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [endsAtMs]);
+
+  const remainingSeconds =
+    endsAtMs != null ? Math.max(0, (endsAtMs - nowMs) / 1000) : fallbackRemainingSeconds;
+
+  return (
+    <RingCountdown
+      totalSeconds={totalSeconds}
+      remainingSeconds={remainingSeconds}
+      mode={mode}
+      smooth
+      completedRoundsToday={completedRoundsToday}
+      subtitle={subtitle}
+      modeLabel={modeLabel}
+    />
+  );
+});

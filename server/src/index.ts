@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -43,6 +44,8 @@ const sessionStore = new MySQLStore({
 });
 
 app.use(corsMiddleware);
+// JSON 响应 gzip 压缩（统计/森林等聚合接口收益最大）；生产环境前置 nginx 亦可叠加
+app.use(compression());
 app.use(express.json());
 app.use(
   session({

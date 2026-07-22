@@ -33,6 +33,8 @@ const NAV_ITEMS: NavItem[] = [
 interface TopNavProps {
   activeHash: string;
   onNavigate: (hash: string) => void;
+  /** hover/focus 导航项时预取目标页面 chunk，点击切换零等待 */
+  onPrefetch?: (hash: string) => void;
 }
 
 interface IndicatorState {
@@ -41,7 +43,7 @@ interface IndicatorState {
   visible: boolean;
 }
 
-export function TopNav({ activeHash, onNavigate }: TopNavProps) {
+export function TopNav({ activeHash, onNavigate, onPrefetch }: TopNavProps) {
   const linksRef = useRef<HTMLDivElement>(null);
   const linkRefs = useRef(new Map<string, HTMLAnchorElement>());
   const [indicator, setIndicator] = useState<IndicatorState>({ x: 0, w: 0, visible: false });
@@ -119,6 +121,8 @@ export function TopNav({ activeHash, onNavigate }: TopNavProps) {
                 else linkRefs.current.delete(item.hash);
               }}
               onClick={(e) => { e.preventDefault(); onNavigate(item.hash); }}
+              onMouseEnter={() => onPrefetch?.(item.hash)}
+              onFocus={() => onPrefetch?.(item.hash)}
               aria-current={isActive ? 'page' : undefined}
               aria-label={item.label}
               className="top-nav__link"

@@ -62,10 +62,12 @@
   overflow: hidden;
 }
 
+/* 光斑不设 filter: blur——radial-gradient 本身已是透明渐隐的软边，
+   叠加 80px 高斯模糊只会让四个 40~60vmax 巨层每帧参与重采样，
+   在背景持续漂移 + 全站 backdrop-filter 的组合下是主要卡顿源 */
 .aurora-blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
   will-change: transform;
 }
 
@@ -123,6 +125,11 @@
   .aurora-blob {
     animation: none;
   }
+}
+
+/* 页面隐藏（切后台/最小化）时暂停漂移：后台标签页不再驱动全站玻璃重采样 */
+.page-hidden .aurora-blob {
+  animation-play-state: paused;
 }
 
 /* ---- 玻璃骨架 shimmer（background-position 动画 1.6s）---- */

@@ -162,10 +162,10 @@
   --z-toast: 300;
   --z-tooltip: 400;
 
-  /* 字体 */
-  --font-heading: 'Noto Serif SC', 'Songti SC', serif;
-  --font-body: 'Noto Sans SC', 'PingFang SC', sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+  /* 字体：系统字体栈，零下载、随平台原生渲染（macOS 宋体/苹方，Windows 等效中文字体） */
+  --font-heading: 'Songti SC', 'STSong', 'Noto Serif CJK SC', 'Source Han Serif SC', 'SimSun', serif;
+  --font-body: 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC', 'Source Han Sans SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, 'Cascadia Mono', Consolas, monospace;
 
   /* 字级：12/14/16/18/20/24/30/36，计时器专用 64（移动 52） */
   --text-xs: 0.75rem;

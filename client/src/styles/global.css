@@ -2,8 +2,7 @@
    砚台考研打卡 — 全局样式（极光玻璃）
    ============================================================ */
 
-/* Google Fonts：Noto Serif SC / Noto Sans SC / JetBrains Mono（font-display: swap） */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@600;700&display=swap');
+/* 字体：系统字体栈（见 tokens.css --font-heading/--font-body/--font-mono），零网络下载 */
 @import './tokens.css';
 
 *,

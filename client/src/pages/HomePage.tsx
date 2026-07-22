@@ -57,7 +57,6 @@ export function HomePage({ navigate }: HomePageProps) {
 
   // 进行中专注会话：有则展示 RingCountdown mini（120px 简化模式）
   const [activeSession, setActiveSession] = useState<ActiveSession | null>(null);
-  const [nowMs, setNowMs] = useState(() => Date.now());
 
   const fetchTasks = useCallback(async () => {
     setTasksError(null);
@@ -85,16 +84,6 @@ export function HomePage({ navigate }: HomePageProps) {
     });
   }, [fetchTasks, fetchPresets]);
 
-  // 进行中会话逐秒刷新剩余时间
-  useEffect(() => {
-    if (!activeSession) return;
-    const id = setInterval(() => setNowMs(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [activeSession]);
-
-  const remainingSeconds = activeSession
-    ? Math.max(0, Math.round((new Date(activeSession.plannedEndAt).getTime() - nowMs) / 1000))
-    : 0;
 
   const taskRows = (tasks ?? []).slice(0, MAX_TASK_ROWS);
   const presetRows = (presets ?? []).slice(0, MAX_PRESET_ROWS);
@@ -120,11 +109,9 @@ export function HomePage({ navigate }: HomePageProps) {
           </h2>
           {activeSession ? (
             <div className="home-focus__active">
-              <RingCountdown
-                variant="mini"
+              <MiniSessionRing
+                plannedEndAt={activeSession.plannedEndAt}
                 totalSeconds={activeSession.plannedDurationSeconds}
-                remainingSeconds={remainingSeconds}
-                mode="focus"
               />
               <div className="home-focus__meta">
                 <p className="home-focus__preset truncate" title={activeSession.presetNameSnapshot}>
@@ -305,3 +292,33 @@ export function HomePage({ navigate }: HomePageProps) {
     </PageShell>
   );
 }
+
+/** 进行中会话迷你环：每秒刷新收敛在本组件内部，首页整体不再随秒整页重渲染 */
+const MiniSessionRing = React.memo(function MiniSessionRing({
+  plannedEndAt,
+  totalSeconds,
+}: {
+  plannedEndAt: string;
+  totalSeconds: number;
+}) {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const remainingSeconds = Math.max(
+    0,
+    Math.round((new Date(plannedEndAt).getTime() - nowMs) / 1000)
+  );
+
+  return (
+    <RingCountdown
+      variant="mini"
+      totalSeconds={totalSeconds}
+      remainingSeconds={remainingSeconds}
+      mode="focus"
+    />
+  );
+});
