@@ -3,6 +3,8 @@ import { AuroraBackground } from './components/layout/AuroraBackground';
 import { TopNav } from './components/layout/TopNav';
 import { SkipLink } from './components/ui/SkipLink';
 import { ToastContainer } from './components/ui/Toast';
+import { LandingPage } from './components/landing/LandingPage';
+import { useAuth } from './hooks/useAuth';
 import './styles/global.css';
 import './styles/utilities.css';
 
@@ -43,6 +45,8 @@ function routeKey(route: Route): string {
 const EXIT_DURATION_MS = 140;
 
 export default function App() {
+  /* 登录态（《滚动式介绍页设计》§3）：未登录 → 介绍页；已登录 → 应用 */
+  const { isLoggedIn } = useAuth();
   const [hash, setHash] = useState(getHash);
   const incoming = parseHashRoute(hash);
 
@@ -111,6 +115,13 @@ export default function App() {
     window.location.hash = newHash;
   }, []);
 
+  /* 路由守卫：未登录访问应用路由（#/plan 等）→ 重定向回介绍页 #/ */
+  useEffect(() => {
+    if (!isLoggedIn && displayed.page !== '/') {
+      window.location.hash = '#/';
+    }
+  }, [isLoggedIn, displayed.page]);
+
   const renderPage = () => {
     switch (displayed.page) {
       case '/':
@@ -131,6 +142,19 @@ export default function App() {
         return <HomePage navigate={navigate} />;
     }
   };
+
+  /* 未登录：渲染介绍页（极简导航内置于 LandingPage，不渲染应用 TopNav，
+     不参与 .page-enter/.page-exit 过渡，独立全屏滚动体验） */
+  if (!isLoggedIn) {
+    return (
+      <>
+        <SkipLink />
+        <AuroraBackground />
+        <LandingPage />
+        <ToastContainer />
+      </>
+    );
+  }
 
   return (
     <>

@@ -1,0 +1,657 @@
+/* ============================================================
+   介绍页（Landing Page）样式 — 极光玻璃 v2 延续
+   设计文档《滚动式介绍页设计》§4-§6
+   颜色全部引用令牌；动效属性仅 transform/opacity（SVG pathLength 除外）
+   ============================================================ */
+
+.landing {
+  position: relative;
+  z-index: var(--z-content);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  /* 介绍页纵向滚动节奏 */
+  --_section-gap: calc(var(--space-2xl) * 2);
+  --_content-max: 1080px;
+}
+
+/* ---------- 顶部极简导航 ---------- */
+
+.landing-nav {
+  position: fixed;
+  top: var(--space-md);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-nav);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  width: min(calc(100% - var(--space-lg) * 2), var(--_content-max));
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-full);
+}
+
+.landing-nav__brand {
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+  text-decoration: none;
+  padding-left: var(--space-sm);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.landing-nav__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* ---------- S0 Hero ---------- */
+
+.landing-hero {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-2xl) var(--space-lg);
+}
+
+.landing-hero__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+  max-width: 720px;
+}
+
+.landing-hero__badge {
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-full);
+  background: var(--color-accent-primary-light);
+  color: var(--color-accent-primary-strong);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+}
+
+.landing-hero__badge strong {
+  font-family: var(--font-mono);
+  font-weight: var(--font-bold);
+}
+
+.landing-hero__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-hero);
+  font-weight: var(--font-bold);
+  line-height: 1.1;
+  letter-spacing: 0.08em;
+}
+
+.landing-hero__slogan {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+}
+
+.landing-hero__sub {
+  margin: 0;
+  font-size: var(--text-base);
+  line-height: 1.8;
+  color: var(--color-text-secondary);
+}
+
+.landing-hero__cta {
+  display: flex;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: var(--space-sm);
+}
+
+.landing-hero__scrollhint {
+  position: absolute;
+  bottom: var(--space-xl);
+  left: 50%;
+  margin-left: -22px;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.landing-hero__scrollhint:hover {
+  color: var(--color-text-primary);
+}
+
+/* ---------- S1 痛点 ---------- */
+
+.landing-painpoint {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--_section-gap) var(--space-lg);
+}
+
+.landing-painpoint__quote {
+  margin: 0;
+  max-width: 760px;
+  text-align: center;
+  font-family: var(--font-heading);
+  font-size: var(--text-3xl);
+  font-weight: var(--font-semibold);
+  line-height: 1.7;
+}
+
+.landing-painpoint__em {
+  color: var(--color-accent-primary-strong);
+}
+
+/* ---------- S2 功能屏通用 ---------- */
+
+.landing-feature {
+  padding: var(--_section-gap) var(--space-lg);
+}
+
+/* 钉屏变体：外层提供滚动行程，内层 sticky 吸附 */
+.landing-feature--pinned {
+  height: 260vh;
+  padding: 0 var(--space-lg);
+}
+
+.landing-feature__sticky {
+  position: sticky;
+  top: 0;
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+}
+
+.landing-feature__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: var(--space-2xl);
+  width: 100%;
+  max-width: var(--_content-max);
+  margin: 0 auto;
+}
+
+.landing-feature__eyebrow {
+  margin: 0 0 var(--space-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.12em;
+  color: var(--color-accent-primary-strong);
+}
+
+.landing-feature__title {
+  margin: 0 0 var(--space-md);
+  font-family: var(--font-heading);
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  line-height: 1.3;
+}
+
+.landing-feature__desc {
+  margin: 0;
+  font-size: var(--text-base);
+  line-height: 1.9;
+  color: var(--color-text-secondary);
+}
+
+.landing-feature__visual {
+  display: flex;
+  justify-content: center;
+}
+
+/* ---------- S2-1 番茄钟圆盘（复刻 RingCountdown 视觉） ---------- */
+
+.landing-pomodoro__disc {
+  position: relative;
+  width: min(380px, 78vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+}
+
+.landing-pomodoro__disc svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.landing-pomodoro__base {
+  stroke: var(--color-accent-primary-light);
+}
+
+.landing-pomodoro__progress {
+  stroke: var(--color-accent-primary);
+  filter: drop-shadow(0 0 12px var(--color-accent-primary));
+}
+
+.landing-pomodoro__center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+}
+
+.landing-pomodoro__time {
+  font-family: var(--font-mono);
+  font-size: var(--text-timer-mobile);
+  font-weight: var(--font-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.landing-pomodoro__mode {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ---------- S2-2 学习森林 ---------- */
+
+.landing-forest {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: var(--space-xl);
+  width: 100%;
+  max-width: 480px;
+  padding: var(--space-xl) var(--space-lg);
+  border-radius: var(--radius-card);
+}
+
+.landing-forest__tree {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.landing-forest__tree svg {
+  width: 72px;
+  height: 90px;
+}
+
+.landing-forest__label {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+/* ---------- S2-3 网课双进度条（scaleX 填充） ---------- */
+
+.landing-course {
+  width: 100%;
+  max-width: 460px;
+  padding: var(--space-xl);
+  border-radius: var(--radius-card);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.landing-course__name {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+}
+
+.landing-course__bar-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-bottom: 6px;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.landing-course__bar-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.landing-course__track {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.landing-course__fill {
+  height: 100%;
+  width: 100%;
+  border-radius: var(--radius-full);
+  transform-origin: left center;
+}
+
+.landing-course__fill--episodes {
+  background: linear-gradient(90deg, var(--color-accent-success), var(--color-accent-deep-green));
+}
+
+.landing-course__fill--duration {
+  background: linear-gradient(90deg, var(--color-accent-primary-strong), var(--color-accent-primary));
+}
+
+/* ---------- S2-4 计划任务 ---------- */
+
+.landing-task {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.landing-task__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+}
+
+.landing-task__check {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-accent-success);
+  color: var(--color-text-inverse);
+}
+
+.landing-task__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.landing-task__dot--math { background: var(--color-subject-math); }
+.landing-task__dot--english { background: var(--color-subject-english); }
+.landing-task__dot--408 { background: var(--color-subject-408); }
+
+.landing-task__text {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  text-decoration: line-through;
+  text-decoration-color: var(--color-text-muted);
+  text-decoration-thickness: 1px;
+}
+
+.landing-task__subject {
+  flex: none;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* ---------- S3 数据机制 ---------- */
+
+.landing-stats {
+  padding: var(--_section-gap) var(--space-lg);
+}
+
+.landing-stats__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-lg);
+  max-width: var(--_content-max);
+  margin: 0 auto;
+}
+
+.landing-stats__card {
+  padding: var(--space-xl);
+  border-radius: var(--radius-card);
+  text-align: center;
+}
+
+.landing-stats__number {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-hero);
+  font-weight: var(--font-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-accent-primary-strong);
+  line-height: 1.1;
+}
+
+.landing-stats__unit {
+  margin-left: var(--space-xs);
+  font-family: var(--font-body);
+  font-size: var(--text-lg);
+  font-weight: var(--font-medium);
+  color: var(--color-text-secondary);
+}
+
+.landing-stats__desc {
+  margin: var(--space-sm) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ---------- 通用小节标题（S4/S5） ---------- */
+
+.landing-section-title {
+  margin: 0 0 var(--space-2xl);
+  font-family: var(--font-heading);
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  text-align: center;
+}
+
+/* ---------- S4 界面实拍 ---------- */
+
+.landing-screenshots {
+  padding: var(--_section-gap) var(--space-lg);
+}
+
+.landing-screenshots__row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-lg);
+  max-width: var(--_content-max);
+  margin: 0 auto;
+  align-items: start;
+}
+
+.landing-screenshots__item {
+  margin: 0;
+  padding: var(--space-sm);
+  border-radius: var(--radius-card);
+}
+
+.landing-screenshots__item img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  object-position: top center;
+  border-radius: var(--radius-md);
+  background: var(--color-skeleton-base);
+}
+
+.landing-screenshots__caption {
+  padding: var(--space-sm) var(--space-xs);
+  font-size: var(--text-xs);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+/* ---------- S5 三步走 ---------- */
+
+.landing-steps {
+  padding: var(--_section-gap) var(--space-lg);
+}
+
+.landing-steps__grid {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-lg);
+  max-width: var(--_content-max);
+  margin: 0 auto;
+}
+
+.landing-steps__card {
+  position: relative;
+  padding: var(--space-xl);
+  border-radius: var(--radius-card);
+}
+
+.landing-steps__step {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-lg);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text-muted);
+  opacity: 0.5;
+}
+
+.landing-steps__icon {
+  display: inline-flex;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-accent-primary-light);
+  color: var(--color-accent-primary-strong);
+}
+
+.landing-steps__card-title {
+  margin: var(--space-md) 0 var(--space-xs);
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+}
+
+.landing-steps__card-desc {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+}
+
+/* ---------- S6 底部 CTA + footer ---------- */
+
+.landing-cta {
+  padding: calc(var(--_section-gap) * 1.5) var(--space-lg) var(--space-2xl);
+}
+
+.landing-cta__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+  text-align: center;
+}
+
+.landing-cta__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+}
+
+.landing-cta__title strong {
+  font-family: var(--font-mono);
+  color: var(--color-accent-primary-strong);
+}
+
+.landing-cta__sub {
+  margin: 0;
+  font-size: var(--text-lg);
+  color: var(--color-text-secondary);
+}
+
+.landing-footer {
+  margin-top: calc(var(--_section-gap) * 1.5);
+  padding-top: var(--space-xl);
+  border-top: 1px solid var(--color-border);
+  text-align: center;
+}
+
+.landing-footer__line {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* ---------- 响应式：≤768px 单列堆叠 ---------- */
+
+@media (max-width: 768px) {
+  .landing-hero__title {
+    font-size: var(--text-hero-mobile);
+  }
+
+  .landing-feature__grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-xl);
+  }
+
+  /* 移动端解除钉屏，避免 sticky 内容超出视口 */
+  .landing-feature--pinned {
+    height: auto;
+    padding: var(--_section-gap) var(--space-lg);
+  }
+
+  .landing-feature__sticky {
+    position: static;
+    min-height: auto;
+  }
+
+  .landing-stats__grid,
+  .landing-screenshots__row,
+  .landing-steps__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-stats__number {
+    font-size: var(--text-hero-mobile);
+  }
+
+  .landing-painpoint__quote {
+    font-size: var(--text-2xl);
+  }
+}
+
+/* ---------- reduced-motion：解除钉屏布局，静态呈现 ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-feature--pinned {
+    height: auto;
+    padding: var(--_section-gap) var(--space-lg);
+  }
+
+  .landing-feature__sticky {
+    position: static;
+    min-height: auto;
+  }
+}

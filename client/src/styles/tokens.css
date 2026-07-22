@@ -178,6 +178,9 @@
   --text-4xl: 2.25rem;
   --text-timer: 4rem;
   --text-timer-mobile: 3.25rem;
+  /* 介绍页 Hero 大标题（设计文档《滚动式介绍页设计》§6） */
+  --text-hero: 3.5rem;
+  --text-hero-mobile: 2.25rem;
 
   /* 字重：标题 600–700 / 正文 400 / 标签 500 */
   --font-normal: 400;
