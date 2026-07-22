@@ -3,6 +3,7 @@ import { AuroraBackground } from './components/layout/AuroraBackground';
 import { TopNav } from './components/layout/TopNav';
 import { SkipLink } from './components/ui/SkipLink';
 import { ToastContainer } from './components/ui/Toast';
+import { LoadingState } from './components/ui/LoadingState';
 import { LandingPage } from './components/landing/LandingPage';
 import { useAuth } from './hooks/useAuth';
 import './styles/global.css';
@@ -16,6 +17,13 @@ import { PomodoroPage } from './pages/PomodoroPage';
 import { CoursesPage } from './pages/CoursesPage';
 import { CourseDetailPage } from './pages/CourseDetailPage';
 import { StatisticsPage } from './pages/StatisticsPage';
+import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
+
+/* 未登录可访问的公开路由（账号系统 T2.4）：介绍页 + 登录 + 注册 */
+const PUBLIC_PAGES = new Set(['/', '/login', '/register']);
+/* 仅未登录可访问：已登录访问这两个路由会被守卫重定向回 #/ */
+const GUEST_ONLY_PAGES = new Set(['/login', '/register']);
 
 function getHash(): string {
   return window.location.hash || '#/';
@@ -45,8 +53,9 @@ function routeKey(route: Route): string {
 const EXIT_DURATION_MS = 140;
 
 export default function App() {
-  /* 登录态（《滚动式介绍页设计》§3）：未登录 → 介绍页；已登录 → 应用 */
-  const { isLoggedIn } = useAuth();
+  /* 登录态：未登录 → 介绍页/登录/注册；已登录 → 应用。
+     isLoading = 首次会话探测（GET /auth/me）进行中，期间渲染加载壳避免闪现 landing */
+  const { isLoggedIn, isLoading } = useAuth();
   const [hash, setHash] = useState(getHash);
   const incoming = parseHashRoute(hash);
 
@@ -115,12 +124,20 @@ export default function App() {
     window.location.hash = newHash;
   }, []);
 
-  /* 路由守卫：未登录访问应用路由（#/plan 等）→ 重定向回介绍页 #/ */
+  /* 路由守卫（账号系统 T2.4）：
+     - 未登录访问应用路由（#/plan 等）→ 重定向回 #/
+     - 已登录访问 #/login、#/register → 重定向回 #/
+     会话探测进行中（isLoading）暂缓判定，避免刷新页面时被误踢回 #/ 后再跳回。
+     以 hash 派生的 incoming 为准（而非 displayed），hashchange 当帧即响应。 */
   useEffect(() => {
-    if (!isLoggedIn && displayed.page !== '/') {
+    if (isLoading) return;
+    const page = incoming.page;
+    if (!isLoggedIn && !PUBLIC_PAGES.has(page)) {
+      window.location.hash = '#/';
+    } else if (isLoggedIn && GUEST_ONLY_PAGES.has(page)) {
       window.location.hash = '#/';
     }
-  }, [isLoggedIn, displayed.page]);
+  }, [isLoggedIn, isLoading, hash]);
 
   const renderPage = () => {
     switch (displayed.page) {
@@ -143,14 +160,45 @@ export default function App() {
     }
   };
 
-  /* 未登录：渲染介绍页（极简导航内置于 LandingPage，不渲染应用 TopNav，
-     不参与 .page-enter/.page-exit 过渡，独立全屏滚动体验） */
+  /* 会话探测中：加载壳（不渲染 landing/应用，避免闪烁与误重定向） */
+  if (isLoading) {
+    return (
+      <>
+        <SkipLink />
+        <AuroraBackground />
+        <main
+          id="main-content"
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 'var(--space-xl) var(--space-lg)',
+          }}
+        >
+          <div style={{ width: 'min(360px, 100%)' }}>
+            <LoadingState message="正在恢复登录状态..." />
+          </div>
+        </main>
+        <ToastContainer />
+      </>
+    );
+  }
+
+  /* 未登录：按 hash 渲染介绍页 / 登录页 / 注册页（均为公开路由；
+     其他 hash 由守卫重定向回 #/，此处兜底为介绍页，不会闪现受保护内容） */
   if (!isLoggedIn) {
     return (
       <>
         <SkipLink />
         <AuroraBackground />
-        <LandingPage />
+        {incoming.page === '/login' ? (
+          <LoginPage />
+        ) : incoming.page === '/register' ? (
+          <RegisterPage />
+        ) : (
+          <LandingPage />
+        )}
         <ToastContainer />
       </>
     );

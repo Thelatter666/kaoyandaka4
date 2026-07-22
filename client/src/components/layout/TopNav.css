@@ -121,10 +121,44 @@
   color: var(--color-accent-primary-strong);
 }
 
-/* 右：主题切换 */
+/* 右：主题切换 + 退出登录 */
 .top-nav__actions {
   display: flex;
   align-items: center;
+  gap: var(--space-xs);
+}
+
+/* 退出登录：与 theme-toggle 同规格的 44px 玻璃圆形图标钮（账号系统 T2.4） */
+.top-nav__logout {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.top-nav__logout:hover {
+  color: var(--color-accent-danger);
+  box-shadow: var(--shadow-glass-md);
+  transform: translateY(-1px);
+}
+
+.top-nav__logout:active {
+  transform: scale(0.97);
+}
+
+.top-nav__logout:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+  box-shadow: none;
 }
 
 /* <960px：导航文字隐藏，图标-only（aria-label 保留，触控区 ≥44px） */
@@ -152,5 +186,30 @@
 
   .top-nav__links {
     gap: 0;
+  }
+}
+
+/* <400px 窄屏：动作钮收至 40px + 导航边距/内边距收紧，容纳 6 图标 + 主题 + 登出 */
+@media (max-width: 399px) {
+  .top-nav {
+    width: calc(100% - 2 * var(--space-xs));
+    padding: 0;
+  }
+
+  .top-nav__actions {
+    gap: 0;
+  }
+
+  .top-nav__logout,
+  .top-nav__actions .theme-toggle {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .top-nav__logout:hover,
+  .top-nav__logout:active {
+    transform: none;
   }
 }

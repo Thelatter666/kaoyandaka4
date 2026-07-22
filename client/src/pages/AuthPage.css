@@ -1,0 +1,175 @@
+/* ============================================================
+   登录 / 注册页（账号系统 T2.4，极光玻璃 v2）
+   两页共用一份样式（与 LandingPage.css 服务全部 landing 子组件同理）：
+   顶部极简条（品牌 + 主题切换）+ 居中玻璃卡片 + 表单字段/错误态。
+   动效仅 transform / opacity；入场初始 opacity 0.01（LCP 手法）。
+   ============================================================ */
+
+.auth-page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- 顶部极简条：品牌（回首页）+ 主题切换（延续 LandingNav 配置） ---- */
+.auth-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+}
+
+.auth-topbar__brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-sm);
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.auth-topbar__brand:hover {
+  text-decoration: none;
+}
+
+/* ---- 居中主区 ---- */
+.auth-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg) var(--space-md) var(--space-2xl);
+}
+
+/* 玻璃卡片：glass-2 材质由 JSX 类名提供，此处定形状与入场 */
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  padding: var(--space-xl);
+  border-radius: var(--radius-card);
+  animation: auth-card-in var(--dur-rise) var(--ease-out) both;
+}
+
+/* 入场：初始 opacity 0.01 而非 0（元素首帧即可绘制，LCP 手法） */
+@keyframes auth-card-in {
+  from {
+    opacity: 0.01;
+    transform: translateY(12px);
+  }
+}
+
+.auth-card__title {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.auth-card__sub {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-lg);
+}
+
+/* ---- 表单 ---- */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.auth-field__label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+}
+
+.auth-field__input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-input);
+  color: var(--color-text-primary);
+  font-size: var(--text-base);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+/* 焦点态：全局 :focus-visible 焦点环之外，描边同步提亮（指针用户可见） */
+.auth-field__input:focus {
+  border-color: var(--color-border-focus);
+}
+
+/* 字段级错误：danger 描边 + 下方错误文案（role=alert 由 JSX 提供） */
+.auth-field__input--error,
+.auth-field__input--error:focus {
+  border-color: var(--color-accent-danger);
+}
+
+.auth-field__error {
+  font-size: var(--text-xs);
+  color: var(--color-accent-danger);
+}
+
+/* 字段辅助说明（如密码规则提示） */
+.auth-field__hint {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* 表单级错误横幅（401 凭证错误 / 429 限流 / 网络异常） */
+.auth-form__error {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-accent-danger);
+  background: color-mix(in srgb, var(--color-accent-danger) 10%, transparent);
+  color: var(--color-accent-danger);
+  font-size: var(--text-sm);
+}
+
+.auth-form__submit {
+  width: 100%;
+  margin-top: var(--space-xs);
+}
+
+/* ---- 卡片底部互链与返回首页 ---- */
+.auth-card__switch {
+  margin-top: var(--space-lg);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.auth-card__back {
+  display: block;
+  margin-top: var(--space-md);
+  text-align: center;
+  font-size: var(--text-sm);
+}
+
+/* 375px 窄屏：卡片内边距收敛，防止内容贴边 */
+@media (max-width: 479px) {
+  .auth-card {
+    padding: var(--space-lg);
+  }
+}
+
+/* reduced-motion：入场取消，静态完整呈现 */
+@media (prefers-reduced-motion: reduce) {
+  .auth-card {
+    animation: none;
+  }
+}

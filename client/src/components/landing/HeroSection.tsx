@@ -58,8 +58,7 @@ export function HeroSection() {
           考研人的一站式学习管理工具
         </m.p>
         <m.div variants={itemVariants} className="landing-hero__cta">
-          {/* TODO(账号系统)：接通注册流程 */}
-          <Button variant="primary" size="lg" onClick={() => {}}>
+          <Button variant="primary" size="lg" onClick={() => { window.location.hash = '#/register'; }}>
             免费开始
           </Button>
           <Button variant="glass" size="lg" onClick={scrollToNext}>

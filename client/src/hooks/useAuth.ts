@@ -1,60 +1,111 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
+import { setUnauthorizedHandler } from '../api/client';
+import { authApi, type AuthUser } from '../api/auth';
 
 /**
- * 登录态判断（设计文档《滚动式介绍页设计》§3）
+ * 登录态管理（账号系统 T2.4，真实 API 版）
  *
- * 当前为 mock 实现：localStorage('yantai_mock_auth') = '1' 视为已登录，
- * 其余（含缺省）视为未登录。用于在账号系统上线前验证介绍页/应用两条路由分支。
+ * 机制：模块级 store + useSyncExternalStore 订阅。
+ * - 首次挂载时以 GET /api/v1/auth/me 探测会话（httpOnly cookie），
+ *   进行中 isLoading=true（App 渲染加载壳，避免未登录闪现 landing）；
+ * - 登录/注册成功后由页面调 applyAuthUser 直接写入全局态，立即生效；
+ * - 业务请求 401（UNAUTHORIZED）由 api/client 回调本模块，全局回到未登录分支；
+ * - 登出走 logoutAuth：先销毁服务端会话，再清空本地态。
  *
- * 账号系统接入方式：将 readMockAuth 替换为 GET /api/v1/auth/me 请求，
- * 保持返回形状 { isLoggedIn, isLoading, setMockLoggedIn } 不变即可无缝切换；
- * 届时 isLoading 在请求进行中为 true，调用方可渲染骨架。
+ * 原 mock（localStorage yantai_mock_auth）已删除；e2e 脚本适配见 T2.5。
  */
 
-const MOCK_KEY = 'yantai_mock_auth';
+type AuthStatus = 'loading' | 'authenticated' | 'guest';
 
-function readMockAuth(): boolean {
-  try {
-    return window.localStorage.getItem(MOCK_KEY) === '1';
-  } catch {
-    return false;
-  }
+interface AuthStoreState {
+  status: AuthStatus;
+  user: AuthUser | null;
 }
+
+let storeState: AuthStoreState = { status: 'loading', user: null };
+const listeners = new Set<() => void>();
+
+function emit(next: AuthStoreState): void {
+  storeState = next;
+  listeners.forEach((listener) => listener());
+}
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function getSnapshot(): AuthStoreState {
+  return storeState;
+}
+
+/* /auth/me 探测去重：并发调用方共享同一请求 */
+let meInflight: Promise<void> | null = null;
+
+/** 重新查询会话（GET /api/v1/auth/me），刷新全局登录态 */
+export function refreshAuth(): Promise<void> {
+  if (!meInflight) {
+    meInflight = authApi
+      .me()
+      .then((user) => emit({ status: 'authenticated', user }))
+      .catch(() => emit({ status: 'guest', user: null }))
+      .finally(() => {
+        meInflight = null;
+      });
+  }
+  return meInflight;
+}
+
+/** 登录/注册成功后写入全局登录态（响应已含用户信息，无需再查 /me） */
+export function applyAuthUser(user: AuthUser): void {
+  emit({ status: 'authenticated', user });
+}
+
+/** 退出登录：销毁服务端会话后清空本地登录态；网络异常也强制回到未登录态 */
+export async function logoutAuth(): Promise<void> {
+  try {
+    await authApi.logout();
+  } catch {
+    /* 服务端不可达时也强制本地登出，避免 UI 卡在已登录分支 */
+  }
+  emit({ status: 'guest', user: null });
+}
+
+/* 业务请求 401 全局处理：会话失效 → 回到未登录分支（/auth/* 的 401 不触发，见 api/client.ts） */
+setUnauthorizedHandler(() => {
+  if (storeState.status === 'authenticated') {
+    emit({ status: 'guest', user: null });
+  }
+});
 
 interface AuthState {
   isLoggedIn: boolean;
-  /** mock 实现下恒为 false；接通真实接口后表示会话查询进行中 */
+  /** 首次会话探测进行中为 true，调用方应渲染加载壳而非 landing/应用 */
   isLoading: boolean;
-  /** 仅 mock 阶段可用的调试开关：写入 localStorage 并同步状态 */
-  setMockLoggedIn: (value: boolean) => void;
+  user: AuthUser | null;
+  /** 主动重新查询会话（如怀疑会话状态变化后） */
+  refresh: () => Promise<void>;
+  /** 退出登录（调 POST /auth/logout 后清空本地态） */
+  logout: () => Promise<void>;
 }
 
 export function useAuth(): AuthState {
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(readMockAuth);
+  const state = useSyncExternalStore(subscribe, getSnapshot);
 
-  /* 跨标签页同步 mock 状态（storage 事件仅在其他标签页触发） */
+  /* 首次挂载探测会话；多组件并发调用由 meInflight 去重 */
   useEffect(() => {
-    const handler = (e: StorageEvent) => {
-      if (e.key === MOCK_KEY) {
-        setIsLoggedIn(readMockAuth());
-      }
-    };
-    window.addEventListener('storage', handler);
-    return () => window.removeEventListener('storage', handler);
-  }, []);
-
-  const setMockLoggedIn = useCallback((value: boolean) => {
-    try {
-      if (value) {
-        window.localStorage.setItem(MOCK_KEY, '1');
-      } else {
-        window.localStorage.removeItem(MOCK_KEY);
-      }
-    } catch {
-      /* localStorage 不可用（隐私模式等）：仅更新内存态 */
+    if (storeState.status === 'loading') {
+      void refreshAuth();
     }
-    setIsLoggedIn(value);
   }, []);
 
-  return { isLoggedIn, isLoading: false, setMockLoggedIn };
+  return {
+    isLoggedIn: state.status === 'authenticated',
+    isLoading: state.status === 'loading',
+    user: state.user,
+    refresh: refreshAuth,
+    logout: logoutAuth,
+  };
 }

@@ -12,9 +12,22 @@ class ApiError extends Error {
   }
 }
 
+/**
+ * 业务请求 401（UNAUTHORIZED，会话失效/被踢）的全局回调，由 useAuth 注册。
+ * 仅对非 /auth/* 路径触发：/auth/login 的 401 是凭证错误（表单内展示）、
+ * /auth/me 的 401 是未登录探测（useAuth 自行处理），二者不触发全局登出。
+ */
+let unauthorizedHandler: (() => void) | null = null;
+
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  unauthorizedHandler = handler;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE}${path}`;
   const res = await fetch(url, {
+    // 统一携带会话 cookie（vite proxy 同源下等价 same-origin；跨域部署时亦可工作）
+    credentials: 'include',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -28,6 +41,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       errorData = await res.json();
     } catch {
       // ignore parse errors
+    }
+    if (res.status === 401 && !path.startsWith('/auth/')) {
+      unauthorizedHandler?.();
     }
     throw new ApiError(
       res.status,

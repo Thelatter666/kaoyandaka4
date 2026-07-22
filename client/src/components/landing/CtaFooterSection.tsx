@@ -23,8 +23,7 @@ export function CtaFooterSection() {
           距离 2026 考研还有 <strong>{days}</strong> 天
         </h2>
         <p className="landing-cta__sub">从今天开始沉淀。</p>
-        {/* TODO(账号系统)：接通注册流程 */}
-        <Button variant="primary" size="lg" onClick={() => {}}>
+        <Button variant="primary" size="lg" onClick={() => { window.location.hash = '#/register'; }}>
           免费开始
         </Button>
       </m.div>
