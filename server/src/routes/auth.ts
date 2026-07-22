@@ -8,12 +8,7 @@ import { generateUUID } from '../utils/uuid.js';
 import { AppError } from '../middleware/errorHandler.js';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 
-// express-session 会话数据扩展：登录态仅存 userId，密码等敏感信息绝不入会话
-declare module 'express-session' {
-  interface SessionData {
-    userId?: string;
-  }
-}
+// SessionData.userId 的会话数据声明已统一移至 middleware/auth.ts（与 requireAuth 同处维护）
 
 const router = Router();
 

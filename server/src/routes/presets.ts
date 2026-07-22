@@ -32,11 +32,12 @@ function transformPreset(row: PresetRow) {
   };
 }
 
-// GET /api/v1/presets — 获取所有预设
-router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
+// GET /api/v1/presets — 获取当前用户的所有预设
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const [rows] = await pool.query<PresetRow[]>(
-      'SELECT * FROM study_presets ORDER BY FIELD(subject, "math", "english", "408"), last_used_at DESC'
+      'SELECT * FROM study_presets WHERE user_id = ? ORDER BY FIELD(subject, "math", "english", "408"), last_used_at DESC',
+      [req.userId]
     );
     res.json(rows.map(transformPreset));
   } catch (err) {
@@ -52,11 +53,12 @@ router.post('/', validate(CreatePresetSchema), async (req: Request, res: Respons
       throw new AppError(400, 'VALIDATION_ERROR', `科目已锁定为 ${lockedSubject}`);
     }
     const id = generateUUID();
+    // user_id 一律取自会话，忽略客户端可能传入的任何归属字段
     await pool.query<ResultSetHeader>(
-      'INSERT INTO study_presets (id, name, subject, sub_subject, duration_minutes) VALUES (?, ?, ?, ?, ?)',
-      [id, name, subject, subSubject || null, durationMinutes]
+      'INSERT INTO study_presets (id, user_id, name, subject, sub_subject, duration_minutes) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, req.userId, name, subject, subSubject || null, durationMinutes]
     );
-    const [rows] = await pool.query<PresetRow[]>('SELECT * FROM study_presets WHERE id = ?', [id]);
+    const [rows] = await pool.query<PresetRow[]>('SELECT * FROM study_presets WHERE id = ? AND user_id = ?', [id, req.userId]);
     res.status(201).json(transformPreset(rows[0]));
   } catch (err) {
     next(err);
@@ -69,7 +71,8 @@ router.put('/:id', validate(UpdatePresetSchema), async (req: Request, res: Respo
     const { id } = req.params;
     const { name, subject, subSubject, durationMinutes } = req.body;
 
-    const [existing] = await pool.query<PresetRow[]>('SELECT * FROM study_presets WHERE id = ?', [id]);
+    // 按 id + user_id 双重定位：他人资源同样返回 404，不区分「不存在」与「别人的」，防枚举
+    const [existing] = await pool.query<PresetRow[]>('SELECT * FROM study_presets WHERE id = ? AND user_id = ?', [id, req.userId]);
     if (existing.length === 0) {
       throw new AppError(404, 'NOT_FOUND', '预设不存在');
     }
@@ -80,11 +83,11 @@ router.put('/:id', validate(UpdatePresetSchema), async (req: Request, res: Respo
         subject = COALESCE(?, subject),
         sub_subject = ?,
         duration_minutes = COALESCE(?, duration_minutes)
-       WHERE id = ?`,
-      [name, subject, subSubject, durationMinutes, id]
+       WHERE id = ? AND user_id = ?`,
+      [name, subject, subSubject, durationMinutes, id, req.userId]
     );
 
-    const [rows] = await pool.query<PresetRow[]>('SELECT * FROM study_presets WHERE id = ?', [id]);
+    const [rows] = await pool.query<PresetRow[]>('SELECT * FROM study_presets WHERE id = ? AND user_id = ?', [id, req.userId]);
     res.json(transformPreset(rows[0]));
   } catch (err) {
     next(err);
@@ -95,11 +98,11 @@ router.put('/:id', validate(UpdatePresetSchema), async (req: Request, res: Respo
 router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const [existing] = await pool.query<PresetRow[]>('SELECT * FROM study_presets WHERE id = ?', [id]);
+    const [existing] = await pool.query<PresetRow[]>('SELECT * FROM study_presets WHERE id = ? AND user_id = ?', [id, req.userId]);
     if (existing.length === 0) {
       throw new AppError(404, 'NOT_FOUND', '预设不存在');
     }
-    await pool.query('DELETE FROM study_presets WHERE id = ?', [id]);
+    await pool.query('DELETE FROM study_presets WHERE id = ? AND user_id = ?', [id, req.userId]);
     res.status(204).send();
   } catch (err) {
     next(err);

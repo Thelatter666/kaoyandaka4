@@ -73,9 +73,10 @@ const COURSE_QUERY = `
 `;
 
 // GET /api/v1/courses
-router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const [rows] = await pool.query<CourseRow[]>(`${COURSE_QUERY} ORDER BY c.created_at DESC`);
+    // 外层按 c.user_id 过滤后，子查询经 course_id 关联自然限定在本人课程内
+    const [rows] = await pool.query<CourseRow[]>(`${COURSE_QUERY} WHERE c.user_id = ? ORDER BY c.created_at DESC`, [req.userId]);
     res.json(rows.map(transformCourse));
   } catch (err) {
     next(err);
@@ -86,13 +87,14 @@ router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
 router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const [courses] = await pool.query<CourseRow[]>(`${COURSE_QUERY} WHERE c.id = ?`, [id]);
+    // 按 id + user_id 双重定位：他人资源同样返回 404，不区分「不存在」与「别人的」，防枚举
+    const [courses] = await pool.query<CourseRow[]>(`${COURSE_QUERY} WHERE c.id = ? AND c.user_id = ?`, [id, req.userId]);
     if (courses.length === 0) throw new AppError(404, 'NOT_FOUND', '课程不存在');
 
     const course = transformCourse(courses[0]);
     const [episodes] = await pool.query<EpisodeRow[]>(
-      'SELECT * FROM course_episodes WHERE course_id = ? ORDER BY sort_order ASC',
-      [id]
+      'SELECT * FROM course_episodes WHERE course_id = ? AND user_id = ? ORDER BY sort_order ASC',
+      [id, req.userId]
     );
     res.json({ ...course, episodes: episodes.map(transformEpisode) });
   } catch (err) {
@@ -187,21 +189,22 @@ router.post('/', validate(CreateCourseSchema), async (req: Request, res: Respons
     }
 
     const courseId = generateUUID();
+    // user_id 一律取自会话；episodes 的冗余 user_id 与所属课程保持一致
     await pool.query<ResultSetHeader>(
-      'INSERT INTO online_courses (id, name, subject, sub_subject) VALUES (?, ?, ?, ?)',
-      [courseId, name, subject, subSubject || null]
+      'INSERT INTO online_courses (id, user_id, name, subject, sub_subject) VALUES (?, ?, ?, ?, ?)',
+      [courseId, req.userId, name, subject, subSubject || null]
     );
 
     for (let i = 0; i < episodes.length; i++) {
       const ep = episodes[i];
       const epId = generateUUID();
       await pool.query<ResultSetHeader>(
-        'INSERT INTO course_episodes (id, course_id, title, duration_seconds, duration_text, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
-        [epId, courseId, ep.title, ep.durationSeconds, ep.durationText, i]
+        'INSERT INTO course_episodes (id, user_id, course_id, title, duration_seconds, duration_text, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [epId, req.userId, courseId, ep.title, ep.durationSeconds, ep.durationText, i]
       );
     }
 
-    const [rows] = await pool.query<CourseRow[]>(`${COURSE_QUERY} WHERE c.id = ?`, [courseId]);
+    const [rows] = await pool.query<CourseRow[]>(`${COURSE_QUERY} WHERE c.id = ? AND c.user_id = ?`, [courseId, req.userId]);
     res.status(201).json(transformCourse(rows[0]));
   } catch (err) {
     next(err);
@@ -212,10 +215,10 @@ router.post('/', validate(CreateCourseSchema), async (req: Request, res: Respons
 router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const [existing] = await pool.query<CourseRow[]>('SELECT * FROM online_courses WHERE id = ?', [id]);
+    const [existing] = await pool.query<CourseRow[]>('SELECT * FROM online_courses WHERE id = ? AND user_id = ?', [id, req.userId]);
     if (existing.length === 0) throw new AppError(404, 'NOT_FOUND', '课程不存在');
     // CASCADE will handle episodes, study_records snapshots remain
-    await pool.query('DELETE FROM online_courses WHERE id = ?', [id]);
+    await pool.query('DELETE FROM online_courses WHERE id = ? AND user_id = ?', [id, req.userId]);
     res.status(204).send();
   } catch (err) {
     next(err);
@@ -226,9 +229,10 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
 router.patch('/:id/episodes/:eid/toggle', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id, eid } = req.params;
+    // 集数用冗余 user_id 单表过滤，无需 JOIN 课程表
     const [episodes] = await pool.query<EpisodeRow[]>(
-      'SELECT * FROM course_episodes WHERE id = ? AND course_id = ?',
-      [eid, id]
+      'SELECT * FROM course_episodes WHERE id = ? AND course_id = ? AND user_id = ?',
+      [eid, id, req.userId]
     );
     if (episodes.length === 0) throw new AppError(404, 'NOT_FOUND', '集数不存在');
 
@@ -237,34 +241,34 @@ router.patch('/:id/episodes/:eid/toggle', async (req: Request, res: Response, ne
     const completedAt = newCompleted ? new Date() : null;
 
     await pool.query(
-      'UPDATE course_episodes SET is_completed = ?, completed_at = ? WHERE id = ?',
-      [newCompleted, completedAt, eid]
+      'UPDATE course_episodes SET is_completed = ?, completed_at = ? WHERE id = ? AND user_id = ?',
+      [newCompleted, completedAt, eid, req.userId]
     );
 
     // If completed, create a study_record for course_video source
     if (newCompleted) {
-      const [courseRows] = await pool.query<CourseRow[]>('SELECT * FROM online_courses WHERE id = ?', [id]);
+      const [courseRows] = await pool.query<CourseRow[]>('SELECT * FROM online_courses WHERE id = ? AND user_id = ?', [id, req.userId]);
       if (courseRows.length > 0) {
         const course = courseRows[0];
         const recordId = generateUUID();
         await pool.query<ResultSetHeader>(
           `INSERT INTO study_records
-           (id, preset_name_snapshot, subject_snapshot, sub_subject_snapshot,
+           (id, user_id, preset_name_snapshot, subject_snapshot, sub_subject_snapshot,
             actual_duration_seconds, course_episode_id,
             course_name_snapshot, episode_title_snapshot, source)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'course_video')`,
-          [recordId, episode.title, course.subject, course.sub_subject,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'course_video')`,
+          [recordId, req.userId, episode.title, course.subject, course.sub_subject,
             episode.duration_seconds, eid, course.name, episode.title]
         );
       }
     } else {
-      // Remove study_record for this episode if uncompleted
-      await pool.query('DELETE FROM study_records WHERE course_episode_id = ? AND source = ?', [eid, 'course_video']);
+      // Remove study_record for this episode if uncompleted（同样限定本人记录）
+      await pool.query('DELETE FROM study_records WHERE course_episode_id = ? AND source = ? AND user_id = ?', [eid, 'course_video', req.userId]);
     }
 
     const [updated] = await pool.query<EpisodeRow[]>(
-      'SELECT * FROM course_episodes WHERE id = ?',
-      [eid]
+      'SELECT * FROM course_episodes WHERE id = ? AND user_id = ?',
+      [eid, req.userId]
     );
     res.json(transformEpisode(updated[0]));
   } catch (err) {

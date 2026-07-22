@@ -34,8 +34,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       throw new AppError(400, 'VALIDATION_ERROR', '缺少 date 参数');
     }
     const [rows] = await pool.query<ReviewRow[]>(
-      'SELECT * FROM daily_reviews WHERE review_date = ?',
-      [date]
+      'SELECT * FROM daily_reviews WHERE review_date = ? AND user_id = ?',
+      [date, req.userId]
     );
     res.json(rows.length > 0 ? transformReview(rows[0]) : null);
   } catch (err) {
@@ -47,22 +47,23 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 router.put('/', validate(UpsertReviewSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { date, content } = req.body;
+    // 唯一键为 (user_id, review_date)：查/改/增全部按当前用户隔离
     const [existing] = await pool.query<ReviewRow[]>(
-      'SELECT * FROM daily_reviews WHERE review_date = ?',
-      [date]
+      'SELECT * FROM daily_reviews WHERE review_date = ? AND user_id = ?',
+      [date, req.userId]
     );
 
     if (existing.length > 0) {
-      await pool.query('UPDATE daily_reviews SET content = ? WHERE review_date = ?', [content, date]);
-      const [rows] = await pool.query<ReviewRow[]>('SELECT * FROM daily_reviews WHERE review_date = ?', [date]);
+      await pool.query('UPDATE daily_reviews SET content = ? WHERE review_date = ? AND user_id = ?', [content, date, req.userId]);
+      const [rows] = await pool.query<ReviewRow[]>('SELECT * FROM daily_reviews WHERE review_date = ? AND user_id = ?', [date, req.userId]);
       res.json(transformReview(rows[0]));
     } else {
       const id = generateUUID();
       await pool.query<ResultSetHeader>(
-        'INSERT INTO daily_reviews (id, review_date, content) VALUES (?, ?, ?)',
-        [id, date, content]
+        'INSERT INTO daily_reviews (id, user_id, review_date, content) VALUES (?, ?, ?, ?)',
+        [id, req.userId, date, content]
       );
-      const [rows] = await pool.query<ReviewRow[]>('SELECT * FROM daily_reviews WHERE id = ?', [id]);
+      const [rows] = await pool.query<ReviewRow[]>('SELECT * FROM daily_reviews WHERE id = ? AND user_id = ?', [id, req.userId]);
       res.status(201).json(transformReview(rows[0]));
     }
   } catch (err) {

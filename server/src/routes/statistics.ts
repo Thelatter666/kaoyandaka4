@@ -59,17 +59,18 @@ router.get('/forest', validate(StatisticsQuerySchema, 'query'), async (req: Requ
       throw new AppError(400, 'FUTURE_DATE', '不能查询未来日期');
     }
 
-    // Query study_records within range
+    // Query study_records within range（仅当前用户）
     // Dedup: exclude course_video records that have a linked focus_session_id
     const [records] = await pool.query<RecordRow[]>(
       `SELECT * FROM study_records
        WHERE created_at >= ? AND created_at < ?
+         AND user_id = ?
          AND (
            source = 'focus_session'
            OR (source = 'course_video' AND focus_session_id IS NULL)
          )
        ORDER BY created_at DESC`,
-      [`${rangeStart} 00:00:00`, `${getNextDate(rangeEnd)} 00:00:00`]
+      [`${rangeStart} 00:00:00`, `${getNextDate(rangeEnd)} 00:00:00`, req.userId]
     );
 
     // Period calculations
@@ -117,12 +118,17 @@ router.get('/forest', validate(StatisticsQuerySchema, 'query'), async (req: Requ
     const totalTrees = Object.values(treesBySubject).reduce((a, b) => a + b, 0);
 
     // Cumulative (all time, same dedup)
+    // user_id 条件必须把去重 OR 组括起来再并列，避免 AND/OR 优先级改变语义
     const [cumRecords] = await pool.query<RowDataPacket[]>(
       `SELECT COALESCE(SUM(actual_duration_seconds), 0) AS total_seconds,
               COUNT(*) AS total_sessions
        FROM study_records
-       WHERE source = 'focus_session'
-          OR (source = 'course_video' AND focus_session_id IS NULL)`
+       WHERE user_id = ?
+         AND (
+           source = 'focus_session'
+           OR (source = 'course_video' AND focus_session_id IS NULL)
+         )`,
+      [req.userId]
     );
     const cumulativeTotalSeconds = cumRecords[0].total_seconds || 0;
 
@@ -130,9 +136,13 @@ router.get('/forest', validate(StatisticsQuerySchema, 'query'), async (req: Requ
     const [cumBySubject] = await pool.query<RowDataPacket[]>(
       `SELECT subject_snapshot, COALESCE(SUM(actual_duration_seconds), 0) AS total
        FROM study_records
-       WHERE source = 'focus_session'
-          OR (source = 'course_video' AND focus_session_id IS NULL)
-       GROUP BY subject_snapshot`
+       WHERE user_id = ?
+         AND (
+           source = 'focus_session'
+           OR (source = 'course_video' AND focus_session_id IS NULL)
+         )
+       GROUP BY subject_snapshot`,
+      [req.userId]
     );
     let cumulativeTotalTrees = 0;
     for (const row of cumBySubject) {

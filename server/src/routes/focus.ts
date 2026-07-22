@@ -58,8 +58,8 @@ router.post('/start', validate(StartFocusSchema), async (req: Request, res: Resp
     let snapshotSubSubject: string | null = null;
 
     if (presetId) {
-      // Get preset
-      const [presets] = await pool.query<PresetRow[]>('SELECT * FROM study_presets WHERE id = ?', [presetId]);
+      // Get preset（仅限本人预设，他人的按不存在处理）
+      const [presets] = await pool.query<PresetRow[]>('SELECT * FROM study_presets WHERE id = ? AND user_id = ?', [presetId, req.userId]);
       if (presets.length === 0) throw new AppError(404, 'NOT_FOUND', '预设不存在');
 
       const preset = presets[0];
@@ -68,7 +68,23 @@ router.post('/start', validate(StartFocusSchema), async (req: Request, res: Resp
       snapshotSubSubject = preset.sub_subject;
 
       // Update preset last_used_at
-      await pool.query('UPDATE study_presets SET last_used_at = NOW() WHERE id = ?', [presetId]);
+      await pool.query('UPDATE study_presets SET last_used_at = NOW() WHERE id = ? AND user_id = ?', [presetId, req.userId]);
+    }
+
+    // 跨表引用归属校验：被引用的集数/任务必须属于当前用户，防止构造他人资源 id 越权关联
+    if (courseEpisodeId) {
+      const [episodes] = await pool.query<RowDataPacket[]>(
+        'SELECT id FROM course_episodes WHERE id = ? AND user_id = ?',
+        [courseEpisodeId, req.userId]
+      );
+      if (episodes.length === 0) throw new AppError(404, 'NOT_FOUND', '集数不存在');
+    }
+    if (taskId) {
+      const [tasks] = await pool.query<RowDataPacket[]>(
+        'SELECT id FROM daily_tasks WHERE id = ? AND user_id = ?',
+        [taskId, req.userId]
+      );
+      if (tasks.length === 0) throw new AppError(404, 'NOT_FOUND', '任务不存在');
     }
 
     const plannedDurationSeconds = plannedDurationMinutes * 60;
@@ -79,14 +95,14 @@ router.post('/start', validate(StartFocusSchema), async (req: Request, res: Resp
 
     await pool.query<ResultSetHeader>(
       `INSERT INTO focus_sessions
-       (id, preset_id, preset_name_snapshot, subject_snapshot, sub_subject_snapshot,
+       (id, user_id, preset_id, preset_name_snapshot, subject_snapshot, sub_subject_snapshot,
         planned_duration_seconds, started_at, planned_end_at, status, source, course_episode_id, task_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'in_progress', ?, ?, ?)`,
-      [id, presetId || null, snapshotName, snapshotSubject, snapshotSubSubject,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'in_progress', ?, ?, ?)`,
+      [id, req.userId, presetId || null, snapshotName, snapshotSubject, snapshotSubSubject,
         plannedDurationSeconds, now, plannedEndAt, source, courseEpisodeId || null, taskId || null]
     );
 
-    const [rows] = await pool.query<FocusRow[]>('SELECT * FROM focus_sessions WHERE id = ?', [id]);
+    const [rows] = await pool.query<FocusRow[]>('SELECT * FROM focus_sessions WHERE id = ? AND user_id = ?', [id, req.userId]);
     res.status(201).json(transformSession(rows[0]));
   } catch (err) {
     next(err);
@@ -99,7 +115,7 @@ router.post('/:id/complete', async (req: Request, res: Response, next: NextFunct
     const { id } = req.params;
     const now = new Date();
 
-    const [sessions] = await pool.query<FocusRow[]>('SELECT * FROM focus_sessions WHERE id = ?', [id]);
+    const [sessions] = await pool.query<FocusRow[]>('SELECT * FROM focus_sessions WHERE id = ? AND user_id = ?', [id, req.userId]);
     if (sessions.length === 0) throw new AppError(404, 'NOT_FOUND', '专注会话不存在');
 
     const session = sessions[0];
@@ -114,23 +130,23 @@ router.post('/:id/complete', async (req: Request, res: Response, next: NextFunct
     const [result] = await pool.query<ResultSetHeader>(
       `UPDATE focus_sessions
        SET status = 'completed', actual_duration_seconds = ?, completed_at = NOW()
-       WHERE id = ? AND status = 'in_progress'`,
-      [actualDurationSeconds, id]
+       WHERE id = ? AND user_id = ? AND status = 'in_progress'`,
+      [actualDurationSeconds, id, req.userId]
     );
 
     if (result.affectedRows === 0) {
       throw new AppError(409, 'CONFLICT', '该专注会话已被处理');
     }
 
-    // Create study_record
+    // Create study_record（user_id 取自会话，与会话归属一致）
     const recordId = generateUUID();
     await pool.query<ResultSetHeader>(
       `INSERT INTO study_records
-       (id, preset_name_snapshot, subject_snapshot, sub_subject_snapshot,
+       (id, user_id, preset_name_snapshot, subject_snapshot, sub_subject_snapshot,
         actual_duration_seconds, focus_session_id, task_id, course_episode_id,
         course_name_snapshot, episode_title_snapshot, source)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, 'focus_session')`,
-      [recordId, session.preset_name_snapshot, session.subject_snapshot, session.sub_subject_snapshot,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, 'focus_session')`,
+      [recordId, req.userId, session.preset_name_snapshot, session.subject_snapshot, session.sub_subject_snapshot,
         actualDurationSeconds, id, session.task_id, session.course_episode_id]
     );
 
@@ -145,8 +161,8 @@ router.post('/:id/cancel', async (req: Request, res: Response, next: NextFunctio
   try {
     const { id } = req.params;
     const [result] = await pool.query<ResultSetHeader>(
-      "UPDATE focus_sessions SET status = 'cancelled' WHERE id = ? AND status = 'in_progress'",
-      [id]
+      "UPDATE focus_sessions SET status = 'cancelled' WHERE id = ? AND user_id = ? AND status = 'in_progress'",
+      [id, req.userId]
     );
     if (result.affectedRows === 0) {
       throw new AppError(404, 'NOT_FOUND', '没有可取消的活跃会话');
@@ -158,10 +174,11 @@ router.post('/:id/cancel', async (req: Request, res: Response, next: NextFunctio
 });
 
 // GET /api/v1/focus/active
-router.get('/active', async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/active', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const [rows] = await pool.query<FocusRow[]>(
-      "SELECT * FROM focus_sessions WHERE status = 'in_progress' ORDER BY started_at DESC LIMIT 1"
+      "SELECT * FROM focus_sessions WHERE status = 'in_progress' AND user_id = ? ORDER BY started_at DESC LIMIT 1",
+      [req.userId]
     );
 
     if (rows.length === 0) {
@@ -176,17 +193,17 @@ router.get('/active', async (_req: Request, res: Response, next: NextFunction) =
       // Auto-complete expired session
       const actualDurationSeconds = session.planned_duration_seconds;
       await pool.query(
-        "UPDATE focus_sessions SET status = 'completed', actual_duration_seconds = ?, completed_at = NOW() WHERE id = ?",
-        [actualDurationSeconds, session.id]
+        "UPDATE focus_sessions SET status = 'completed', actual_duration_seconds = ?, completed_at = NOW() WHERE id = ? AND user_id = ?",
+        [actualDurationSeconds, session.id, req.userId]
       );
       // Create study record
       const recordId = generateUUID();
       await pool.query(
         `INSERT INTO study_records
-         (id, preset_name_snapshot, subject_snapshot, sub_subject_snapshot,
+         (id, user_id, preset_name_snapshot, subject_snapshot, sub_subject_snapshot,
           actual_duration_seconds, focus_session_id, task_id, course_episode_id, source)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'focus_session')`,
-        [recordId, session.preset_name_snapshot, session.subject_snapshot, session.sub_subject_snapshot,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'focus_session')`,
+        [recordId, req.userId, session.preset_name_snapshot, session.subject_snapshot, session.sub_subject_snapshot,
           actualDurationSeconds, session.id, session.task_id, session.course_episode_id]
       );
       return res.json(null);

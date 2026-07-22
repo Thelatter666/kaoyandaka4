@@ -6,6 +6,7 @@ import session from 'express-session';
 import MySQLStoreFactory from 'express-mysql-session';
 import { corsMiddleware } from './middleware/cors.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { requireAuth } from './middleware/auth.js';
 import authRouter from './routes/auth.js';
 import presetsRouter from './routes/presets.js';
 import tasksRouter from './routes/tasks.js';
@@ -62,13 +63,14 @@ app.use(
 );
 
 // API Routes
+// 业务路由统一在挂载层强制鉴权：集中一处可审计、无遗漏风险；/api/v1/auth 与 /api/v1/health 保持公开
 app.use('/api/v1/auth', authRouter);
-app.use('/api/v1/presets', presetsRouter);
-app.use('/api/v1/tasks', tasksRouter);
-app.use('/api/v1/reviews', reviewsRouter);
-app.use('/api/v1/focus', focusRouter);
-app.use('/api/v1/courses', coursesRouter);
-app.use('/api/v1/statistics', statisticsRouter);
+app.use('/api/v1/presets', requireAuth, presetsRouter);
+app.use('/api/v1/tasks', requireAuth, tasksRouter);
+app.use('/api/v1/reviews', requireAuth, reviewsRouter);
+app.use('/api/v1/focus', requireAuth, focusRouter);
+app.use('/api/v1/courses', requireAuth, coursesRouter);
+app.use('/api/v1/statistics', requireAuth, statisticsRouter);
 
 // Health check
 app.get('/api/v1/health', (_req, res) => {
