@@ -1,0 +1,98 @@
+## 任务：管理「砚台考研打卡」服务器
+
+### 服务器连接
+```bash
+ssh kaoyan
+# 已配置 ~/.ssh/config，密钥在 ~/.ssh/kaoyan-server-key
+```
+
+### 项目信息
+- **GitHub 仓库**: `git@github.com:Thelatter666/kaoyandaka4.git`
+- **服务器路径**: `/www/wwwroot/kaoyandaka4`
+- **PM2 进程名**: `kaoyandaily-api`
+- **PM2 工作目录**: `/www/wwwroot/kaoyandaka4/server`
+- **管理面板**: 宝塔面板
+- **Nginx 站点**: `/www/server/panel/vhost/nginx/118.24.164.3.conf`
+- **前端静态文件**: `/www/wwwroot/kaoyandaka4/client/dist`
+- **PM2 日志**: `/www/wwwlogs/pm2/`
+
+### 🔐 重要：不要覆盖 .env
+服务器上的 `/www/wwwroot/kaoyandaka4/.env` 包含生产环境的数据库密码和会话密钥，与本地不同。
+**任何更新操作都必须保留 .env 文件不变。**
+
+### 操作一：首次初始化 Git（仅执行一次）
+如果服务器上还不是 git 仓库，需要初始化：
+```bash
+# 1. 配置 SSH 用 deploy key 连接 GitHub（密钥已在服务器 ~/.ssh/github-deploy-key）
+cat >> ~/.ssh/config << 'EOF'
+
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/github-deploy-key
+    StrictHostKeyChecking no
+EOF
+
+# 2. 备份当前部署
+cd /www/wwwroot
+mv kaoyandaka4 kaoyandaka4-bak
+
+# 3. 克隆最新代码
+git clone git@github.com:Thelatter666/kaoyandaka4.git kaoyandaka4
+
+# 4. 恢复生产 .env
+cp kaoyandaka4-bak/.env kaoyandaka4/.env
+
+# 5. 安装依赖并构建
+cd kaoyandaka4
+npm install --production
+cd client && npm install && cd ..
+cd server && npm install && cd ..
+
+# 6. 构建
+npm run build:client
+npm run build:server
+
+# 7. 重启 PM2
+pm2 delete kaoyandaily-api 2>/dev/null || true
+pm2 start server/dist/index.js --name kaoyandaily-api --cwd /www/wwwroot/kaoyandaka4/server
+pm2 save
+```
+
+### 操作二：同步更新（日常使用）
+当你告诉我"把新功能同步到服务器"时，执行：
+```bash
+# 1. 拉取最新代码
+cd /www/wwwroot/kaoyandaka4 && git pull
+
+# 2. 安装依赖（如果 package.json 变了）
+npm install --production
+cd client && npm install && cd ..
+cd server && npm install && cd ..
+
+# 3. 构建
+npm run build:client
+npm run build:server
+
+# 4. 重启服务
+pm2 restart kaoyandaily-api
+
+# 5. 验证
+curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/xxx
+pm2 logs kaoyandaily-api --lines 10
+```
+
+### 操作三：查看服务器状态
+```bash
+ssh kaoyan "pm2 list; echo ''; free -h; echo ''; df -h /"
+```
+
+### 操作四：查看日志
+```bash
+ssh kaoyan "pm2 logs kaoyandaily-api --lines 50"
+```
+
+### 操作五：备份数据库
+```bash
+ssh kaoyan "mysqldump -ukaoyandaily -p'密码' kaoyandaily > /root/backup-$(date +%Y%m%d).sql"
+```
