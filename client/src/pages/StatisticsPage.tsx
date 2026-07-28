@@ -10,6 +10,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { BookOpen, CheckCircle2, ChevronLeft, ChevronRight, Clock, TreePine, Trophy } from 'lucide-react';
 import { PageShell } from '../components/layout/PageShell';
 import { Card } from '../components/ui/Card';
+import { GlowCard } from '../components/ui/GlowCard';
 import { Button } from '../components/ui/Button';
 import { SubjectBadge } from '../components/ui/SubjectBadge';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -197,8 +198,13 @@ export function StatisticsPage() {
             </p>
           </Card>
 
-          {/* 累计成果卡（span 4，时间线旁侧卡） */}
-          <Card className="bento-span-4 stats-cumulative reveal" style={{ '--i': 5 } as React.CSSProperties}>
+          {/* 累计成果卡（span 4，时间线旁侧卡）- 使用 GlowCard 增强 */}
+          <GlowCard 
+            className="bento-span-4 stats-cumulative reveal" 
+            style={{ '--i': 5 } as React.CSSProperties}
+            glowColor="green"
+            size="md"
+          >
             <h3 className="stats-card-title">
               <Trophy size={18} strokeWidth={1.75} aria-hidden="true" />
               累计成果
@@ -207,7 +213,7 @@ export function StatisticsPage() {
               <StatItem label="累计专注" value={formatDurationHuman(data.cumulative.totalFocusSeconds)} />
               <StatItem label="累计树木" value={`${data.cumulative.totalTrees} 棵`} />
             </div>
-          </Card>
+          </GlowCard>
 
           {/* 学习记录时间线（span 8，按日分组 glass-1 行卡；大量项不做 stagger） */}
           {data.records.length > 0 && (
