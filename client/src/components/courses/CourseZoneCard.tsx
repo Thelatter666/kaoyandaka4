@@ -7,6 +7,7 @@
 import React from 'react';
 import { Plus, Trash2, ChevronRight, Sigma, BookA, Cpu, type LucideProps } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { CardContainer, CardBody, CardItem } from '../ui/Card3D';
 import { DualProgressBars } from './DualProgressBars';
 import { Course } from '../../api/courses';
 import { formatDurationHuman } from '../../utils/duration';
@@ -44,69 +45,91 @@ export function CourseZoneCard({ label, subject, courses, onImport, onNavigate, 
   /* 空分区：虚线描边玻璃卡 + 导入次按钮 */
   if (courses.length === 0) {
     return (
-      <div className={`zone-card zone-card--${subject} zone-card--empty glass-1${className ? ` ${className}` : ''}`} style={style}>
-        <div className="zone-card__head">
-          <span className="zone-card__icon" aria-hidden="true">
-            <ZoneIcon size={18} strokeWidth={1.75} />
-          </span>
-          <h3 className="zone-card__label">{label}</h3>
-        </div>
-        <p className="zone-card__empty-hint">这个分区还没有课程</p>
-        <Button variant="glass" onClick={onImport}>
-          <Plus size={16} strokeWidth={1.75} aria-hidden="true" />
-          导入{label}课程
-        </Button>
-      </div>
+      <CardContainer className={`zone-card zone-card--${subject} zone-card--empty glass-1${className ? ` ${className}` : ''}`} style={style}>
+        <CardBody>
+          <div className="zone-card__head">
+            <CardItem translateZ="20">
+              <span className="zone-card__icon" aria-hidden="true">
+                <ZoneIcon size={18} strokeWidth={1.75} />
+              </span>
+            </CardItem>
+            <CardItem translateZ="30">
+              <h3 className="zone-card__label">{label}</h3>
+            </CardItem>
+          </div>
+          <CardItem translateZ="10">
+            <p className="zone-card__empty-hint">这个分区还没有课程</p>
+          </CardItem>
+          <CardItem translateZ="40">
+            <Button variant="glass" onClick={onImport}>
+              <Plus size={16} strokeWidth={1.75} aria-hidden="true" />
+              导入{label}课程
+            </Button>
+          </CardItem>
+        </CardBody>
+      </CardContainer>
     );
   }
 
   return (
-    <div className={`zone-card zone-card--${subject} glass-1 sheen-hover${className ? ` ${className}` : ''}`} style={style}>
-      {/* 标题行：科目图标 + 名称 + 进度百分比 */}
-      <div className="zone-card__head">
-        <span className="zone-card__icon" aria-hidden="true">
-          <ZoneIcon size={18} strokeWidth={1.75} />
-        </span>
-        <h3 className="zone-card__label">{label}</h3>
-        <span className="zone-card__pct tabular-nums">{pct}%</span>
-      </div>
+    <CardContainer className={`zone-card zone-card--${subject} glass-1 sheen-hover${className ? ` ${className}` : ''}`} style={style}>
+      <CardBody>
+        {/* 标题行：科目图标 + 名称 + 进度百分比 */}
+        <div className="zone-card__head">
+          <CardItem translateZ="20">
+            <span className="zone-card__icon" aria-hidden="true">
+              <ZoneIcon size={18} strokeWidth={1.75} />
+            </span>
+          </CardItem>
+          <CardItem translateZ="30">
+            <h3 className="zone-card__label">{label}</h3>
+          </CardItem>
+          <CardItem translateZ="25">
+            <span className="zone-card__pct tabular-nums">{pct}%</span>
+          </CardItem>
+        </div>
 
-      {/* 双进度条：集数（松绿系）/ 时长（珊瑚系） */}
-      <DualProgressBars
-        completedEpisodes={completedEpisodes}
-        totalEpisodes={totalEpisodes}
-        watchedSeconds={watchedSeconds}
-        totalSeconds={totalSeconds}
-        size="sm"
-      />
+        {/* 双进度条：集数（松绿系）/ 时长（珊瑚系） */}
+        <CardItem translateZ="15">
+          <DualProgressBars
+            completedEpisodes={completedEpisodes}
+            totalEpisodes={totalEpisodes}
+            watchedSeconds={watchedSeconds}
+            totalSeconds={totalSeconds}
+            size="sm"
+          />
+        </CardItem>
 
-      {/* 课程列表 */}
-      <ul className="zone-card__courses">
-        {courses.map((course) => (
-          <li key={course.id} className="zone-card__course-row">
-            <button
-              type="button"
-              className="zone-card__course"
-              onClick={() => onNavigate(`#/courses/${course.id}`)}
-              aria-label={`查看课程 ${course.name}`}
-            >
-              <span className="zone-card__course-name truncate">{course.name}</span>
-              <span className="zone-card__course-meta tabular-nums">
-                {course.completedEpisodeCount}/{course.episodeCount} 集 · {formatDurationHuman(course.totalDurationSeconds)}
-              </span>
-              <ChevronRight size={16} strokeWidth={1.75} aria-hidden="true" className="zone-card__course-chevron" />
-            </button>
-            <button
-              type="button"
-              className="zone-card__course-delete"
-              onClick={() => onDelete(course)}
-              aria-label={`删除 ${course.name}`}
-            >
-              <Trash2 size={16} strokeWidth={1.75} aria-hidden="true" />
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
+        {/* 课程列表 */}
+        <CardItem translateZ="10">
+          <ul className="zone-card__courses">
+            {courses.map((course) => (
+              <li key={course.id} className="zone-card__course-row">
+                <button
+                  type="button"
+                  className="zone-card__course"
+                  onClick={() => onNavigate(`#/courses/${course.id}`)}
+                  aria-label={`查看课程 ${course.name}`}
+                >
+                  <span className="zone-card__course-name truncate">{course.name}</span>
+                  <span className="zone-card__course-meta tabular-nums">
+                    {course.completedEpisodeCount}/{course.episodeCount} 集 · {formatDurationHuman(course.totalDurationSeconds)}
+                  </span>
+                  <ChevronRight size={16} strokeWidth={1.75} aria-hidden="true" className="zone-card__course-chevron" />
+                </button>
+                <button
+                  type="button"
+                  className="zone-card__course-delete"
+                  onClick={() => onDelete(course)}
+                  aria-label={`删除 ${course.name}`}
+                >
+                  <Trash2 size={16} strokeWidth={1.75} aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </CardItem>
+      </CardBody>
+    </CardContainer>
   );
 }

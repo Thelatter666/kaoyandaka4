@@ -16,6 +16,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { SubjectBadge } from '../components/ui/SubjectBadge';
+import { Magnetic } from '../components/ui/Magnetic';
 import { DurationSelector } from '../components/presets/DurationSelector';
 import { PresetCard } from '../components/presets/PresetCard';
 import { RingCountdown, PROGRESS_CIRCUMFERENCE } from '../components/timer/RingCountdown';
@@ -366,16 +367,18 @@ export function PomodoroPage() {
                 <div className="pomodoro-control__duration">
                   <DurationSelector value={durationMinutes} onChange={setDurationMinutes} />
                 </div>
-                <Button
-                  variant="primary"
-                  size="lg"
-                  className="pomodoro-cta"
-                  onClick={handleStartFocus}
-                  loading={actionLoading}
-                >
-                  <Play size={18} strokeWidth={1.75} aria-hidden="true" />
-                  开始专注
-                </Button>
+                <Magnetic strength={0.2} radius={150}>
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    className="pomodoro-cta"
+                    onClick={handleStartFocus}
+                    loading={actionLoading}
+                  >
+                    <Play size={18} strokeWidth={1.75} aria-hidden="true" />
+                    开始专注
+                  </Button>
+                </Magnetic>
               </div>
             </div>
             <div className="pomodoro-below">
