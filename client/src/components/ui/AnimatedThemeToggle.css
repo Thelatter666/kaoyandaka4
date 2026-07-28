@@ -1,0 +1,66 @@
+/* ============================================================
+   AnimatedThemeToggle 组件 - 极光玻璃适配版
+   基于 MagicUI animated-theme-toggler 简化改造
+   核心：View Transitions API + clipPath 动画
+   ============================================================ */
+
+.animated-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--color-glass-bg);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-med) var(--ease-out),
+    box-shadow var(--dur-med) var(--ease-out),
+    color var(--dur-med) var(--ease-out);
+  position: relative;
+  overflow: hidden;
+}
+
+.animated-theme-toggle:hover {
+  background-color: var(--color-glass-bg-strong);
+  box-shadow: var(--shadow-glass-md);
+}
+
+.animated-theme-toggle:focus-visible {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 2px;
+}
+
+.animated-theme-toggle svg {
+  color: var(--color-text-secondary);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+[data-theme="dark"] .animated-theme-toggle svg {
+  color: var(--color-text-muted);
+}
+
+/* View Transition 动画容器（由 JS 动态控制） */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: calc(var(--magicui-theme-toggle-vt-duration, 400ms) / 2);
+}
+
+/* 暗色主题下图标颜色调整 */
+.dark .animated-theme-toggle svg {
+  color: var(--color-text-primary);
+}
+
+/* prefers-reduced-motion 降级 */
+@media (prefers-reduced-motion: reduce) {
+  .animated-theme-toggle {
+    transition: none;
+  }
+  
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}
