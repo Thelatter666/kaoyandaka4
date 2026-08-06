@@ -23,6 +23,7 @@ import {
 import { PageShell } from '../components/layout/PageShell';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { InteractiveHoverButton } from '../components/ui/InteractiveHoverButton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { SubjectBadge } from '../components/ui/SubjectBadge';
 import { RingCountdown } from '../components/timer/RingCountdown';
@@ -129,9 +130,9 @@ export function HomePage({ navigate }: HomePageProps) {
           ) : (
             <div className="home-focus__idle">
               <p className="home-focus__hint">还没有进行中的专注，现在开始一轮吧</p>
-              <Button variant="primary" size="lg" onClick={() => navigate('#/pomodoro')}>
+              <InteractiveHoverButton onClick={() => navigate('#/pomodoro')}>
                 开始专注
-              </Button>
+              </InteractiveHoverButton>
             </div>
           )}
         </Card>

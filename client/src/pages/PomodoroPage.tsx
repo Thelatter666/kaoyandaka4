@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { PageShell } from '../components/layout/PageShell';
 import { Button } from '../components/ui/Button';
+import { InteractiveHoverButton } from '../components/ui/InteractiveHoverButton';
 import { Card } from '../components/ui/Card';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
@@ -368,16 +369,13 @@ export function PomodoroPage() {
                   <DurationSelector value={durationMinutes} onChange={setDurationMinutes} />
                 </div>
                 <Magnetic strength={0.2} radius={150}>
-                  <Button
-                    variant="primary"
-                    size="lg"
+                  <InteractiveHoverButton
                     className="pomodoro-cta"
                     onClick={handleStartFocus}
                     loading={actionLoading}
                   >
-                    <Play size={18} strokeWidth={1.75} aria-hidden="true" />
                     开始专注
-                  </Button>
+                  </InteractiveHoverButton>
                 </Magnetic>
               </div>
             </div>

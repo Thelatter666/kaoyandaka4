@@ -1,0 +1,131 @@
+/* ============================================================
+   悬停交互按钮（组件库 interactive-hover-button 集成，极光玻璃适配）
+   胶囊形：hover 白点放大盖满按钮 → 白底珊瑚字 + 箭头滑入
+   ============================================================ */
+
+.ihb {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background-color: var(--color-accent-primary-strong);
+  color: var(--color-text-inverse);
+  box-shadow: 0 4px 14px var(--color-accent-primary-light);
+  font-family: var(--font-body);
+  font-weight: var(--font-medium);
+  font-size: var(--text-base);
+  line-height: 1.4;
+  padding: 10px 24px;
+  min-height: 44px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.ihb:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--glow-primary);
+}
+
+.ihb:active:not(:disabled) {
+  transform: scale(0.97);
+  box-shadow: 0 4px 14px var(--color-accent-primary-light);
+}
+
+.ihb:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+.ihb:disabled,
+.ihb--loading {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* 圆点：hover 放大盖满按钮（原组件 scale(100.8)），形成白底 */
+.ihb__dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-text-inverse);
+  transform: translate(-50%, -50%);
+  transition: transform 300ms;
+}
+
+.ihb:hover .ihb__dot {
+  transform: translate(-50%, -50%) scale(100.8);
+}
+
+/* 原文字：hover 向右滑出淡出 */
+.ihb__label {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  transition: transform 300ms, opacity 300ms;
+}
+
+.ihb:hover .ihb__label {
+  transform: translateX(48px);
+  opacity: 0;
+}
+
+/* 悬停层：同文字 + 箭头，从右侧滑入（珊瑚字，白底上可读） */
+.ihb__reveal {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  color: var(--color-accent-primary-strong);
+  transform: translateX(48px);
+  opacity: 0;
+  transition: transform 300ms, opacity 300ms;
+}
+
+.ihb:hover .ihb__reveal {
+  transform: translateX(-20px);
+  opacity: 1;
+}
+
+/* ---- Reduced motion：全部悬停位移/放大取消，仅保留文字与辉光 ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  .ihb:hover:not(:disabled),
+  .ihb:active:not(:disabled) {
+    transform: none;
+  }
+
+  .ihb__dot,
+  .ihb__label,
+  .ihb__reveal {
+    transition: none;
+  }
+
+  .ihb:hover .ihb__dot {
+    transform: translate(-50%, -50%);
+  }
+
+  .ihb:hover .ihb__label {
+    transform: none;
+    opacity: 1;
+  }
+
+  .ihb:hover .ihb__reveal {
+    transform: none;
+    opacity: 0;
+  }
+}
