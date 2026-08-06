@@ -1,10 +1,22 @@
 /* ============================================================
    网课管理页（设计文档 8.5 / v2 12.4）
    页头由 PageShell 提供（导入入口在操作槽）；
-   7 分区错落 bento 网格（跨度由工具类提供，多主体无单一主角）
+   7 分区纵向单列（2026-08 用户偏好，替代 bento 错落构图；
+   .bento-grid 工具类与跨度类仍保留在 utilities.css 中）
    ============================================================ */
 
-/* 分区卡高度不一，顶部对齐保持错落节奏 */
+/* 2026-08 用户偏好：7 分区由 bento 错落网格改为纵向单列。
+   双类选择器（2 类特异性 > .bento-grid 的 1 类）不依赖 CSS 加载顺序；
+   span 1 覆盖防止 1fr 单列下 span 4/6 撑出隐式列 */
+.courses-grid.bento-grid {
+  grid-template-columns: 1fr;
+}
+.courses-grid .bento-span-4,
+.courses-grid .bento-span-6 {
+  grid-column: span 1;
+}
+
+/* 分区卡高度不一，顶部对齐（单列下每行一张卡，无视觉差异） */
 .courses-grid {
   align-items: start;
 }
