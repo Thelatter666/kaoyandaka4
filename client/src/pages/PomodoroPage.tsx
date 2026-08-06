@@ -23,6 +23,7 @@ import { PresetCard } from '../components/presets/PresetCard';
 import { RingCountdown, PROGRESS_CIRCUMFERENCE } from '../components/timer/RingCountdown';
 import { BurstParticles } from '../components/timer/BurstParticles';
 import { useFocusSession } from '../hooks/useFocusSession';
+import { useScreenWakeLock } from '../hooks/useScreenWakeLock';
 import { presetsApi, Preset } from '../api/presets';
 import { statisticsApi } from '../api/statistics';
 import { showToast } from '../components/ui/Toast';
@@ -66,6 +67,9 @@ export function PomodoroPage() {
     startFocus, completeFocus, cancelFocus,
     startBreak, completeBreak,
   } = useFocusSession();
+
+  // 番茄钟进行中（专注或休息）保持屏幕点亮，不进入睡眠/休眠
+  useScreenWakeLock(!!activeSession || !!breakMode);
 
   const [presets, setPresets] = useState<Preset[]>([]);
   const [presetsLoading, setPresetsLoading] = useState(true);
