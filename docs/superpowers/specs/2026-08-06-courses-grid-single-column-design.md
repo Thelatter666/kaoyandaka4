@@ -13,9 +13,8 @@
 
 ```css
 /* 2026-08 用户偏好:7 分区由 bento 错落网格改为纵向单列(原 v2 12.4 Bento 构图保留在 utilities.css 工具类中) */
-.courses-grid {
+.courses-grid.bento-grid {
   grid-template-columns: 1fr;
-  align-items: stretch;
 }
 .courses-grid .bento-span-4,
 .courses-grid .bento-span-6 {
@@ -25,7 +24,8 @@
 
 要点:
 - `grid-template-columns: 1fr` + 显式覆盖 span → 单列下每张卡占满整行(不能只改列数:span 4/6 会在单列网格中创建隐式列,必须同时覆盖 span)
-- 原有 `.courses-grid { align-items: start }` 改为 `stretch`(单列下卡片等高更整齐;或保留 start,卡片自然高度)
+- **双类选择器 `.courses-grid.bento-grid`**(特异性 2 类 > `.bento-grid` 的 1 类):不依赖 CSS 加载顺序(当前全局 CSS 先注入、懒加载页面 CSS 后注入,恰好生效,但改导入顺序会静默失效,故用特异性保证)
+- 原 `align-items: start` 保留不动(单列下每行一个 item,无视觉差异,不做无意义改动)
 - 不动的部分:reveal 入场动画、`--i` 编排变量、导入/删除流程、空分区虚线卡、双进度条、`utilities.css` 的 `.bento-grid` 工具类
 
 ## 边界
