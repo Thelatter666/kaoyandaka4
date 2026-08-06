@@ -84,6 +84,39 @@
   gap: var(--space-lg);
 }
 
+/* 文件上传区域 */
+.import-modal__upload-section {
+  margin-bottom: var(--space-md);
+}
+
+/* OR 分割线 */
+.import-modal__divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin: var(--space-md) 0;
+}
+
+.import-modal__divider::before,
+.import-modal__divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.import-modal__divider span {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* 手动输入区域 */
+.import-modal__manual-input {
+  margin-top: var(--space-md);
+}
+
 .import-modal__label {
   display: block;
   font-size: var(--text-sm);

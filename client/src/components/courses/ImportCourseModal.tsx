@@ -10,6 +10,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { SubjectBadge } from '../ui/SubjectBadge';
 import { showToast } from '../ui/Toast';
+import { FileUpload } from '../ui/FileUpload';
 import { coursesApi, ParseResult } from '../../api/courses';
 import { formatDurationHuman } from '../../utils/duration';
 import type { Subject, SubSubject } from '@shared/types';
@@ -38,6 +39,7 @@ export function ImportCourseModal({ isOpen, zone, onClose, onImported }: ImportC
   const [parsing, setParsing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   // 每次打开时重置向导状态
   useEffect(() => {
@@ -47,15 +49,30 @@ export function ImportCourseModal({ isOpen, zone, onClose, onImported }: ImportC
       setCourseName('');
       setParseResult(null);
       setParseError(null);
+      setUploadedFile(null);
     }
   }, [isOpen]);
 
   const handleParse = async () => {
-    if (!rawText.trim() || !zone) return;
+    if ((!rawText.trim() && !uploadedFile) || !zone) return;
+    
     setParsing(true);
     setParseError(null);
     try {
-      const result = await coursesApi.parse({ rawText: rawText.trim(), subject: zone.subject, subSubject: zone.subSubject || undefined });
+      let textToParse = rawText.trim();
+      
+      // 如果上传了文件，读取并解析 JSON
+      if (uploadedFile) {
+        const fileContent = JSON.parse(await uploadedFile.text());
+        // 将 JSON 数据转换为原始文本格式（假设 JSON 包含 episodes 数组）
+        if (fileContent.episodes && Array.isArray(fileContent.episodes)) {
+          textToParse = fileContent.episodes
+            .map((ep: any) => `${ep.title}\n${formatDurationHuman(ep.durationSeconds)}`)
+            .join('\n');
+        }
+      }
+      
+      const result = await coursesApi.parse({ rawText: textToParse, subject: zone.subject, subSubject: zone.subSubject || undefined });
       setParseResult(result);
       setStep(2);
     } catch (err) {
@@ -122,9 +139,26 @@ export function ImportCourseModal({ isOpen, zone, onClose, onImported }: ImportC
       <div className="import-modal__body">
         {step === 1 && (
           <>
-            <div>
+            {/* 文件上传区域 */}
+            <div className="import-modal__upload-section">
+              <FileUpload 
+                accept={{ '.json': ['application/json'] }}
+                onChange={(files) => {
+                  if (files.length > 0) {
+                    setUploadedFile(files[0]);
+                  }
+                }}
+              />
+            </div>
+            
+            {/* OR 手动粘贴 */}
+            <div className="import-modal__divider">
+              <span>OR</span>
+            </div>
+            
+            <div className="import-modal__manual-input">
               <label htmlFor="import-rawtext" className="import-modal__label">
-                粘贴集数列表（格式：标题 + 时长 MM:SS）
+                或直接粘贴集数列表（格式：标题 + 时长 MM:SS）
               </label>
               <textarea
                 id="import-rawtext"
@@ -135,6 +169,7 @@ export function ImportCourseModal({ isOpen, zone, onClose, onImported }: ImportC
                 style={{ ...fieldStyle, fontFamily: 'var(--font-mono)', resize: 'vertical' }}
               />
             </div>
+            
             {parseError && (
               <p className="import-modal__error">
                 <AlertTriangle size={14} strokeWidth={1.75} aria-hidden="true" />
@@ -143,7 +178,12 @@ export function ImportCourseModal({ isOpen, zone, onClose, onImported }: ImportC
             )}
             <div className="import-modal__footer">
               <Button variant="glass" onClick={onClose}>取消</Button>
-              <Button variant="primary" onClick={handleParse} loading={parsing} disabled={!rawText.trim()}>
+              <Button 
+                variant="primary" 
+                onClick={handleParse} 
+                loading={parsing} 
+                disabled={!rawText.trim() && !uploadedFile}
+              >
                 解析预览
                 <ChevronRight size={16} strokeWidth={1.75} aria-hidden="true" />
               </Button>

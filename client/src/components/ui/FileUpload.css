@@ -1,0 +1,239 @@
+/* ============================================================
+   FileUpload 组件 - 极光玻璃适配版
+   基于 Aceternity file-upload 改造，替换 Tailwind → CSS 令牌
+   ============================================================ */
+
+.file-upload-container {
+  width: 100%;
+}
+
+.file-upload-dropzone {
+  position: relative;
+  group/file: & {
+    .file-upload-dashed-border {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  cursor: pointer;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  transition: all var(--dur-med) var(--ease-out);
+}
+
+.file-upload-hidden {
+  display: none;
+}
+
+/* 网格背景层：粒子效果 */
+.file-upload-grid-bg {
+  position: absolute;
+  inset: 0;
+  mask-image: radial-gradient(ellipse at center, white, transparent);
+  -webkit-mask-image: radial-gradient(ellipse at center, white, transparent);
+  z-index: 0;
+  opacity: 0.3;
+}
+
+.file-upload-grid {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap-x: 1px;
+  gap-y: 1px;
+  transform: scale(1.05);
+}
+
+.file-upload-grid-cell {
+  flex: 0 0 2.5rem; /* w-10 = 40px */
+  height: 2.5rem;
+  border-radius: 2px;
+}
+
+.file-upload-grid-even {
+  background-color: rgba(var(--color-glass-bg-strong), 0.1);
+}
+
+.file-upload-grid-shadow {
+  background-color: rgba(var(--color-glass-bg), 0.55);
+  box-shadow: inset 0 0 1px rgba(255, 255, 255, 1);
+}
+
+[data-theme="dark"] .file-upload-grid-even {
+  background-color: rgba(29, 41, 57, 0.1);
+}
+
+[data-theme="dark"] .file-upload-grid-shadow {
+  background-color: rgba(29, 41, 57, 0.95);
+  box-shadow: inset 0 0 1px rgba(0, 0, 0, 1);
+}
+
+/* 内容区域 */
+.file-upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+}
+
+.file-upload-title {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.file-upload-subtitle {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: var(--font-normal);
+  color: var(--color-text-secondary);
+  margin: var(--space-sm) 0 0 0;
+}
+
+.file-upload-files-area {
+  position: relative;
+  margin-top: var(--space-xl);
+  width: 100%;
+  max-width: 560px; /* max-w-xl */
+}
+
+.file-upload-file-item {
+  position: relative;
+  z-index: 40;
+  margin-top: var(--space-md);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+[data-theme="light"] .file-upload-file-item {
+  box-shadow: var(--shadow-glass-sm);
+}
+
+/* 文件信息头部 */
+.file-upload-file-header {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.file-upload-file-name {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.file-upload-file-size {
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  padding: 4px 8px;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+/* 文件元信息 */
+.file-upload-file-meta {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-top: var(--space-sm);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+[data-theme="dark"] .file-upload-file-meta {
+  color: var(--color-text-muted);
+}
+
+.file-upload-file-type {
+  border-radius: 2px;
+  padding: 2px 4px;
+  font-size: var(--text-xs);
+}
+
+[file-upload-file-type] {
+  background-color: var(--color-glass-bg);
+}
+
+[data-theme="dark"] [file-upload-file-type] {
+  background-color: rgba(29, 41, 57, 0.5);
+}
+
+.file-upload-file-modified {
+  font-size: var(--text-sm);
+}
+
+/* 占位图标 */
+.file-upload-placeholder {
+  position: relative;
+  z-index: 40;
+  width: 128px; /* w-[8rem] */
+  height: 8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  margin: var(--space-md) auto 0 auto;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.file-upload-icon {
+  color: var(--color-text-secondary);
+}
+
+[data-theme="dark"] .file-upload-icon {
+  color: var(--color-text-muted);
+}
+
+/* 虚线边框动画 */
+.file-upload-dashed-border {
+  position: absolute;
+  z-index: 30;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: var(--space-md) auto 0;
+  width: 128px;
+  height: 8rem;
+  border: 2px dashed var(--color-accent-primary);
+  background: transparent;
+  border-radius: var(--radius-md);
+  opacity: 0;
+  transform: scale(0.96);
+}
+
+.group/file:hover .file-upload-dashed-border {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* hover 阴影增强 */
+.group/file:hover {
+  .file-upload-placeholder {
+    box-shadow: 0px 10px 50px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* 主题适配 */
+.dark .file-upload-placeholder {
+  background-color: rgba(29, 41, 57, 1);
+}

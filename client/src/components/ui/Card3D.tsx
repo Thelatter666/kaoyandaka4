@@ -19,12 +19,14 @@ interface CardContainerProps {
   children?: React.ReactNode;
   className?: string;
   containerClassName?: string;
+  style?: React.CSSProperties;
 }
 
 export const CardContainer = ({
   children,
   className,
   containerClassName,
+  style,
 }: CardContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isMouseEntered, setIsMouseEntered] = useState(false);
@@ -59,7 +61,7 @@ export const CardContainer = ({
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
           className={`card-3d-body glass-1 ${className || ''}`}
-          style={{ transformStyle: 'preserve-3d' }}
+          style={{ transformStyle: 'preserve-3d', ...style }}
         >
           {children}
         </div>
