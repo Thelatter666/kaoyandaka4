@@ -114,12 +114,21 @@
 
 .course-detail__episodes {
   list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
+  position: relative;
 }
 
-/* 集数行卡 glass-1 */
+/* 虚拟化行：absolute 定位 + translateY 排版（见 CourseDetailPage 虚拟化改造） */
+.course-detail__episode-virtual {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding-bottom: var(--space-sm);
+}
+
+/* 集数行卡：glass-1 背景/边框保留，显式移除 backdrop-filter
+   （性能优化 2026-08：密集行滚动时每行实时模糊重算是帧率主瓶颈；
+   行内小面积模糊在视觉上不可辨，去掉后滚动帧率提升 ~2 倍） */
 .episode-row {
   display: flex;
   align-items: center;
@@ -127,6 +136,8 @@
   padding: var(--space-sm) var(--space-md);
   border-radius: var(--radius-md);
   min-width: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 /* 完成圆点：28px 视觉，44px 触控区；完成行动效 160ms */
@@ -218,4 +229,90 @@
   .episode-row__toggle:active .episode-row__dot {
     transform: none;
   }
+
+  .skeleton::after {
+    animation: none;
+  }
+}
+
+/* ---- 骨架屏（加载态占位，与最终布局同构） ---- */
+
+.course-detail__skeleton-hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+}
+
+.course-detail__skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-lg);
+}
+
+.course-detail__skeleton-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-md);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-md);
+}
+
+/* 骨架条：glass-3 深底降透明度作灰条，双主题通用 */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--color-glass-3-bg);
+  opacity: 0.22;
+}
+
+/* shimmer：玻璃高光带扫过（token 色，双主题可见） */
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--color-glass-border), transparent);
+  animation: skeleton-shimmer 1.4s var(--ease-out) infinite;
+}
+
+@keyframes skeleton-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton--title {
+  width: 40%;
+  height: 30px;
+}
+
+.skeleton--badge {
+  width: 96px;
+  height: 24px;
+  align-self: flex-start;
+}
+
+.skeleton--bar {
+  width: 100%;
+  height: 12px;
+}
+
+.skeleton--bar-short {
+  width: 60%;
+}
+
+.skeleton--stat {
+  height: 36px;
+}
+
+.skeleton--heading {
+  width: 30%;
+  height: 24px;
+}
+
+.skeleton--row {
+  height: 52px;
 }

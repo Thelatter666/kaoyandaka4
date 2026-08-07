@@ -7,9 +7,14 @@
  * 集数行卡 glass-1（28px 完成圆点 Check 填充松绿 / 标题 / 原始时长 / 开始学习 Play 按钮）；
  * 完成行动效 160ms；删除入口 danger 幽灵按钮 + 确认弹窗。
  * 集数完成切换、删除确认与保留历史记录规则、统计/进度数据口径不变。
+ *
+ * 性能优化（2026-08）：集数列表启用 window 滚动虚拟化（@tanstack/react-virtual
+ * useWindowVirtualizer）——仅渲染可见行 + overscan，滚动帧率不受总行数影响；
+ * 行高固定 68px（60px 行 + 8px gap），行渲染抽为 EpisodeRow 子组件。
  */
-import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, Check, Play, Trash2, ListVideo, MonitorPlay } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
+import { ChevronLeft, Trash2, ListVideo, MonitorPlay } from 'lucide-react';
+import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { PageShell } from '../components/layout/PageShell';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -17,9 +22,9 @@ import { SubjectBadge } from '../components/ui/SubjectBadge';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
-import { LoadingState } from '../components/ui/LoadingState';
 import { showToast } from '../components/ui/Toast';
 import { DualProgressBars } from '../components/courses/DualProgressBars';
+import { EpisodeRow } from '../components/courses/EpisodeRow';
 import { coursesApi, CourseDetail } from '../api/courses';
 import { formatDurationHuman } from '../utils/duration';
 import type { Subject, SubSubject } from '@shared/types';
@@ -27,11 +32,37 @@ import './CourseDetailPage.css';
 
 interface CourseDetailPageProps { courseId: string; }
 
+/** 虚拟化固定行高：60px 集数行 + 8px 间距（--space-sm） */
+const EPISODE_ROW_HEIGHT = 68;
+/** 可视窗口外上下各多渲染的行数（滚动缓冲，防空白闪现） */
+const EPISODE_OVERSCAN = 8;
+
 export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const listSectionRef = useRef<HTMLElement>(null);
+  const [listOffsetTop, setListOffsetTop] = useState(0);
+
+  /* window 滚动虚拟化：仅渲染可视区 + overscan 行；scrollMargin = 列表在文档中的起始偏移 */
+  const virtualizer = useWindowVirtualizer({
+    count: course?.episodes.length ?? 0,
+    estimateSize: () => EPISODE_ROW_HEIGHT,
+    overscan: EPISODE_OVERSCAN,
+    scrollMargin: listOffsetTop,
+  });
+
+  /* 内容渲染后测量列表起始偏移（reveal 动画结束后复核一次，消除 transform 偏差） */
+  useLayoutEffect(() => {
+    const el = listSectionRef.current;
+    if (!el) return;
+    const measure = () => setListOffsetTop(el.getBoundingClientRect().top + window.scrollY);
+    measure();
+    const t = window.setTimeout(measure, 600);
+    return () => window.clearTimeout(t);
+  }, [course]);
 
   const fetchCourse = useCallback(async () => {
     setLoading(true);
@@ -72,7 +103,38 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
     }
   };
 
-  if (loading) return <PageShell><LoadingState message="加载课程详情..." /></PageShell>;
+  if (loading) return (
+    <PageShell>
+      {/* 返回 */}
+      <a href="#/courses" className="course-detail__back">
+        <ChevronLeft size={16} strokeWidth={1.75} aria-hidden="true" />
+        返回网课列表
+      </a>
+
+      {/* 骨架屏：与最终布局同构（hero 卡 + 集数列表），数据返回后无缝替换，避免空白突变 */}
+      <div className="bento-grid">
+        <div className="bento-span-12 course-detail__skeleton-hero glass-1" aria-hidden="true">
+          <div className="skeleton skeleton--title" />
+          <div className="skeleton skeleton--badge" />
+          <div className="skeleton skeleton--bar" />
+          <div className="skeleton skeleton--bar skeleton--bar-short" />
+          <div className="course-detail__skeleton-stats">
+            <div className="skeleton skeleton--stat" />
+            <div className="skeleton skeleton--stat" />
+            <div className="skeleton skeleton--stat" />
+            <div className="skeleton skeleton--stat" />
+          </div>
+        </div>
+        <div className="bento-span-12 course-detail__skeleton-list glass-1" aria-hidden="true">
+          <div className="skeleton skeleton--heading" />
+          {Array.from({ length: 8 }, (_, i) => (
+            <div key={i} className="skeleton skeleton--row" />
+          ))}
+        </div>
+      </div>
+      <p className="sr-only">加载课程详情中...</p>
+    </PageShell>
+  );
   if (error) return <PageShell><ErrorState message={error} onRetry={fetchCourse} /></PageShell>;
   if (!course) return (
     <PageShell>
@@ -144,8 +206,9 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
         </div>
       </Card>
 
-      {/* 集数列表（span 12 功能卡区）：仅容器 reveal 入场一次，集项不做 stagger */}
+      {/* 集数列表（span 12 功能卡区）：仅容器 reveal 入场一次；window 滚动虚拟化渲染可见行 */}
       <section
+        ref={listSectionRef}
         className="bento-span-12 course-detail__episodes-section reveal"
         style={{ '--i': 1 } as React.CSSProperties}
         aria-label="集数列表"
@@ -157,35 +220,25 @@ export function CourseDetailPage({ courseId }: CourseDetailPageProps) {
       {course.episodes.length === 0 ? (
         <Card><p className="course-detail__empty">暂无集数</p></Card>
       ) : (
-        <ul className="course-detail__episodes">
-          {course.episodes.map((ep, i) => (
-            <li key={ep.id} className={`episode-row glass-1${ep.isCompleted ? ' episode-row--done' : ''}`}>
-              {/* 28px 完成圆点（44px 触控区），Check 填充松绿 */}
-              <button
-                type="button"
-                className="episode-row__toggle"
-                onClick={() => handleToggleEpisode(ep.id)}
-                aria-label={`${ep.isCompleted ? '标记为未完成' : '标记为已完成'}：${ep.title}`}
-                aria-pressed={ep.isCompleted}
+        <ul className="course-detail__episodes" style={{ height: virtualizer.getTotalSize() }}>
+          {virtualizer.getVirtualItems().map((vi) => {
+            const ep = course.episodes[vi.index];
+            return (
+              <li
+                key={ep.id}
+                className="course-detail__episode-virtual"
+                data-index={vi.index}
+                style={{ transform: `translateY(${vi.start - virtualizer.options.scrollMargin}px)` }}
               >
-                <span className="episode-row__dot" aria-hidden="true">
-                  {ep.isCompleted && <Check size={16} strokeWidth={2.5} />}
-                </span>
-              </button>
-              <span className="episode-row__index tabular-nums" aria-hidden="true">{i + 1}</span>
-              <span className="episode-row__title truncate">{ep.title}</span>
-              <span className="episode-row__duration tabular-nums">{ep.durationText}</span>
-              <Button
-                variant="glass"
-                className="episode-row__play"
-                onClick={() => { window.location.hash = '#/pomodoro'; }}
-                aria-label={`开始学习：${ep.title}`}
-              >
-                <Play size={16} strokeWidth={1.75} aria-hidden="true" />
-                <span className="episode-row__play-text">开始学习</span>
-              </Button>
-            </li>
-          ))}
+                <EpisodeRow
+                  episode={ep}
+                  index={vi.index}
+                  onToggle={handleToggleEpisode}
+                  onStart={() => { window.location.hash = '#/pomodoro'; }}
+                />
+              </li>
+            );
+          })}
         </ul>
       )}
       </section>
