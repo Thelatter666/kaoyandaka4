@@ -3,11 +3,12 @@
  *
  * glass-1 分区卡：标题行（科目图标 + 名称 + 进度百分比）+ 双进度条 + 课程列表；
  * 空分区 = 虚线描边玻璃卡 +「导入 [分区名] 课程」次按钮（Plus 图标）。
+ * 注意：不使用 Card3D 包裹 —— preserve-3d transform 会导致容器内元素
+ * hit-test 偏移（点击/滚轮事件目标错误），见 2026-08-07 事故记录。
  */
 import React from 'react';
 import { Plus, Trash2, ChevronRight, Sigma, BookA, Cpu, type LucideProps } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { CardContainer, CardBody, CardItem } from '../ui/Card3D';
 import { DualProgressBars } from './DualProgressBars';
 import { Course } from '../../api/courses';
 import { formatDurationHuman } from '../../utils/duration';
@@ -36,100 +37,85 @@ export function CourseZoneCard({ label, subject, courses, onImport, onNavigate, 
   const ZoneIcon = ZONE_ICONS[subject];
 
   // 分区聚合双进度（集数 / 时长，口径与各课程累加一致）
+  // 注意：totalDurationSeconds/watchedDurationSeconds 来自 SQL SUM()，mysql2 返回 BIGINT 字符串，需 Number() 转换再求和
   const totalEpisodes = courses.reduce((sum, c) => sum + c.episodeCount, 0);
   const completedEpisodes = courses.reduce((sum, c) => sum + c.completedEpisodeCount, 0);
-  const totalSeconds = courses.reduce((sum, c) => sum + c.totalDurationSeconds, 0);
-  const watchedSeconds = courses.reduce((sum, c) => sum + c.watchedDurationSeconds, 0);
+  const totalSeconds = courses.reduce((sum, c) => sum + Number(c.totalDurationSeconds), 0);
+  const watchedSeconds = courses.reduce((sum, c) => sum + Number(c.watchedDurationSeconds), 0);
   const pct = totalEpisodes > 0 ? Math.round((completedEpisodes / totalEpisodes) * 100) : 0;
 
   /* 空分区：虚线描边玻璃卡 + 导入次按钮 */
   if (courses.length === 0) {
     return (
-      <CardContainer className={`zone-card zone-card--${subject} zone-card--empty glass-1${className ? ` ${className}` : ''}`} style={style}>
-        <CardBody>
-          <div className="zone-card__head">
-            <CardItem translateZ="20">
-              <span className="zone-card__icon" aria-hidden="true">
-                <ZoneIcon size={18} strokeWidth={1.75} />
-              </span>
-            </CardItem>
-            <CardItem translateZ="30">
-              <h3 className="zone-card__label">{label}</h3>
-            </CardItem>
-          </div>
-          <CardItem translateZ="10">
-            <p className="zone-card__empty-hint">这个分区还没有课程</p>
-          </CardItem>
-          <CardItem translateZ="40">
-            <Button variant="glass" onClick={onImport}>
-              <Plus size={16} strokeWidth={1.75} aria-hidden="true" />
-              导入{label}课程
-            </Button>
-          </CardItem>
-        </CardBody>
-      </CardContainer>
+      <div className={`zone-card zone-card--${subject} zone-card--empty glass-1${className ? ` ${className}` : ''}`} style={style}>
+        <div className="zone-card__head">
+          <span className="zone-card__icon" aria-hidden="true">
+            <ZoneIcon size={18} strokeWidth={1.75} />
+          </span>
+          <h3 className="zone-card__label">{label}</h3>
+        </div>
+        <p className="zone-card__empty-hint">这个分区还没有课程</p>
+        <Button variant="glass" onClick={onImport}>
+          <Plus size={16} strokeWidth={1.75} aria-hidden="true" />
+          导入{label}课程
+        </Button>
+      </div>
     );
   }
 
   return (
-    <CardContainer className={`zone-card zone-card--${subject} glass-1 sheen-hover${className ? ` ${className}` : ''}`} style={style}>
-      <CardBody>
-        {/* 标题行：科目图标 + 名称 + 进度百分比 */}
-        <div className="zone-card__head">
-          <CardItem translateZ="20">
-            <span className="zone-card__icon" aria-hidden="true">
-              <ZoneIcon size={18} strokeWidth={1.75} />
-            </span>
-          </CardItem>
-          <CardItem translateZ="30">
-            <h3 className="zone-card__label">{label}</h3>
-          </CardItem>
-          <CardItem translateZ="25">
-            <span className="zone-card__pct tabular-nums">{pct}%</span>
-          </CardItem>
-        </div>
+    <div className={`zone-card zone-card--${subject} glass-1 sheen-hover${className ? ` ${className}` : ''}`} style={style}>
+      {/* 标题行：科目图标 + 名称 + 进度百分比 */}
+      <div className="zone-card__head">
+        <span className="zone-card__icon" aria-hidden="true">
+          <ZoneIcon size={18} strokeWidth={1.75} />
+        </span>
+        <h3 className="zone-card__label">{label}</h3>
+        <span className="zone-card__pct tabular-nums">{pct}%</span>
+      </div>
 
-        {/* 双进度条：集数（松绿系）/ 时长（珊瑚系） */}
-        <CardItem translateZ="15">
-          <DualProgressBars
-            completedEpisodes={completedEpisodes}
-            totalEpisodes={totalEpisodes}
-            watchedSeconds={watchedSeconds}
-            totalSeconds={totalSeconds}
-            size="sm"
-          />
-        </CardItem>
+      {/* 双进度条：集数（松绿系）/ 时长（珊瑚系） */}
+      <DualProgressBars
+        completedEpisodes={completedEpisodes}
+        totalEpisodes={totalEpisodes}
+        watchedSeconds={watchedSeconds}
+        totalSeconds={totalSeconds}
+        size="sm"
+      />
 
-        {/* 课程列表 */}
-        <CardItem translateZ="10">
-          <ul className="zone-card__courses">
-            {courses.map((course) => (
-              <li key={course.id} className="zone-card__course-row">
-                <button
-                  type="button"
-                  className="zone-card__course"
-                  onClick={() => onNavigate(`#/courses/${course.id}`)}
-                  aria-label={`查看课程 ${course.name}`}
-                >
-                  <span className="zone-card__course-name truncate">{course.name}</span>
-                  <span className="zone-card__course-meta tabular-nums">
-                    {course.completedEpisodeCount}/{course.episodeCount} 集 · {formatDurationHuman(course.totalDurationSeconds)}
-                  </span>
-                  <ChevronRight size={16} strokeWidth={1.75} aria-hidden="true" className="zone-card__course-chevron" />
-                </button>
-                <button
-                  type="button"
-                  className="zone-card__course-delete"
-                  onClick={() => onDelete(course)}
-                  aria-label={`删除 ${course.name}`}
-                >
-                  <Trash2 size={16} strokeWidth={1.75} aria-hidden="true" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </CardItem>
-      </CardBody>
-    </CardContainer>
+      {/* 课程列表：限高 3 行，悬停卡片滚轮翻阅全部 */}
+      <ul className="zone-card__courses">
+        {courses.map((course) => (
+          <li key={course.id} className="zone-card__course-row">
+            <button
+              type="button"
+              className="zone-card__course"
+              onClick={() => onNavigate(`#/courses/${course.id}`)}
+              aria-label={`查看课程 ${course.name}`}
+            >
+              <span className="zone-card__course-name truncate">{course.name}</span>
+              <span className="zone-card__course-meta tabular-nums">
+                {course.completedEpisodeCount}/{course.episodeCount} 集 · {formatDurationHuman(course.totalDurationSeconds)}
+              </span>
+              <ChevronRight size={16} strokeWidth={1.75} aria-hidden="true" className="zone-card__course-chevron" />
+            </button>
+            <button
+              type="button"
+              className="zone-card__course-delete"
+              onClick={() => onDelete(course)}
+              aria-label={`删除 ${course.name}`}
+            >
+              <Trash2 size={16} strokeWidth={1.75} aria-hidden="true" />
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {/* 持续导入入口：非空分区卡也可继续添加课程 */}
+      <Button variant="glass" size="sm" className="zone-card__add" onClick={onImport}>
+        <Plus size={16} strokeWidth={1.75} aria-hidden="true" />
+        再导入一门课
+      </Button>
+    </div>
   );
 }

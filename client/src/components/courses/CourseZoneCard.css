@@ -78,6 +78,43 @@
   flex-direction: column;
   border-top: 1px solid var(--color-border);
   padding-top: var(--space-sm);
+  /* 限高 3 行（行高 44px），悬停卡片时滚轮翻阅全部课程 */
+  max-height: 132px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* 滚动条默认隐藏，hover 卡片时淡入细滚动条（WebKit + Firefox） */
+.zone-card__courses {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.zone-card:hover .zone-card__courses {
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.zone-card__courses::-webkit-scrollbar {
+  width: 8px;
+}
+
+.zone-card__courses::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.zone-card__courses::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: var(--radius-full);
+}
+
+.zone-card:hover .zone-card__courses::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+}
+
+/* ---- 持续导入入口：非空分区卡底部 ---- */
+
+.zone-card__add {
+  align-self: flex-start;
 }
 
 .zone-card__course-row {
