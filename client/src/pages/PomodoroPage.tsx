@@ -145,6 +145,28 @@ export function PomodoroPage() {
     return () => clearInterval(timer);
   }, [activeSession]);
 
+  // 浏览器标签页标题实时显示剩余时间（专注/休息均覆盖）：
+  // 切到其他标签页看网课/学习时，从标签栏即可扫读番茄钟剩余；番茄钟页卸载时恢复原标题
+  useEffect(() => {
+    if (!activeSession && !breakMode) return;
+    const baseTitle = document.title;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const fmt = (sec: number) => `${pad(Math.floor(sec / 60))}:${pad(Math.floor(sec % 60))}`;
+    const update = () => {
+      const label = breakMode ? '休息' : '专注';
+      const endMs = breakMode ? (breakEndsAt ?? 0) : new Date(activeSession?.plannedEndAt ?? '').getTime();
+      const remain = Math.max(0, Math.floor((endMs - Date.now()) / 1000));
+      document.title = `[${fmt(remain)}] ${label} · 砚台考研打卡`;
+    };
+    update();
+    // 10s 刷新足够标签栏扫读；后台标签页浏览器会节流 interval，显示有短暂滞后属预期
+    const timer = setInterval(update, 10000);
+    return () => {
+      clearInterval(timer);
+      document.title = baseTitle;
+    };
+  }, [activeSession, breakMode, breakEndsAt]);
+
   // Sync with active session（会话恢复：检测到进行中会话即进入计时视图）
   useEffect(() => {
     if (activeSession) {
