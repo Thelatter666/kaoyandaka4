@@ -153,3 +153,9 @@ import { CreateTaskSchema } from '../../../shared/src/schemas/task.js';
 - **操作安全**（根目录 `memory.md` 事故教训, 2026-07-28）: 修改任何已有文件前**先 Read**; 密钥/配置类文件操作前先 `cp file file.bak`; 用户说"写到/放入/添加"一律视为**追加**, 除非明确说"覆盖/替换"
 - **服务器管理**: `.claude/skills/manage-server/` 项目 skill — 腾讯云服务器部署、日志、重启; 部署文件在 `deploy/` (deploy.sh, nginx.conf, nginx.ip.conf, server-management-prompt.txt)
 - **E2E**: `e2e/tests/smoke.spec.ts` 冒烟测试, 通过真实会话认证（非 mock）
+
+## 开发工作流约束（2026-08-07 定）
+
+1. **新功能/模块修改**：必须先加载 `creative-development-workflow` skill，按 brainstorm → grilling → spec → plan → 实现 流程执行
+2. **分支策略**：每次添加新功能或修改模块，必须从 `main` 新建分支（如 `feat/xxx`、`refactor/xxx`），禁止直接改 main
+3. **完成确认**：任务完成后只汇报效果，**等待用户确认**；用户确认后才可执行 commit / 合并到 main 的指令
