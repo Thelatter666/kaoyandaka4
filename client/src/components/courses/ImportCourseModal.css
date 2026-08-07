@@ -89,6 +89,23 @@
   margin-bottom: var(--space-md);
 }
 
+/* ---- 目标分区选择 ---- */
+
+.import-modal__zone {
+  margin-bottom: var(--space-md);
+}
+
+.import-modal__zone-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.import-modal__zone-control select {
+  flex: 1;
+  min-width: 0;
+}
+
 /* OR 分割线 */
 .import-modal__divider {
   display: flex;

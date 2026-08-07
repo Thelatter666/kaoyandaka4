@@ -106,10 +106,17 @@ export function CoursesPage({ navigate }: CoursesPageProps) {
         </div>
       )}
 
-      {/* 导入弹窗：三步（粘贴 → 预览 → 确认） */}
+      {/* 导入弹窗：三步（粘贴 → 预览 → 确认）；右上角默认数学分区，弹窗内可切换 */}
       <ImportCourseModal
         isOpen={!!importZone}
         zone={importZone}
+        zones={COURSE_ZONES}
+        onZoneChange={(zone) => {
+          const full = COURSE_ZONES.find(
+            (z) => z.subject === zone.subject && z.subSubject === zone.subSubject,
+          );
+          if (full) setImportZone(full);
+        }}
         onClose={() => setImportZone(null)}
         onImported={fetchCourses}
       />

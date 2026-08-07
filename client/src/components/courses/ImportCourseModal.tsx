@@ -27,11 +27,17 @@ export interface ImportZone {
 interface ImportCourseModalProps {
   isOpen: boolean;
   zone: ImportZone | null;
+  /** 可导入的全部分区（下拉选项） */
+  zones: ImportZone[];
+  /** 弹窗内切换目标分区 → 同步父级 */
+  onZoneChange: (zone: ImportZone) => void;
   onClose: () => void;
   onImported: () => void;
 }
 
-export function ImportCourseModal({ isOpen, zone, onClose, onImported }: ImportCourseModalProps) {
+const zoneKey = (z: ImportZone) => `${z.subject}:${z.subSubject ?? ''}`;
+
+export function ImportCourseModal({ isOpen, zone, zones, onZoneChange, onClose, onImported }: ImportCourseModalProps) {
   const [step, setStep] = useState(1);
   const [rawText, setRawText] = useState('');
   const [courseName, setCourseName] = useState('');
@@ -52,6 +58,19 @@ export function ImportCourseModal({ isOpen, zone, onClose, onImported }: ImportC
       setUploadedFile(null);
     }
   }, [isOpen]);
+
+  // 切换目标分区：清空输入/解析结果回到第一步，防止解析结果错位到其他分区
+  const handleZoneChange = (value: string) => {
+    const next = zones.find((z) => zoneKey(z) === value);
+    if (!next || !zone || zoneKey(next) === zoneKey(zone)) return;
+    setStep(1);
+    setRawText('');
+    setCourseName('');
+    setParseResult(null);
+    setParseError(null);
+    setUploadedFile(null);
+    onZoneChange(next);
+  };
 
   const handleParse = async () => {
     if ((!rawText.trim() && !uploadedFile) || !zone) return;
@@ -139,6 +158,26 @@ export function ImportCourseModal({ isOpen, zone, onClose, onImported }: ImportC
       <div className="import-modal__body">
         {step === 1 && (
           <>
+            {/* 目标分区选择：右上角/卡片入口均可在此切换 */}
+            <div className="import-modal__zone">
+              <label htmlFor="import-zone" className="import-modal__label">目标分区</label>
+              <div className="import-modal__zone-control">
+                <select
+                  id="import-zone"
+                  value={zone ? zoneKey(zone) : ''}
+                  onChange={(e) => handleZoneChange(e.target.value)}
+                  style={fieldStyle}
+                >
+                  {zones.map((z) => (
+                    <option key={zoneKey(z)} value={zoneKey(z)}>{z.label}</option>
+                  ))}
+                </select>
+                {zone && (
+                  <SubjectBadge subject={zone.subject} subSubject={zone.subSubject} size="md" />
+                )}
+              </div>
+            </div>
+
             {/* 文件上传区域 */}
             <div className="import-modal__upload-section">
               <FileUpload 
