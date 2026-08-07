@@ -1,0 +1,410 @@
+- generic [ref=e2]:
+  - link "跳到主要内容" [ref=e3] [cursor=pointer]:
+    - /url: "#main"
+  - banner [ref=e4]:
+    - link "TheLatter — home" [ref=e5] [cursor=pointer]:
+      - /url: "#top"
+      - generic [ref=e11]: TheLatter
+    - navigation "Primary navigation" [ref=e12]:
+      - link "作品" [ref=e14] [cursor=pointer]:
+        - /url: "#projects"
+      - link "关于" [ref=e16] [cursor=pointer]:
+        - /url: "#about"
+      - link "文章" [ref=e18] [cursor=pointer]:
+        - /url: "#writing"
+      - link "联系" [ref=e20] [cursor=pointer]:
+        - /url: "#contact"
+    - button "切换为英文" [ref=e22] [cursor=pointer]:
+      - generic [ref=e23]: 中
+      - generic [ref=e24]: /
+      - generic [ref=e25]: EN
+  - main [ref=e26]:
+    - region [ref=e27]:
+      - generic [ref=e28]:
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - paragraph [ref=e33]: THELATTER · SOFTWARE ENGINEER
+            - heading "在代码与想象之间，构建有意义的体验" [level=1] [ref=e34]
+            - paragraph [ref=e35]: 软件工程本科生 · 正在寻找实习机会
+          - link "向下探索作品" [ref=e36] [cursor=pointer]:
+            - /url: "#projects"
+        - generic [ref=e40]:
+          - generic [ref=e41]: SELECTED WORK
+          - paragraph [ref=e42]: 同一块玻璃，继续讲述作品。
+    - region [ref=e43]:
+      - heading "让想法成为可靠、好用的产品" [level=2] [ref=e44]
+      - generic [ref=e45]:
+        - article "CampusFlow" [ref=e46]
+        - article [ref=e47]:
+          - generic [ref=e49]:
+            - generic [ref=e50]:
+              - generic [ref=e51]:
+                - generic [ref=e52]:
+                  - generic [ref=e53]: 02 / 04
+                  - generic [ref=e54]: 概念项目
+                - paragraph [ref=e55]: TypeScript
+                - heading "CodeScope" [level=3] [ref=e56]
+                - paragraph [ref=e57]: 把仓库质量信号变成清晰的工程视图
+                - paragraph [ref=e58]: 通过静态分析呈现代码结构、依赖关系与维护风险。
+              - generic [ref=e59]:
+                - list "Technologies" [ref=e60]:
+                  - listitem [ref=e61]: TypeScript
+                  - listitem [ref=e62]: AST
+                  - listitem [ref=e63]: Docker
+                - generic "CodeScope links" [ref=e64]:
+                  - generic [ref=e65]: 演示待上线
+                  - generic [ref=e66]: 源码待公开
+            - generic [ref=e69]:
+              - generic [ref=e70]: CodeScope / thelatter-app
+              - complementary [ref=e77]:
+                - generic [ref=e78]: Overview
+                - generic [ref=e79]: Architecture
+                - generic [ref=e80]: Dependencies
+                - generic [ref=e81]: Hotspots
+                - generic [ref=e82]: Reports
+              - main [ref=e83]:
+                - generic [ref=e84]:
+                  - generic [ref=e85]:
+                    - generic [ref=e86]: Health score
+                    - generic [ref=e87]: "92"
+                  - generic [ref=e88]:
+                    - generic [ref=e89]: Modules
+                    - generic [ref=e90]: "148"
+                  - generic [ref=e91]:
+                    - generic [ref=e92]: Coverage
+                    - generic [ref=e93]: 84%
+        - article [ref=e102]:
+          - generic [ref=e104]:
+            - generic [ref=e105]:
+              - generic [ref=e106]:
+                - generic [ref=e107]:
+                  - generic [ref=e108]: 03 / 04
+                  - generic [ref=e109]: 概念项目
+                - paragraph [ref=e110]: React
+                - heading "SyncRoom" [level=3] [ref=e111]
+                - paragraph [ref=e112]: 专注、交流和协作发生在同一个空间
+                - paragraph [ref=e113]: 带实时状态、共享计时器与小组讨论的在线学习空间。
+              - generic [ref=e114]:
+                - list "Technologies" [ref=e115]:
+                  - listitem [ref=e116]: React
+                  - listitem [ref=e117]: WebSocket
+                  - listitem [ref=e118]: Redis
+                - generic "SyncRoom links" [ref=e119]:
+                  - generic [ref=e120]: 演示待上线
+                  - generic [ref=e121]: 源码待公开
+            - generic [ref=e124]:
+              - generic [ref=e125]: SyncRoom / Deep focus
+              - complementary [ref=e132]:
+                - generic [ref=e133]: SR
+              - main [ref=e138]:
+                - generic [ref=e139]:
+                  - generic [ref=e140]: FOCUS SESSION
+                  - strong [ref=e141]: 42:18
+                  - generic [ref=e142]: In progress
+                - generic [ref=e144]:
+                  - generic [ref=e145]:
+                    - generic [ref=e146]: ME
+                    - generic [ref=e147]: Alex
+                    - generic [ref=e148]: Writing
+                  - generic [ref=e149]:
+                    - generic [ref=e150]: JL
+                    - generic [ref=e151]: Jamie
+                    - generic [ref=e152]: Research
+                  - generic [ref=e153]:
+                    - generic [ref=e154]: RK
+                    - generic [ref=e155]: Riko
+                    - generic [ref=e156]: Reading
+                - generic [ref=e157]: You have 3 teammates focusing with you
+        - article [ref=e158]:
+          - generic [ref=e160]:
+            - generic [ref=e161]:
+              - generic [ref=e162]:
+                - generic [ref=e163]:
+                  - generic [ref=e164]: 04 / 04
+                  - generic [ref=e165]: 概念项目
+                - paragraph [ref=e166]: PWA
+                - heading "PocketOS" [level=3] [ref=e167]
+                - paragraph [ref=e168]: 把日常工具收进一个离线优先的工作台
+                - paragraph [ref=e169]: 浏览器中的模块化效率工作台，支持离线数据与可安装体验。
+              - generic [ref=e170]:
+                - list "Technologies" [ref=e171]:
+                  - listitem [ref=e172]: PWA
+                  - listitem [ref=e173]: IndexedDB
+                  - listitem [ref=e174]: Service Worker
+                - generic "PocketOS links" [ref=e175]:
+                  - generic [ref=e176]: 演示待上线
+                  - generic [ref=e177]: 源码待公开
+            - generic [ref=e180]:
+              - generic [ref=e181]: PocketOS / Today
+              - complementary [ref=e188]:
+                - generic [ref=e189]: P
+              - main [ref=e194]:
+                - generic [ref=e195]:
+                  - generic [ref=e196]: FRIDAY, JULY 24
+                  - strong [ref=e197]: One space for your day.
+                - generic [ref=e198]:
+                  - generic [ref=e199]:
+                    - text: Today
+                    - generic [ref=e200]: Review portfolio
+                    - generic [ref=e202]: Ship interaction
+                    - generic [ref=e204]: Apply for roles
+                  - generic [ref=e206]:
+                    - text: Quick note
+                    - paragraph [ref=e207]: Build thoughtfully. Keep learning.
+                  - generic [ref=e208]:
+                    - strong [ref=e209]: 26°
+                    - generic [ref=e210]: Shanghai · Clear
+      - complementary
+    - region "Technology toolkit" [ref=e211]:
+      - list "Core technologies" [ref=e212]:
+        - generic [ref=e213]:
+          - listitem [ref=e214]: React
+          - listitem [ref=e215]: TypeScript
+          - listitem [ref=e216]: GSAP
+          - listitem [ref=e217]: WebGL
+          - listitem [ref=e218]: Three.js
+          - listitem [ref=e219]: Vite
+          - listitem [ref=e220]: Tailwind CSS
+          - listitem [ref=e221]: Framer Motion
+          - listitem [ref=e222]: React
+          - listitem [ref=e223]: TypeScript
+          - listitem [ref=e224]: GSAP
+          - listitem [ref=e225]: WebGL
+          - listitem [ref=e226]: Three.js
+          - listitem [ref=e227]: Vite
+          - listitem [ref=e228]: Tailwind CSS
+          - listitem [ref=e229]: Framer Motion
+      - list "Practices and tools" [ref=e230]:
+        - generic [ref=e231]:
+          - listitem [ref=e232]: Accessibility
+          - listitem [ref=e233]: Performance
+          - listitem [ref=e234]: Node.js
+          - listitem [ref=e235]: Testing
+          - listitem [ref=e236]: Design Systems
+          - listitem [ref=e237]: CI / CD
+          - listitem [ref=e238]: Git
+          - listitem [ref=e239]: Figma
+          - listitem [ref=e240]: Accessibility
+          - listitem [ref=e241]: Performance
+          - listitem [ref=e242]: Node.js
+          - listitem [ref=e243]: Testing
+          - listitem [ref=e244]: Design Systems
+          - listitem [ref=e245]: CI / CD
+          - listitem [ref=e246]: Git
+          - listitem [ref=e247]: Figma
+    - region [ref=e248]:
+      - generic [ref=e249]:
+        - paragraph [ref=e250]: THE THELATTER DIFFERENCE
+        - heading [level=2] [ref=e251]:
+          - generic "我如何把问题变成可交付的软件" [ref=e252]:
+            - generic [ref=e253]: 我
+            - generic [ref=e254]: 如
+            - generic [ref=e255]: 何
+            - generic [ref=e256]: 把
+            - generic [ref=e257]: 问
+            - generic [ref=e258]: 题
+            - generic [ref=e259]: 变
+            - generic [ref=e260]: 成
+            - generic [ref=e261]: 可
+            - generic [ref=e262]: 交
+            - generic [ref=e263]: 付
+            - generic [ref=e264]: 的
+            - generic [ref=e265]: 软
+            - generic [ref=e266]: 件
+        - generic [ref=e267]:
+          - tablist "工程关注点" [ref=e268]:
+            - tab "01 产品前端" [selected] [ref=e269] [cursor=pointer]:
+              - generic [ref=e270]: "01"
+              - text: 产品前端
+            - tab "02 全栈系统" [ref=e271] [cursor=pointer]:
+              - generic [ref=e272]: "02"
+              - text: 全栈系统
+            - tab "03 工程质量" [ref=e273] [cursor=pointer]:
+              - generic [ref=e274]: "03"
+              - text: 工程质量
+            - tab "04 持续学习" [ref=e275] [cursor=pointer]:
+              - generic [ref=e276]: "04"
+              - text: 持续学习
+          - tabpanel "01 产品前端" [ref=e277]:
+            - generic [ref=e278]:
+              - paragraph [ref=e279]: 产品前端
+              - heading "把复杂流程做得清楚、快速、可访问" [level=3] [ref=e280]
+              - generic [ref=e281]: 从信息结构和交互状态开始，完成可维护的 React 界面，并把性能与可访问性放进交付标准。
+            - generic [ref=e282]:
+              - generic [ref=e283]: thelatter.dev
+              - generic [ref=e288]:
+                - strong [ref=e289]: "95"
+                - generic [ref=e290]: Lighthouse 目标
+                - generic [ref=e291]: "const experience = { states: 'explicit', motion: 'meaningful', access: 'built-in' }"
+    - region "个人宣言" [ref=e292]:
+      - paragraph [ref=e293]: 向可靠的软件问好。
+      - generic [ref=e294]: 也向下一次更好的实现问好。
+    - region [ref=e295]:
+      - generic [ref=e296]:
+        - generic [ref=e297]:
+          - paragraph [ref=e298]: LEARNING IN PUBLIC
+          - heading [level=2] [ref=e299]:
+            - generic "把学习过程也做成作品" [ref=e300]:
+              - generic [ref=e301]: 把
+              - generic [ref=e302]: 学
+              - generic [ref=e303]: 习
+              - generic [ref=e304]: 过
+              - generic [ref=e305]: 程
+              - generic [ref=e306]: 也
+              - generic [ref=e307]: 做
+              - generic [ref=e308]: 成
+              - generic [ref=e309]: 作
+              - generic [ref=e310]: 品
+        - generic [ref=e311]:
+          - article [ref=e312]:
+            - generic [ref=e313]: Frontend
+            - paragraph [ref=e318]: 01 · Frontend
+            - heading "动效不是装饰：用运动解释界面关系" [level=3] [ref=e319]
+            - generic [ref=e320]: 记录如何把复杂滚动叙事拆成可访问、可维护的状态。
+            - generic [ref=e321]: 文章筹备中
+          - article [ref=e322]:
+            - generic [ref=e323]: Engineering
+            - paragraph [ref=e328]: 02 · Engineering
+            - heading "让类型穿过系统边界" [level=3] [ref=e329]
+            - generic [ref=e330]: 从接口契约到运行时校验，减少全栈应用中的隐性假设。
+            - generic [ref=e331]: 文章筹备中
+          - article [ref=e332]:
+            - generic [ref=e333]: Systems
+            - paragraph [ref=e338]: 03 · Notes
+            - heading "从一次失败的实现里提炼设计原则" [level=3] [ref=e339]
+            - generic [ref=e340]: 记录判断如何改变，以及下一次怎样更早发现问题。
+            - generic [ref=e341]: 文章筹备中
+    - region [ref=e342]:
+      - generic [ref=e343]:
+        - generic [ref=e344]: portfolio.tsx
+        - generic [ref=e345]: "function grow(problem) { const model = understand(problem) const version = build(model) return learn(version) }"
+      - generic [ref=e346]:
+        - paragraph [ref=e347]: A REAL LEARNING STORY
+        - heading [level=2] [ref=e348]:
+          - generic "我不只想把功能做出来。" [ref=e349]:
+            - generic [ref=e350]: 我
+            - generic [ref=e351]: 不
+            - generic [ref=e352]: 只
+            - generic [ref=e353]: 想
+            - generic [ref=e354]: 把
+            - generic [ref=e355]: 功
+            - generic [ref=e356]: 能
+            - generic [ref=e357]: 做
+            - generic [ref=e358]: 出
+            - generic [ref=e359]: 来
+            - generic [ref=e360]: 。
+        - blockquote [ref=e361]: 我想理解它为什么应该这样工作，如何让别人容易维护，以及用户真正感受到的是什么。
+        - generic [ref=e362]: TheLatter · Software Engineering Undergraduate
+    - region [ref=e363]:
+      - generic [ref=e364]:
+        - paragraph [ref=e365]: WORKING TOGETHER
+        - heading [level=2] [ref=e366]:
+          - generic "我能为实习团队带来什么" [ref=e367]:
+            - generic [ref=e368]: 我
+            - generic [ref=e369]: 能
+            - generic [ref=e370]: 为
+            - generic [ref=e371]: 实
+            - generic [ref=e372]: 习
+            - generic [ref=e373]: 团
+            - generic [ref=e374]: 队
+            - generic [ref=e375]: 带
+            - generic [ref=e376]: 来
+            - generic [ref=e377]: 什
+            - generic [ref=e378]: 么
+        - generic [ref=e379]:
+          - article [ref=e380]:
+            - text: "01"
+            - heading "产品意识" [level=3] [ref=e381]
+            - paragraph [ref=e382]: 从用户任务而不是页面清单出发
+          - article [ref=e383]:
+            - text: "02"
+            - heading "工程基础" [level=3] [ref=e384]
+            - paragraph [ref=e385]: 类型、测试、版本控制与清晰边界
+          - article [ref=e386]:
+            - text: "03"
+            - heading "协作习惯" [level=3] [ref=e387]
+            - paragraph [ref=e388]: 主动同步风险，也认真吸收反馈
+          - article [ref=e389]:
+            - text: "04"
+            - heading "成长速度" [level=3] [ref=e390]
+            - paragraph [ref=e391]: 把未知拆小，快速验证，不假装知道
+    - region [ref=e392]:
+      - generic [ref=e393]:
+        - paragraph [ref=e394]: FAQ
+        - heading [level=2] [ref=e395]:
+          - generic "关于合作，从这里开始。" [ref=e396]:
+            - generic [ref=e397]: 关
+            - generic [ref=e398]: 于
+            - generic [ref=e399]: 合
+            - generic [ref=e400]: 作
+            - generic [ref=e401]: ，
+            - generic [ref=e402]: 从
+            - generic [ref=e403]: 这
+            - generic [ref=e404]: 里
+            - generic [ref=e405]: 开
+            - generic [ref=e406]: 始
+            - generic [ref=e407]: 。
+        - generic [ref=e408]:
+          - group [ref=e409]:
+            - generic "你正在寻找什么类型的实习？" [ref=e410] [cursor=pointer]:
+              - text: 你正在寻找什么类型的实习？
+              - generic [ref=e411]: +
+          - group [ref=e412]:
+            - generic "目前最熟悉哪些技术？" [ref=e413] [cursor=pointer]:
+              - text: 目前最熟悉哪些技术？
+              - generic [ref=e414]: +
+          - group [ref=e415]:
+            - generic "这些项目是真实上线项目吗？" [ref=e416] [cursor=pointer]:
+              - text: 这些项目是真实上线项目吗？
+              - generic [ref=e417]: +
+          - group [ref=e418]:
+            - generic "可以远程或异地实习吗？" [ref=e419] [cursor=pointer]:
+              - text: 可以远程或异地实习吗？
+              - generic [ref=e420]: +
+    - region [ref=e421]:
+      - generic [ref=e422]:
+        - paragraph [ref=e423]: LET'S BUILD
+        - heading [level=2] [ref=e424]:
+          - generic "正在寻找软件工程实习机会。" [ref=e425]:
+            - generic [ref=e426]: 正
+            - generic [ref=e427]: 在
+            - generic [ref=e428]: 寻
+            - generic [ref=e429]: 找
+            - generic [ref=e430]: 软
+            - generic [ref=e431]: 件
+            - generic [ref=e432]: 工
+            - generic [ref=e433]: 程
+            - generic [ref=e434]: 实
+            - generic [ref=e435]: 习
+            - generic [ref=e436]: 机
+            - generic [ref=e437]: 会
+            - generic [ref=e438]: 。
+        - paragraph [ref=e439]: 如果你正在组建重视产品细节与工程质量的团队，我很愿意聊聊。
+        - generic [ref=e440]:
+          - button "发送邮件" [ref=e441] [cursor=pointer]
+          - button "GitHub" [ref=e445] [cursor=pointer]
+        - paragraph [ref=e449]: 开放实习与合作机会
+        - generic [ref=e451]: 请将示例邮箱替换为真实联系方式
+  - contentinfo [ref=e452]:
+    - generic [ref=e453]:
+      - generic [ref=e454]:
+        - strong [ref=e455]: TheLatter
+        - paragraph [ref=e456]: 用代码构建，也用文字思考。
+      - navigation "页脚导航" [ref=e457]:
+        - link "作品" [ref=e458] [cursor=pointer]:
+          - /url: "#projects"
+        - link "关于" [ref=e459] [cursor=pointer]:
+          - /url: "#about"
+        - link "文章" [ref=e460] [cursor=pointer]:
+          - /url: "#writing"
+        - link "联系" [ref=e461] [cursor=pointer]:
+          - /url: "#contact"
+      - generic [ref=e462]:
+        - link "GitHub" [ref=e464] [cursor=pointer]:
+          - /url: https://github.com/Thelatter666
+        - link "发送邮件" [ref=e468] [cursor=pointer]:
+          - /url: mailto:hello@thelatter.dev
+    - generic [ref=e471]:
+      - paragraph [ref=e472]: © 2026 TheLatter。保留所有权利。
+      - link "回到顶部 ↑" [ref=e473] [cursor=pointer]:
+        - /url: "#top"

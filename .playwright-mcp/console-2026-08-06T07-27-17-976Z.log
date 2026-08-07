@@ -1,0 +1,38 @@
+[     333ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:6006/favicon.svg:0
+[   24957ms] TypeError: Cannot read properties of undefined (reading 'style')
+    at onMouseEnter (http://localhost:6006/src/gallery/registry-decorator.jsx:104:16)
+    at executeDispatch (http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:13622:11)
+    at runWithFiberInDEV (http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:997:72)
+    at processDispatchQueue (http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:13658:37)
+    at http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:14071:11
+    at batchedUpdates$1 (http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:2626:42)
+    at dispatchEventForPluginEventSystem (http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:13763:9)
+    at dispatchEvent (http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:16784:13)
+    at dispatchContinuousEvent (http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:16775:64)
+[   24998ms] TypeError: Cannot read properties of undefined (reading 'style')
+    at onMouseLeave (http://localhost:6006/src/gallery/registry-decorator.jsx:110:16)
+    at executeDispatch (http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:13622:11)
+    at runWithFiberInDEV (http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:997:72)
+    at processDispatchQueue (http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:13658:37)
+    at http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:14071:11
+    at batchedUpdates$1 (http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:2626:42)
+    at dispatchEventForPluginEventSystem (http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:13763:9)
+    at dispatchEvent (http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:16784:13)
+    at dispatchContinuousEvent (http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:16775:64)
+[   25170ms] TypeError: Cannot read properties of undefined (reading 'style')
+    at onMouseEnter (http://localhost:6006/src/gallery/registry-decorator.jsx:104:16)
+    at executeDispatch (http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:13622:11)
+    at runWithFiberInDEV (http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:997:72)
+    at processDispatchQueue (http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:13658:37)
+    at http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:14071:11
+    at batchedUpdates$1 (http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:2626:42)
+    at dispatchEventForPluginEventSystem (http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:13763:9)
+    at dispatchEvent (http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:16784:13)
+    at dispatchContinuousEvent (http://localhost:6006/node_modules/.cache/storybook/1c3385a5d25e538d10b518b310c74d3ca2690b6aaffeadccd74da79736171f86/sb-vite/deps/chunk-SZ6L7SX3.js?v=87bc2fb7:16775:64)
+[ 2029654ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:6006/@vite/client:963
+[10940449ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:6006/@vite/client:963
+[10940454ms] [ERROR] WebSocket connection to 'ws://localhost:6006/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:6006/@vite/client:1034
+[10941456ms] [ERROR] WebSocket connection to 'ws://localhost:6006/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:6006/@vite/client:1034
+[10942459ms] [ERROR] WebSocket connection to 'ws://localhost:6006/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:6006/@vite/client:1034
+[10943461ms] [ERROR] WebSocket connection to 'ws://localhost:6006/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:6006/@vite/client:1034
+[10944465ms] [ERROR] WebSocket connection to 'ws://localhost:6006/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:6006/@vite/client:1034

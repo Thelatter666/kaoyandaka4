@@ -1,0 +1,52 @@
+- generic [ref=f1e2]:
+  - link "跳至主内容" [ref=f1e3] [cursor=pointer]:
+    - /url: "#main-content"
+  - navigation "主导航" [ref=f1e29]:
+    - link "砚台考研" [ref=f1e30] [cursor=pointer]:
+      - /url: "#/"
+    - generic [ref=f1e31]:
+      - link "首页" [ref=f1e32] [cursor=pointer]:
+        - /url: "#/"
+      - link "计划" [ref=f1e37] [cursor=pointer]:
+        - /url: "#/plan"
+      - link "预设" [ref=f1e42] [cursor=pointer]:
+        - /url: "#/presets"
+      - link "番茄钟" [ref=f1e45] [cursor=pointer]:
+        - /url: "#/pomodoro"
+      - link "网课" [ref=f1e50] [cursor=pointer]:
+        - /url: "#/courses"
+      - link "统计" [ref=f1e55] [cursor=pointer]:
+        - /url: "#/statistics"
+    - generic [ref=f1e60]:
+      - button "切换主题" [ref=f1e61] [cursor=pointer]
+      - button "退出登录" [ref=f1e64] [cursor=pointer]
+  - main [ref=f1e69]:
+    - generic [ref=f1e70]:
+      - heading "欢迎回来" [level=1] [ref=f1e71]
+      - paragraph [ref=f1e72]: 2026年8月6日 周四
+    - generic [ref=f1e73]:
+      - generic [ref=f1e74]:
+        - heading "今日专注" [level=2] [ref=f1e75]
+        - generic [ref=f1e82]:
+          - paragraph [ref=f1e83]: 还没有进行中的专注，现在开始一轮吧
+          - button "开始专注" [ref=f1e84] [cursor=pointer]
+      - generic [ref=f1e92]:
+        - paragraph [ref=f1e93]: 考研倒计时
+        - paragraph [ref=f1e97]:
+          - generic [ref=f1e98]: "136"
+          - generic [ref=f1e99]: 天
+        - paragraph [ref=f1e100]: 距 2026 年 12 月 20 日（不含今日）
+      - generic [ref=f1e101]:
+        - generic [ref=f1e102]:
+          - heading "今日任务" [level=2] [ref=f1e103]
+          - button "查看全部" [ref=f1e107] [cursor=pointer]
+        - generic [ref=f1e110]:
+          - heading "今天还没有任务" [level=3] [ref=f1e115]
+          - paragraph [ref=f1e116]: 去计划页安排今天的学习任务吧
+      - generic [ref=f1e117]:
+        - generic [ref=f1e118]:
+          - heading "学习预设" [level=2] [ref=f1e119]
+          - button "查看全部" [ref=f1e121] [cursor=pointer]
+        - generic [ref=f1e124]:
+          - heading "还没有学习预设" [level=3] [ref=f1e127]
+          - paragraph [ref=f1e128]: 创建预设后即可一键开始专注

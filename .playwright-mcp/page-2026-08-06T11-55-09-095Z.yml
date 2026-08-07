@@ -1,0 +1,52 @@
+- generic [ref=e2]:
+  - link "跳至主内容" [ref=e3] [cursor=pointer]:
+    - /url: "#main-content"
+  - navigation "主导航" [ref=e4]:
+    - link "砚台考研" [ref=e5] [cursor=pointer]:
+      - /url: "#/"
+    - generic [ref=e6]:
+      - link "首页" [ref=e7] [cursor=pointer]:
+        - /url: "#/"
+      - link "计划" [ref=e12] [cursor=pointer]:
+        - /url: "#/plan"
+      - link "预设" [ref=e17] [cursor=pointer]:
+        - /url: "#/presets"
+      - link "番茄钟" [ref=e20] [cursor=pointer]:
+        - /url: "#/pomodoro"
+      - link "网课" [ref=e25] [cursor=pointer]:
+        - /url: "#/courses"
+      - link "统计" [ref=e30] [cursor=pointer]:
+        - /url: "#/statistics"
+    - generic [ref=e35]:
+      - button "切换主题" [ref=e36] [cursor=pointer]
+      - button "退出登录" [ref=e39] [cursor=pointer]
+  - main [ref=e44]:
+    - generic [ref=e45]:
+      - heading "欢迎回来" [level=1] [ref=e46]
+      - paragraph [ref=e47]: 2026年8月6日 周四
+    - generic [ref=e48]:
+      - generic [ref=e49]:
+        - heading "今日专注" [level=2] [ref=e50]
+        - generic [ref=e57]:
+          - paragraph [ref=e58]: 还没有进行中的专注，现在开始一轮吧
+          - button "开始专注" [ref=e59] [cursor=pointer]
+      - generic [ref=e67]:
+        - paragraph [ref=e68]: 考研倒计时
+        - paragraph [ref=e72]:
+          - generic [ref=e73]: "136"
+          - generic [ref=e74]: 天
+        - paragraph [ref=e75]: 距 2026 年 12 月 20 日（不含今日）
+      - generic [ref=e76]:
+        - generic [ref=e77]:
+          - heading "今日任务" [level=2] [ref=e78]
+          - button "查看全部" [ref=e82] [cursor=pointer]
+        - generic [ref=e85]:
+          - heading "今天还没有任务" [level=3] [ref=e90]
+          - paragraph [ref=e91]: 去计划页安排今天的学习任务吧
+      - generic [ref=e92]:
+        - generic [ref=e93]:
+          - heading "学习预设" [level=2] [ref=e94]
+          - button "查看全部" [ref=e96] [cursor=pointer]
+        - generic [ref=e99]:
+          - heading "还没有学习预设" [level=3] [ref=e102]
+          - paragraph [ref=e103]: 创建预设后即可一键开始专注

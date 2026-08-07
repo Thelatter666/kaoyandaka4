@@ -1,0 +1,6 @@
+- generic [ref=e2]:
+  - link "跳至主内容" [ref=e3] [cursor=pointer]:
+    - /url: "#main-content"
+  - main [ref=e4]:
+    - status [ref=e6]:
+      - generic [ref=e7]: 正在恢复登录状态...

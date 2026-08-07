@@ -1,0 +1,11 @@
+[    8882ms] [ERROR] Warning: Unknown event handler property `%s`. It will be ignored.%s onPointerExit 
+    at div
+    at Magnetic (http://localhost:5173/src/components/ui/Magnetic.tsx:19:3)
+    at div
+    at div
+    at main
+    at PageShell (http://localhost:5173/src/components/layout/PageShell.tsx:18:29)
+    at PomodoroPage (http://localhost:5173/src/pages/PomodoroPage.tsx?t=1786017236887:68:7)
+    at Suspense
+    at div
+    at App (http://localhost:5173/src/App.tsx?t=1786017236887:116:37) @ http://localhost:5173/node_modules/.vite/deps/chunk-NXESFFTV.js?v=d27f5444:520
