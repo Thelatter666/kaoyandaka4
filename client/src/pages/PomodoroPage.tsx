@@ -145,6 +145,22 @@ export function PomodoroPage() {
     return () => clearInterval(timer);
   }, [activeSession]);
 
+  // 标签页标题实时倒计时：Web Worker 每秒刷新（不受后台标签页 interval 节流），
+  // 切到其他标签页看网课/学习时从标签栏即可扫读剩余；结束/离开时恢复原标题
+  useEffect(() => {
+    if (!activeSession && !breakMode) return;
+    const baseTitle = document.title;
+    const endMs = breakMode ? (breakEndsAt ?? 0) : new Date(activeSession?.plannedEndAt ?? '').getTime();
+    const label = breakMode ? '休息' : '专注';
+    const worker = new Worker(new URL('../workers/countdown-title.ts', import.meta.url), { type: 'module' });
+    worker.onmessage = (e: MessageEvent<string>) => { document.title = e.data; };
+    worker.postMessage({ endMs, label });
+    return () => {
+      worker.terminate();
+      document.title = baseTitle;
+    };
+  }, [activeSession, breakMode, breakEndsAt]);
+
   // Sync with active session（会话恢复：检测到进行中会话即进入计时视图）
   useEffect(() => {
     if (activeSession) {
