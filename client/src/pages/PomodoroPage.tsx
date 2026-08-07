@@ -84,6 +84,10 @@ export function PomodoroPage() {
   // 光晕核心：完成粒子爆散 / 今日已完成轮次（逐帧刷新已下沉至 SmoothRing 内部）
   const [burstKey, setBurstKey] = useState(0);
   const [statsRounds, setStatsRounds] = useState(0);
+  /** 今日每科目累计秒数（来自 today-summary，供「距下一棵树」提示） */
+  const [treeBySubject, setTreeBySubject] = useState<Record<string, number> | null>(null);
+  /** 进行中会话已进行秒数（60s 间隔刷新，分钟粒度） */
+  const [activeElapsedSec, setActiveElapsedSec] = useState(0);
   const [naturalRounds, setNaturalRounds] = useState(0);
   const prevSessionIdRef = useRef<string | null>(null);
   /** 完成/取消按钮触发的会话结束（区别于自然结束），避免重复触发粒子 */
@@ -109,13 +113,37 @@ export function PomodoroPage() {
     statisticsApi
       .getTodaySummary()
       .then((data) => {
-        if (!cancelled) setStatsRounds(data.completedSessions);
+        if (!cancelled) {
+          setStatsRounds(data.completedSessions);
+          setTreeBySubject(data.bySubject);
+        }
       })
       .catch(() => {
         /* 回退：仅使用页面内状态（roundCount / naturalRounds）推导 */
       });
     return () => { cancelled = true; };
   }, []);
+
+  // 距下一棵树剩余分钟：1 树 = 3600 秒/科目（与统计页 forest 口径一致，free 漫游独立累计）
+  const TREE_SECONDS = 3600;
+  const treeRemainingMinutes = (subject: string, elapsedSeconds = 0): number => {
+    const completed = treeBySubject?.[subject] ?? 0;
+    const remaining = TREE_SECONDS - ((completed + elapsedSeconds) % TREE_SECONDS);
+    return Math.ceil(remaining / 60);
+  };
+
+  // 进行中会话实时 elapsed：基于计划时长减剩余（60s 刷新，分钟粒度）
+  useEffect(() => {
+    if (!activeSession) return;
+    const update = () => {
+      const endMs = new Date(activeSession.plannedEndAt).getTime();
+      const remainSec = Math.max(0, Math.floor((endMs - Date.now()) / 1000));
+      setActiveElapsedSec(totalPlannedSeconds - remainSec);
+    };
+    update();
+    const timer = setInterval(update, 60000);
+    return () => clearInterval(timer);
+  }, [activeSession]);
 
   // Sync with active session（会话恢复：检测到进行中会话即进入计时视图）
   useEffect(() => {
@@ -381,6 +409,9 @@ export function PomodoroPage() {
                     开始专注
                   </InteractiveHoverButton>
                 </Magnetic>
+                <p className="pomodoro-tree-hint">
+                  再专注 {treeRemainingMinutes(selectedPreset?.subject ?? 'free')} 分钟可种下一棵树
+                </p>
               </div>
             </div>
             <div className="pomodoro-below">
@@ -464,6 +495,12 @@ export function PomodoroPage() {
                 <p className="pomodoro-side__row">
                   <span className="pomodoro-side__label">计划时长</span>
                   <span className="pomodoro-side__value tabular-nums">{plannedMinutes} 分钟</span>
+                </p>
+                <p className="pomodoro-side__row">
+                  <span className="pomodoro-side__label">距下一棵树</span>
+                  <span className="pomodoro-side__value tabular-nums">
+                    {treeRemainingMinutes(activeSession.subjectSnapshot as string, activeElapsedSec)} 分钟
+                  </span>
                 </p>
               </div>
             </Card>

@@ -5,6 +5,8 @@ import type { ForestResponse } from '@shared/types';
 export interface TodaySummary {
   completedSessions: number;
   totalSeconds: number;
+  /** 每科目今日累计秒数（math/english/408/free；free 漫游独立累计种树） */
+  bySubject: Record<string, number>;
 }
 
 export const statisticsApi = {

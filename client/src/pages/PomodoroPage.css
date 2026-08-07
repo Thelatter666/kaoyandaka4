@@ -154,11 +154,21 @@
 /* ---- 空闲态控制卡：glass-2 横条（时长选择 + 开始专注大按钮） ---- */
 .pomodoro-control {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-xl);
   border-radius: var(--radius-card);
   padding: var(--space-lg);
   width: min(100%, 720px);
+}
+
+/* 「距下一棵树」提示：整行居中置于控制卡第二行 */
+.pomodoro-tree-hint {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 
 .pomodoro-control__duration {

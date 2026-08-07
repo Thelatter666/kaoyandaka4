@@ -194,9 +194,25 @@ router.get('/today-summary', async (req: Request, res: Response, next: NextFunct
          AND (source = 'focus_session' OR (source = 'course_video' AND focus_session_id IS NULL))`,
       [req.userId, `${todayStr} 00:00:00`, `${getNextDate(todayStr)} 00:00:00`]
     );
+    // 每科目今日累计秒数（供番茄钟页计算「距下一棵树」；口径与 forest 一致，free 漫游独立累计）
+    const [subjRows] = await pool.query<RowDataPacket[]>(
+      `SELECT subject_snapshot, COALESCE(SUM(actual_duration_seconds),0) AS total_seconds
+       FROM study_records
+       WHERE user_id = ? AND created_at >= ? AND created_at < ?
+         AND (source = 'focus_session' OR (source = 'course_video' AND focus_session_id IS NULL))
+       GROUP BY subject_snapshot`,
+      [req.userId, `${todayStr} 00:00:00`, `${getNextDate(todayStr)} 00:00:00`]
+    );
+    const bySubject: Record<string, number> = { math: 0, english: 0, '408': 0, free: 0 };
+    for (const row of subjRows) {
+      if (bySubject[row.subject_snapshot] !== undefined) {
+        bySubject[row.subject_snapshot] = Number(row.total_seconds) || 0;
+      }
+    }
     res.json({
       completedSessions: Number(rows[0].completed_sessions) || 0,
       totalSeconds: Number(rows[0].total_seconds) || 0,
+      bySubject,
     });
   } catch (err) {
     next(err);
