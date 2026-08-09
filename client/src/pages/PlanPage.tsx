@@ -27,6 +27,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { SubjectBadge } from '../components/ui/SubjectBadge';
+import { Dropdown } from '../components/ui/Dropdown';
 import { TaskItem, TaskData } from '../components/tasks/TaskItem';
 import { showToast } from '../components/ui/Toast';
 import { tasksApi, Task } from '../api/tasks';
@@ -283,26 +284,26 @@ export function PlanPage() {
               onKeyDown={(e) => { if (e.key === 'Enter') handleAddTask(); }}
             />
             <div className="plan-add__controls">
-              <select
-                className="plan-add__select"
+              <Dropdown
                 value={newSubject}
-                onChange={(e) => { setNewSubject(e.target.value as Subject); setNewSubSubject(null); }}
-                aria-label="科目"
-              >
-                <option value="math">数学</option>
-                <option value="english">英语</option>
-                <option value="408">408</option>
-              </select>
+                onChange={(v) => { setNewSubject(v as Subject); setNewSubSubject(null); }}
+                options={[
+                  { value: 'math', label: '数学' },
+                  { value: 'english', label: '英语' },
+                  { value: '408', label: '408' },
+                ]}
+                ariaLabel="科目"
+              />
               {newSubject === '408' && (
-                <select
-                  className="plan-add__select"
-                  value={newSubSubject || ''}
-                  onChange={(e) => setNewSubSubject((e.target.value || null) as SubSubject | null)}
-                  aria-label="子科目"
-                >
-                  <option value="">不限</option>
-                  {SUB_SUBJECT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
+                <Dropdown
+                  value={newSubSubject ?? ''}
+                  onChange={(v) => setNewSubSubject((v || null) as SubSubject | null)}
+                  options={[
+                    { value: '', label: '不限' },
+                    ...SUB_SUBJECT_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
+                  ]}
+                  ariaLabel="子科目"
+                />
               )}
               <label className={`plan-add__important${newImportant ? ' plan-add__important--active' : ''}`}>
                 <input type="checkbox" checked={newImportant} onChange={(e) => setNewImportant(e.target.checked)} />

@@ -101,7 +101,7 @@
   gap: var(--space-sm);
 }
 
-.import-modal__zone-control select {
+.import-modal__zone-control .import-modal__zone-dropdown {
   flex: 1;
   min-width: 0;
 }

@@ -1,0 +1,185 @@
+/* ============================================================
+   砚台考研打卡 — Dropdown 下拉选择组件（极光玻璃）
+   源自外部设计稿：开合旋转箭头 + AnimatePresence 菜单 + 选中打勾
+   双主题自适应（[data-theme] 令牌），禁止裸色值。
+   ============================================================ */
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+  width: auto;
+}
+
+.dropdown--block {
+  display: block;
+  width: 100%;
+}
+
+/* ---- 触发按钮 ---- */
+
+.dropdown__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-input);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+.dropdown__trigger:hover:not(:disabled) {
+  border-color: var(--color-accent-primary);
+}
+
+.dropdown__trigger:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+.dropdown__trigger[aria-expanded='true'] {
+  border-color: var(--color-accent-primary);
+  box-shadow: var(--glow-primary);
+}
+
+.dropdown__trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.dropdown__value {
+  color: var(--color-text-primary);
+  font-weight: var(--font-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown__placeholder {
+  color: var(--color-text-muted);
+}
+
+.dropdown__chevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform var(--dur-med) var(--ease-out);
+}
+
+.dropdown__chevron--open {
+  transform: rotate(180deg);
+}
+
+/* ---- 下拉菜单（glass-2 材质，悬浮于内容之上） ---- */
+
+.dropdown__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: var(--z-dropdown);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-bg-strong);
+  -webkit-backdrop-filter: blur(var(--blur-glass-strong)) saturate(1.4);
+  backdrop-filter: blur(var(--blur-glass-strong)) saturate(1.4);
+  box-shadow: var(--shadow-glass-lg);
+  overflow: hidden;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .dropdown__menu {
+    background: var(--color-bg-card-solid);
+  }
+}
+
+/* ---- 选项 ---- */
+
+.dropdown__option {
+  border-top: 1px solid var(--color-border);
+}
+
+.dropdown__option:first-child {
+  border-top: none;
+}
+
+.dropdown__option-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.dropdown__option-button:hover {
+  background: var(--color-glass-bg);
+}
+
+.dropdown__option-label {
+  display: block;
+  font-weight: var(--font-medium);
+}
+
+.dropdown__option-desc {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.dropdown__option--selected .dropdown__option-label {
+  color: var(--color-accent-primary-strong);
+}
+
+.dropdown__check {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-accent-primary-strong);
+}
+
+/* ---- sm：紧凑（工具栏/按钮组） ---- */
+
+.dropdown--sm .dropdown__trigger {
+  min-height: 36px;
+  padding: 4px 12px;
+  font-size: var(--text-sm);
+  border-radius: var(--radius-sm);
+}
+
+.dropdown--sm .dropdown__option-button {
+  padding: 6px 12px;
+  font-size: var(--text-sm);
+}
+
+/* ---- Reduced motion：动效已由 framer 的 useReducedMotion 关闭，CSS 侧一并取消 ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  .dropdown__chevron {
+    transition: none;
+  }
+}
