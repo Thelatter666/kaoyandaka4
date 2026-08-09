@@ -7,4 +7,4 @@ dist/
 test-results/
 playwright-report/
 .claude/
-.playwright-mcp/console-2026-08-07T02-04-43-735Z.log
+.playwright-mcp/
