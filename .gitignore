@@ -8,3 +8,8 @@ test-results/
 playwright-report/
 .claude/
 .playwright-mcp/
+.workbuddy/
+server-butler/
+
+# 本地调试截图（不入库）
+*.png
