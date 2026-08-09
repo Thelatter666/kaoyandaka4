@@ -22,7 +22,6 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { PageShell } from '../components/layout/PageShell';
-import { Card } from '../components/ui/Card';
 import { GradientCard } from '../components/ui/GradientCard';
 import { Button } from '../components/ui/Button';
 import { InteractiveHoverButton } from '../components/ui/InteractiveHoverButton';
@@ -158,50 +157,58 @@ export function HomePage({ navigate }: HomePageProps) {
           )}
         </GradientCard>
 
-        {/* 考试倒计时卡（span 4 + row-2 高卡，纵向跨两行）：蜜金光斑 + 超大等宽数字 */}
-        <Card
-          className="bento-span-4 bento-row-2 home-countdown reveal"
+        {/* 考试倒计时宽卡（span 8，与原今日任务卡对调位置）：蜜金光斑 + 超大数字
+            与学习趋势热力图左右并排 */}
+        <GradientCard
+          tone="neutral"
+          watermark={<Hourglass />}
+          title={
+            <>
+              <Hourglass size={18} strokeWidth={1.75} aria-hidden="true" />
+              考研倒计时
+            </>
+          }
+          className="bento-span-8 home-countdown reveal"
           style={{ '--i': 1 } as React.CSSProperties}
         >
           <span className="home-countdown__blob" aria-hidden="true" />
-          <div className="home-countdown__body">
-            <p className="home-countdown__label">
-              <Hourglass size={16} strokeWidth={1.75} aria-hidden="true" />
-              考研倒计时
-            </p>
-            {daysRemaining > 0 ? (
-              <>
-                <p className="home-countdown__days">
-                  <span className="home-countdown__num tabular-nums">{daysRemaining}</span>
-                  <span className="home-countdown__unit">天</span>
-                </p>
-                <p className="home-countdown__sub">距 2026 年 12 月 20 日（不含今日）</p>
-              </>
-            ) : (
-              <>
-                <p className="home-countdown__ended">考试已结束</p>
-                <p className="home-countdown__sub">2026 年 12 月 20 日</p>
-              </>
-            )}
-          </div>
+          <div className="home-countdown__wide">
+            {/* 左：超大等宽倒计时数字 */}
+            <div className="home-countdown__num-block">
+              {daysRemaining > 0 ? (
+                <>
+                  <p className="home-countdown__days">
+                    <span className="home-countdown__num tabular-nums">{daysRemaining}</span>
+                    <span className="home-countdown__unit">天</span>
+                  </p>
+                  <p className="home-countdown__sub">距 2026 年 12 月 20 日（不含今日）</p>
+                </>
+              ) : (
+                <>
+                  <p className="home-countdown__ended">考试已结束</p>
+                  <p className="home-countdown__sub">2026 年 12 月 20 日</p>
+                </>
+              )}
+            </div>
 
-          {/* 学习趋势热力图：近 6 个月每日专注时长（5 档强度） */}
-          <div className="home-countdown__heatmap">
-            <p className="home-countdown__heatmap-title">
-              学习趋势
-              <span className="home-countdown__heatmap-range tabular-nums">近 6 个月</span>
-            </p>
-            <StudyHeatmap
-              data={heatmap}
-              loading={heatmap === null}
-              error={heatmapError}
-              onRetry={fetchHeatmap}
-            />
+            {/* 右：学习趋势热力图（近 6 个月每日专注时长，5 档强度） */}
+            <div className="home-countdown__heatmap">
+              <p className="home-countdown__heatmap-title">
+                学习趋势
+                <span className="home-countdown__heatmap-range tabular-nums">近 6 个月</span>
+              </p>
+              <StudyHeatmap
+                data={heatmap}
+                loading={heatmap === null}
+                error={heatmapError}
+                onRetry={fetchHeatmap}
+              />
+            </div>
           </div>
-        </Card>
+        </GradientCard>
 
-        {/* 今日任务摘要（span 8）：GradientCard neutral + ClipboardList 水印，
-            查看全部 CTA；玻璃列表行，最多 4 条 */}
+        {/* 今日任务摘要（span 4 + row-2 窄高卡，与原倒计时卡对调位置）：
+            GradientCard neutral + ClipboardList 水印，查看全部 CTA；玻璃列表行，最多 4 条 */}
         <GradientCard
           tone="neutral"
           watermark={<ClipboardList />}
@@ -213,7 +220,7 @@ export function HomePage({ navigate }: HomePageProps) {
           }
           ctaText="查看全部"
           onCta={() => navigate('#/plan')}
-          className="bento-span-8 home-tasks reveal"
+          className="bento-span-4 bento-row-2 home-tasks reveal"
           style={{ '--i': 2 } as React.CSSProperties}
         >
           {tasks === null && !tasksError ? (

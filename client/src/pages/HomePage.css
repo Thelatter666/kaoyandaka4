@@ -50,10 +50,14 @@
   margin-bottom: var(--space-xs);
 }
 
-/* 功能卡：内边距紧凑化（纵向 24→12） */
+/* 功能卡：内边距紧凑化（纵向 24→12）；任务窄卡撑满 row-2 高度 */
 .home-tasks,
 .home-presets {
   padding: 12px var(--space-lg);
+}
+
+.home-tasks {
+  height: 100%;
 }
 
 /* ---- 卡片标题（宋体 + lucide 图标）---- */
@@ -76,14 +80,11 @@
 /* 卡片标题行（标题 + 查看全部链接）由 GradientCard 槽位承担（title + cta），
    旧 .home-card-head / .home-card-link 样式已移除 */
 
-/* ---- 倒计时高卡（span 4 + row-2）：上部倒计时 + 下部学习趋势热力图 ---- */
+/* ---- 倒计时宽卡（span 8，与原今日任务卡对调）：超大数字与热力图左右并排 ---- */
 .home-countdown {
   position: relative;
   overflow: hidden;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
 }
 
 /* 卡片左上小团蜜金光斑（overflow hidden 内装饰） */
@@ -100,21 +101,21 @@
   pointer-events: none;
 }
 
-.home-countdown__body {
+/* 左右并排容器：数字块 + 热力图 */
+.home-countdown__wide {
   position: relative;
   z-index: 1;
   display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
+  align-items: center;
+  gap: var(--space-xl);
 }
 
-.home-countdown__label {
+.home-countdown__num-block {
+  flex-shrink: 0;
+  min-width: 190px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--space-xs);
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
 }
 
 .home-countdown__days {
@@ -124,7 +125,7 @@
   line-height: 1.1;
 }
 
-/* 高卡主视觉：超大等宽数字 */
+/* 宽卡主视觉：超大等宽数字 */
 .home-countdown__num {
   font-family: var(--font-mono);
   font-size: var(--text-timer);
@@ -151,13 +152,18 @@
   font-size: var(--text-xs);
 }
 
-/* ---- 热力图区块（倒计时卡下半部，与上方倒计时分隔）---- */
+/* ---- 热力图区块（宽卡右侧，与数字并排）---- */
 .home-countdown__heatmap {
   position: relative;
   z-index: 1;
-  margin-top: auto;
-  padding-top: var(--space-sm);
-  border-top: 1px solid var(--color-glass-bg-strong);
+  flex: 1;
+  min-width: 0;
+}
+
+/* 宽卡里限制热力图宽度，格子约 13px 封顶，避免过度放大 */
+.home-countdown .heatmap__grid {
+  max-width: 430px;
+  margin-left: auto;
 }
 
 .home-countdown__heatmap-title {
@@ -249,9 +255,12 @@
   padding-left: 10px;
 }
 
-/* 完成态：松绿 CheckCircle2 + 删除线 + 透明度 0.62 */
-.home-task--done {
+/* 完成态：松绿 CheckCircle2 + 删除线 + 透明度 0.62；
+   入场动画 fill 锁定 opacity:1 会覆盖淡化，完成态直接跳过入场动画
+   （选择器需匹配 .home-list > li 的特异性） */
+.home-list > li.home-task--done {
   opacity: 0.62;
+  animation: none;
 }
 
 .home-task--done .home-task__content {
