@@ -39,8 +39,14 @@
 }
 
 .range-nav__arrow:hover:not(:disabled) {
-  transform: translateY(-1px);
   box-shadow: var(--shadow-glass-md);
+}
+
+/* 位移仅鼠标设备生效（触摸 tap 后粘性 hover 会卡住上浮状态） */
+@media (hover: hover) and (pointer: fine) {
+  .range-nav__arrow:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
 }
 
 .range-nav__arrow:active:not(:disabled) {

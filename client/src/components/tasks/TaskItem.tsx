@@ -33,7 +33,7 @@ interface TaskItemProps {
   onSortKeyDown?: (e: React.KeyboardEvent) => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
-  /** 额外样式（如列表项入场延迟 animationDelay） */
+  /** 额外样式（如列表项入场延迟 transitionDelay） */
   style?: React.CSSProperties;
 }
 

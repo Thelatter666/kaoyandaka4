@@ -20,7 +20,13 @@
 .theme-toggle:hover {
   color: var(--color-text-primary);
   box-shadow: var(--shadow-glass-md);
-  transform: translateY(-1px);
+}
+
+/* 位移仅鼠标设备生效（触摸 tap 后粘性 hover 会卡住上浮状态） */
+@media (hover: hover) and (pointer: fine) {
+  .theme-toggle:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .theme-toggle:active {

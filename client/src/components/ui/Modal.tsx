@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -9,9 +9,34 @@ interface ModalProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
+/**
+ * Modal 退出动画时长（与 CSS transition 一致）
+ * 退出阶段：isOpen=false 后先播放退出动画，再卸载 DOM
+ */
+const EXIT_DURATION = 200;
+
 export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  // visible 控制 DOM 是否挂载；exiting 标记退出动画阶段
+  const [visible, setVisible] = useState(isOpen);
+  const [exiting, setExiting] = useState(false);
+
+  // 两阶段开合：open → 立即挂载；close → 先播退出动画再卸载
+  useEffect(() => {
+    if (isOpen) {
+      setVisible(true);
+      setExiting(false);
+      return;
+    }
+    if (!visible) return;
+    setExiting(true);
+    const timer = setTimeout(() => {
+      setVisible(false);
+      setExiting(false);
+    }, EXIT_DURATION);
+    return () => clearTimeout(timer);
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (isOpen) {
@@ -50,7 +75,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!visible) return null;
 
   const maxWidth = size === 'sm' ? 400 : size === 'lg' ? 720 : 560;
 
@@ -59,7 +84,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 'var(--z-modal)',
+        zIndex: 300,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -67,18 +92,20 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      {/* 遮罩：rgba(16,24,40,0.32) + blur 8px */}
+      {/* 遮罩：rgba(16,24,40,0.32) + blur 8px；transition 实现可中断 */}
       <div
+        data-exiting={exiting}
         style={{
           position: 'absolute',
           inset: 0,
           backgroundColor: 'var(--color-bg-overlay)',
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
-          animation: 'modal-fade-in 200ms var(--ease-out)',
+          opacity: exiting ? 0 : 1,
+          transition: `opacity ${EXIT_DURATION}ms var(--ease-out)`,
         }}
       />
-      {/* 面板：glass-2 + --radius-card，200ms scale+fade */}
+      {/* 面板：glass-2 + --radius-card；transition 实现可中断 */}
       <div
         ref={modalRef}
         role="dialog"
@@ -94,7 +121,9 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
           width: '100%',
           maxHeight: '85vh',
           overflowY: 'auto',
-          animation: 'modal-slide-in 200ms var(--ease-out)',
+          opacity: exiting ? 0 : 1,
+          transform: exiting ? 'scale(0.97)' : 'scale(1)',
+          transition: `opacity ${EXIT_DURATION}ms var(--ease-out), transform ${EXIT_DURATION}ms var(--ease-out)`,
         }}
       >
         {title && (
@@ -133,10 +162,6 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
         )}
         {children}
       </div>
-      <style>{`
-        @keyframes modal-fade-in { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes modal-slide-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-      `}</style>
     </div>
   );
 }

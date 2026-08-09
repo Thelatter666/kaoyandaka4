@@ -1,8 +1,8 @@
 /**
  * 悬停交互按钮（组件库 interactive-hover-button 集成）
  *
- * 胶囊形按钮：悬停时左侧圆点放大盖满按钮、原文字向右滑出淡出，
- * 右侧滑入相同文字 + 箭头（纯 CSS transition，无 JS 依赖）。
+ * 胶囊形按钮：悬停时圆点放大盖满按钮形成白底，文字原地交叉淡换为
+ * 珊瑚字 + 箭头（纯 CSS transition，无 JS 依赖）。
  * Aurora Glass 适配：Tailwind 类 → tokens（primary-strong 底 + 白字），
  * reveal 层为视觉副本，aria-hidden 避免读屏重复。
  */

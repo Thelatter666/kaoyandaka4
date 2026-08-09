@@ -46,10 +46,13 @@
   width: 104px;
 }
 
-/* 主角卡 hover：上浮 3px + 阴影升一档（配合 .sheen-hover 光泽扫过） */
-.home-focus:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-glass-lg);
+/* 主角卡 hover：上浮 3px + 阴影升一档（配合 .sheen-hover 光泽扫过）
+   位移仅鼠标设备生效（触摸 tap 后粘性 hover 会卡住上浮状态） */
+@media (hover: hover) and (pointer: fine) {
+  .home-focus:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-glass-lg);
+  }
 }
 
 .home-focus .home-card-title {
@@ -110,7 +113,13 @@
 
 .home-card-link:hover {
   background: var(--color-accent-primary-light);
-  transform: translateY(-1px);
+}
+
+/* 位移仅鼠标设备生效 */
+@media (hover: hover) and (pointer: fine) {
+  .home-card-link:hover {
+    transform: translateY(-1px);
+  }
 }
 
 /* ---- 倒计时高卡（span 4 + row-2）：纵向三段分布（标签 / 超大数字 / 副文案）---- */

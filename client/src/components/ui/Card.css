@@ -14,10 +14,13 @@
 .card--pad-md { padding: var(--space-lg); }
 .card--pad-lg { padding: var(--space-xl); }
 
-/* 可点击卡片 hover：上浮 2px + 阴影升至 md */
-.card--hoverable:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-glass-md);
+/* 可点击卡片 hover：上浮 2px + 阴影升至 md
+   （(hover:hover) 门控：避免触摸设备 tap 后粘性 hover 卡住上浮状态） */
+@media (hover: hover) and (pointer: fine) {
+  .card--hoverable:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-glass-md);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

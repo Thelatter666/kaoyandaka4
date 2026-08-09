@@ -77,9 +77,10 @@
   pointer-events: none;
 }
 
+/* 高频导航指示器：240ms ease-out 快速跟随（420ms spring 回弹在频繁切换时显拖沓） */
 .top-nav__indicator--animated {
   transition:
-    transform 420ms var(--ease-spring),
+    transform var(--dur-med) var(--ease-out),
     opacity var(--dur-fast) var(--ease-out);
 }
 
@@ -147,7 +148,13 @@
 .top-nav__logout:hover {
   color: var(--color-accent-danger);
   box-shadow: var(--shadow-glass-md);
-  transform: translateY(-1px);
+}
+
+/* 位移仅鼠标设备生效（触摸 tap 后粘性 hover 会卡住上浮状态） */
+@media (hover: hover) and (pointer: fine) {
+  .top-nav__logout:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .top-nav__logout:active {

@@ -69,14 +69,16 @@ input, textarea, select {
   border-radius: var(--radius-sm);
 }
 
-/* prefers-reduced-motion：全部动画/过渡取消，状态直接呈现 */
+/* prefers-reduced-motion：动画取消；过渡压缩至 100ms 保留状态反馈
+   （0.01ms 硬清零会把 opacity/color 反馈也抹掉，状态变化显得生硬；
+   100ms 快速过渡对前庭敏感用户安全，且保留状态连续性提示） */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition-duration: 100ms !important;
     scroll-behavior: auto !important;
   }
 }

@@ -10,21 +10,18 @@
   gap: var(--space-xs);
   padding: 4px 8px;
   border-radius: var(--radius-md);
-  animation: task-item-in var(--dur-med) var(--ease-out) both;
+  /* 入场用 transition + @starting-style：只在挂载时播放一次，状态更新不重播 */
   transition:
-    opacity var(--dur-fast) var(--ease-out),
+    opacity var(--dur-med) var(--ease-out),
+    transform var(--dur-med) var(--ease-out),
     box-shadow var(--dur-fast) var(--ease-out);
 }
 
-/* 列表项入场：opacity + translateY(6px)，延迟由使用方 style 驱动（最多 8 项） */
-@keyframes task-item-in {
-  from {
+/* 列表项入场起始态：opacity 0 + translateY(6px)，挂载后 transition 到默认态 */
+@starting-style {
+  .task-item {
     opacity: 0;
     transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -175,10 +172,10 @@
   outline: none;
 }
 
-/* ---- reduced-motion：入场动画与庆祝动画取消 ---- */
+/* ---- reduced-motion：入场过渡与庆祝动画取消 ---- */
 @media (prefers-reduced-motion: reduce) {
   .task-item {
-    animation: none;
+    transition: none;
   }
 
   .task-item--done .task-item__toggle svg {
