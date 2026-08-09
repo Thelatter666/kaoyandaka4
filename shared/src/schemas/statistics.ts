@@ -45,3 +45,18 @@ export const ForestResponseSchema = z.object({
 
 export type StatisticsQuery = z.infer<typeof StatisticsQuerySchema>;
 export type ForestResponse = z.infer<typeof ForestResponseSchema>;
+
+/** 学习趋势热力图：近 N 天每日专注秒数（聚合口径与 /forest 一致） */
+export const HeatmapResponseSchema = z.object({
+  rangeStart: DateString,
+  rangeEnd: DateString,
+  days: z.array(
+    z.object({
+      date: DateString,
+      /** 当日专注总秒数（去重口径：focus_session 全计 + course_video 仅计未关联 focus_session） */
+      seconds: z.number().int().nonnegative(),
+    })
+  ),
+});
+
+export type HeatmapResponse = z.infer<typeof HeatmapResponseSchema>;
