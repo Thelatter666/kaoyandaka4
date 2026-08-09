@@ -92,6 +92,8 @@ export function PomodoroPage() {
   const prevSessionIdRef = useRef<string | null>(null);
   /** 完成/取消按钮触发的会话结束（区别于自然结束），避免重复触发粒子 */
   const selfEndedRef = useRef(false);
+  /** 开始专注瞬间的点火动画：一次 240ms scale 沉降 + 聚光灯涌起 */
+  const [igniting, setIgniting] = useState(false);
 
   const fetchPresets = useCallback(async () => {
     setPresetsLoading(true);
@@ -209,6 +211,8 @@ export function PomodoroPage() {
       // 未选预设即漫游专注：presetId 传 null
       await startFocus(selectedPreset?.id ?? null, durationMinutes, 'pomodoro');
       setStep('active');
+      setIgniting(true);
+      window.setTimeout(() => setIgniting(false), 260);
     } catch {
       // Error handled by hook
     } finally {
@@ -271,20 +275,47 @@ export function PomodoroPage() {
   // 今日已完成轮次：统计接口种子 + 本页按钮完成（roundCount 自 1 起）+ 自然结束
   const completedRoundsToday = statsRounds + Math.max(0, roundCount - 1) + naturalRounds;
 
+  const breakTotalSeconds = breakMode === 'short_break' ? SHORT_BREAK_MINUTES * 60 : LONG_BREAK_MINUTES * 60;
+
+  // 钟的 props 由 step 派生：单一常驻 SmoothRing，永不重挂
+  const ringProps = (() => {
+    if (step === 'active' && activeSession) {
+      return {
+        mode: 'focus' as RingMode,
+        totalSeconds: totalPlannedSeconds,
+        endsAtMs: new Date(activeSession.plannedEndAt).getTime(),
+        fallbackRemainingSeconds: 0,
+        subtitle:
+          activeSession.subjectSnapshot === 'free'
+            ? '漫游专注'
+            : `${activeSession.presetNameSnapshot} · ${SUBJECT_LABELS[activeSession.subjectSnapshot as Subject]}`,
+      };
+    }
+    if (breakMode) {
+      return {
+        mode: breakMode as RingMode,
+        totalSeconds: breakTotalSeconds,
+        endsAtMs: breakEndsAt,
+        fallbackRemainingSeconds: breakRemainingSeconds,
+      };
+    }
+    return {
+      mode: 'focus' as RingMode,
+      totalSeconds: durationMinutes * 60,
+      endsAtMs: null,
+      fallbackRemainingSeconds: durationMinutes * 60,
+      modeLabel: '准备开始',
+      subtitle: selectedPreset
+        ? `${selectedPreset.name} · ${SUBJECT_LABELS[selectedPreset.subject as Subject]}`
+        : '漫游专注',
+    };
+  })();
+
+  const plannedMinutes = Math.round(totalPlannedSeconds / 60);
+
   // ======================
   // 共享片段
   // ======================
-
-  /** 圆盘舞台：聚灯光斑（跟随模式色）+ 大留白，reveal 依次入场 */
-  const renderStage = (mode: RingMode, ring: React.ReactNode, revealIndex: number) => (
-    <div
-      className={`pomodoro-hero__stage pomodoro-hero__stage--${mode} reveal`}
-      style={{ '--i': revealIndex } as React.CSSProperties}
-    >
-      <span className="pomodoro-stage__glow" aria-hidden="true" />
-      {ring}
-    </div>
-  );
 
   /** 底部预设 dock：首张「漫游专注」+ 横排紧凑卡托盘；dimmed 时淡出 0.4 保持可交互 */
   const renderPresetDock = (dimmed: boolean, revealIndex: number) => {
@@ -352,121 +383,63 @@ export function PomodoroPage() {
   };
 
   // ======================
-  // RENDER: Idle（圆盘常驻中央：满环预览 + 控制卡 + 预设 dock）
+  // RENDER: 单一常驻树（钟跨步骤持续挂载，辅助内容按条件浮现）
   // ======================
-  if (step === 'idle') {
-    return (
-      <PageShell
-        title="番茄钟"
-        subtitle={breakMode ? '休息一下，恢复精力' : '设定时长，即刻开始一段专注'}
-      >
-        <p className="sr-only">今日已完成 {completedRoundsToday} 轮</p>
+  return (
+    <PageShell
+      title="番茄钟"
+      subtitle={breakMode ? '休息一下，恢复精力' : '设定时长，即刻开始一段专注'}
+      maxWidth={step === 'active' ? 1080 : step === 'completed' ? 720 : undefined}
+    >
+      <p className="sr-only">今日已完成 {completedRoundsToday} 轮</p>
 
-        {breakMode ? (
-          <>
-            <div className="pomodoro-hero">
-              {renderStage(
-                breakMode,
-                <SmoothRing
-                  mode={breakMode}
-                  totalSeconds={breakMode === 'short_break' ? SHORT_BREAK_MINUTES * 60 : LONG_BREAK_MINUTES * 60}
-                  endsAtMs={breakEndsAt}
-                  fallbackRemainingSeconds={breakRemainingSeconds}
-                  completedRoundsToday={completedRoundsToday}
-                />,
-                0,
-              )}
-              <div className="pomodoro-ops reveal" style={{ '--i': 1 } as React.CSSProperties}>
-                <Button variant="ghost" onClick={completeBreak}>
-                  <X size={16} strokeWidth={1.75} aria-hidden="true" />
-                  跳过休息
-                </Button>
+      <div className={step === 'active' && activeSession ? 'pomodoro-active' : undefined}>
+        <div className="pomodoro-hero">
+          {/* 常驻舞台：钟跨步骤持续存在，props 随状态演化 */}
+          <div
+            className={`pomodoro-hero__stage pomodoro-hero__stage--${ringProps.mode}${
+              step === 'completed' ? ' pomodoro-hero__stage--hidden' : ''
+            }${igniting ? ' pomodoro-hero__stage--ignite' : ''}`}
+          >
+            <span className="pomodoro-stage__glow" aria-hidden="true" />
+            <SmoothRing {...ringProps} completedRoundsToday={completedRoundsToday} />
+          </div>
+
+          {step === 'idle' && !breakMode && (
+            /* 控制卡：时长选择 + 开始专注（圆盘正下方横条） */
+            <div
+              className="glass-2 pomodoro-control reveal"
+              style={{ '--i': 1 } as React.CSSProperties}
+            >
+              <div className="pomodoro-control__duration">
+                <DurationSelector value={durationMinutes} onChange={setDurationMinutes} />
               </div>
+              <Magnetic strength={0.2} radius={150}>
+                <InteractiveHoverButton
+                  className="pomodoro-cta"
+                  onClick={handleStartFocus}
+                  loading={actionLoading}
+                >
+                  开始专注
+                </InteractiveHoverButton>
+              </Magnetic>
+              <p className="pomodoro-tree-hint">
+                再专注 {treeRemainingMinutes(selectedPreset?.subject ?? 'free')} 分钟可种下一棵树
+              </p>
             </div>
-            <div className="pomodoro-below">
-              {renderPresetDock(true, 2)}
+          )}
+
+          {step === 'idle' && breakMode && (
+            <div className="pomodoro-ops reveal" style={{ '--i': 1 } as React.CSSProperties}>
+              <Button variant="ghost" onClick={completeBreak}>
+                <X size={16} strokeWidth={1.75} aria-hidden="true" />
+                跳过休息
+              </Button>
             </div>
-          </>
-        ) : (
-          <>
-            <div className="pomodoro-hero">
-              {renderStage(
-                'focus',
-                <RingCountdown
-                  totalSeconds={durationMinutes * 60}
-                  remainingSeconds={durationMinutes * 60}
-                  mode="focus"
-                  smooth
-                  modeLabel="准备开始"
-                  completedRoundsToday={completedRoundsToday}
-                  subtitle={
-                    selectedPreset
-                      ? `${selectedPreset.name} · ${SUBJECT_LABELS[selectedPreset.subject as Subject]}`
-                      : '漫游专注'
-                  }
-                />,
-                0,
-              )}
+          )}
 
-              {/* 控制卡：时长选择 + 开始专注（圆盘正下方横条） */}
-              <div
-                className="glass-2 pomodoro-control reveal"
-                style={{ '--i': 1 } as React.CSSProperties}
-              >
-                <div className="pomodoro-control__duration">
-                  <DurationSelector value={durationMinutes} onChange={setDurationMinutes} />
-                </div>
-                <Magnetic strength={0.2} radius={150}>
-                  <InteractiveHoverButton
-                    className="pomodoro-cta"
-                    onClick={handleStartFocus}
-                    loading={actionLoading}
-                  >
-                    开始专注
-                  </InteractiveHoverButton>
-                </Magnetic>
-                <p className="pomodoro-tree-hint">
-                  再专注 {treeRemainingMinutes(selectedPreset?.subject ?? 'free')} 分钟可种下一棵树
-                </p>
-              </div>
-            </div>
-            <div className="pomodoro-below">
-              {renderPresetDock(false, 2)}
-            </div>
-          </>
-        )}
-      </PageShell>
-    );
-  }
-
-  // ======================
-  // RENDER: Active Session（圆盘舞台为唯一主角，辅助信息收进单一侧卡）
-  // ======================
-  if (step === 'active' && activeSession) {
-    const plannedMinutes = Math.round(totalPlannedSeconds / 60);
-    return (
-      <PageShell maxWidth={1080}>
-        <p className="sr-only">今日已完成 {completedRoundsToday} 轮</p>
-
-        <div className="pomodoro-active">
-          <div className="pomodoro-hero">
-            {renderStage(
-              'focus',
-              <SmoothRing
-                mode="focus"
-                totalSeconds={totalPlannedSeconds}
-                endsAtMs={new Date(activeSession.plannedEndAt).getTime()}
-                completedRoundsToday={completedRoundsToday}
-                subtitle={
-                  activeSession.subjectSnapshot === 'free'
-                    ? '漫游专注'
-                    : `${activeSession.presetNameSnapshot} · ${SUBJECT_LABELS[activeSession.subjectSnapshot as Subject]}`
-                }
-              />,
-              0,
-            )}
-
-            {/* 操作区：圆盘正下方一排（移动端纵向堆叠） */}
+          {step === 'active' && activeSession && (
+            /* 操作区：圆盘正下方一排（移动端纵向堆叠） */
             <div className="pomodoro-ops reveal" style={{ '--i': 1 } as React.CSSProperties}>
               <Button variant="primary" size="lg" onClick={handleComplete} loading={actionLoading}>
                 <Check size={18} strokeWidth={1.75} aria-hidden="true" />
@@ -477,9 +450,11 @@ export function PomodoroPage() {
                 取消
               </Button>
             </div>
-          </div>
+          )}
+        </div>
 
-          {/* 进行中辅助信息：当前预设 / 轮次 / 计划时长，收进单一侧卡 */}
+        {step === 'active' && activeSession && (
+          /* 进行中辅助信息：当前预设 / 轮次 / 计划时长，收进单一侧卡 */
           <aside
             className="pomodoro-active__side reveal"
             style={{ '--i': 2 } as React.CSSProperties}
@@ -521,24 +496,11 @@ export function PomodoroPage() {
               </div>
             </Card>
           </aside>
-        </div>
+        )}
+      </div>
 
-        {/* 页面其余内容：淡出 0.4，保持可交互 */}
-        <div className="pomodoro-below">
-          {renderPresetDock(true, 3)}
-        </div>
-      </PageShell>
-    );
-  }
-
-  // ======================
-  // RENDER: Completed（粒子爆散 + 继续/休息入口）
-  // ======================
-  if (step === 'completed') {
-    return (
-      <PageShell maxWidth={720}>
-        <p className="sr-only">今日已完成 {completedRoundsToday} 轮</p>
-
+      {step === 'completed' ? (
+        /* 完成态：粒子爆散 + 继续/休息入口（钟随舞台隐藏，保持挂载不重挂） */
         <div className="pomodoro-completed">
           {/* 完成粒子：自然结束/提前完成触发一次；取消/休息结束不触发 */}
           <BurstParticles burstKey={burstKey} colorVar="--color-accent-primary" />
@@ -582,11 +544,14 @@ export function PomodoroPage() {
             </div>
           </div>
         </div>
-      </PageShell>
-    );
-  }
-
-  return null;
+      ) : (
+        /* 页面其余内容：淡出 0.4，保持可交互（专注进行中或休息中均淡出） */
+        <div className="pomodoro-below">
+          {renderPresetDock(step === 'active' || breakMode !== null, step === 'active' ? 3 : 2)}
+        </div>
+      )}
+    </PageShell>
+  );
 }
 
 interface SmoothRingProps {

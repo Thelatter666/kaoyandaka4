@@ -66,7 +66,7 @@
 .ring-countdown__progress {
   filter: drop-shadow(0 0 10px currentColor);
   transition:
-    stroke-dashoffset var(--dur-slow) linear,
+    stroke-dashoffset var(--dur-ring) linear,
     stroke var(--dur-med) var(--ease-out);
 }
 
@@ -88,7 +88,22 @@
 }
 
 .ring-countdown--lowtime .ring-countdown__progress {
-  animation: ring-breathe 2s ease-in-out infinite;
+  animation: ring-breathe 2s var(--ease-in-out) infinite;
+}
+
+/* 低时数字脉动（与环呼吸同 2s 周期，50% 相位对齐） */
+@keyframes time-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+
+.ring-countdown--lowtime .ring-countdown__time {
+  animation: time-pulse 2s var(--ease-in-out) infinite;
 }
 
 /* 中环·轮次刻度珠：未点亮 --color-border；点亮模式色 + 同模式辉光；
@@ -135,7 +150,8 @@
 }
 
 /* 剩余时间：JetBrains Mono 64px（移动 52px）700，
-   浅色主题 135deg 模式色 → 提亮色渐变填充；深色主题纯色保对比度 */
+   浅色主题 135deg 模式色 → 提亮色渐变填充；深色主题纯色保对比度
+   浅色渐变填充 background 不可过渡，低时切色为快切（深色纯色有 240ms 过渡） */
 .ring-countdown__time {
   font-family: var(--font-mono);
   font-size: var(--text-timer);
@@ -155,6 +171,7 @@
   background-clip: border-box;
   color: var(--_rc-c1);
   -webkit-text-fill-color: var(--_rc-c1);
+  transition: color var(--dur-med) var(--ease-out);
 }
 
 /* 模式文字：14px 500，跟随模式色的文字变体（图形色对白不足 4.5:1） */
@@ -197,6 +214,7 @@
 /* ---- reduced-motion：脉动取消，仅保留变色（全局 0.01ms 规则之外的显式降级） ---- */
 @media (prefers-reduced-motion: reduce) {
   .ring-countdown--lowtime .ring-countdown__progress,
+  .ring-countdown--lowtime .ring-countdown__time,
   .ring-countdown__bead--lit {
     animation: none;
   }
