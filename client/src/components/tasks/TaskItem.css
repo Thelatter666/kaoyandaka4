@@ -75,6 +75,56 @@
   color: var(--color-accent-success);
 }
 
+/* ---- 打卡庆祝动画（Circle → CheckCircle2 切换） ---- */
+
+/* 勾选按钮容器：为图标过渡提供相对定位 */
+.task-item__toggle {
+  position: relative;
+}
+
+/* 完成时图标缩放 + 颜色过渡（从 Circle 到 CheckCircle2 的"打勾"感） */
+.task-item__toggle svg {
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+/* 完成瞬间：CheckCircle2 缩放进入（从 0.8 放大到 1） */
+.task-item--done .task-item__toggle svg {
+  animation: check-celebration var(--dur-fast) var(--ease-out);
+}
+
+@keyframes check-celebration {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 完成时整卡微妙反馈：轻微下沉（物理感） */
+.task-item--done {
+  animation: task-complete-settle var(--dur-fast) var(--ease-out);
+}
+
+@keyframes task-complete-settle {
+  0% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(1px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
 .task-item__pin:hover {
   color: var(--color-accent-primary);
   background: var(--color-glass-bg);
@@ -103,6 +153,7 @@
   white-space: nowrap;
   color: var(--color-text-primary);
   cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 /* 完成态：文字删除线 */
@@ -124,9 +175,17 @@
   outline: none;
 }
 
-/* ---- reduced-motion：入场动画取消 ---- */
+/* ---- reduced-motion：入场动画与庆祝动画取消 ---- */
 @media (prefers-reduced-motion: reduce) {
   .task-item {
+    animation: none;
+  }
+
+  .task-item--done .task-item__toggle svg {
+    animation: none;
+  }
+
+  .task-item--done {
     animation: none;
   }
 }

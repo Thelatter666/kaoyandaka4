@@ -7,6 +7,8 @@ interface ToastItem {
   id: number;
   type: ToastType;
   message: string;
+  /** 退出状态：true 时播放退出动画 */
+  exiting?: boolean;
 }
 
 let toastId = 0;
@@ -27,10 +29,17 @@ export function ToastContainer() {
 
   const addToast = useCallback((type: ToastType, message: string) => {
     const id = ++toastId;
-    setToasts((prev) => [...prev.slice(-4), { id, type, message }]);
+    setToasts((prev) => [...prev.slice(-4), { id, type, message, exiting: false }]);
+
+    // 3.5s 后标记为退出状态，播放退出动画
+    setTimeout(() => {
+      setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, exiting: true } : t)));
+    }, 3500);
+
+    // 退出动画结束后（300ms）真正移除
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3500);
+    }, 3800);
   }, []);
 
   useEffect(() => {
@@ -47,7 +56,7 @@ export function ToastContainer() {
         position: 'fixed',
         bottom: 24,
         right: 24,
-        zIndex: 'var(--z-toast)',
+        zIndex: 1000, // 修复：数值而非字符串
         display: 'flex',
         flexDirection: 'column',
         gap: 'var(--space-sm)',
@@ -60,7 +69,8 @@ export function ToastContainer() {
           <div
             key={toast.id}
             role="status"
-            className="glass-3"
+            className="glass-3 toast-item"
+            data-exiting={toast.exiting}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -68,7 +78,6 @@ export function ToastContainer() {
               padding: '12px 20px',
               borderRadius: 'var(--radius-md)',
               fontSize: 'var(--text-sm)',
-              animation: 'toast-slide-in 300ms var(--ease-out)',
               /* 375px 窄屏不横向溢出：宽度上限随视口收敛 */
               maxWidth: 'min(360px, calc(100vw - 48px))',
             }}
@@ -79,9 +88,31 @@ export function ToastContainer() {
         );
       })}
       <style>{`
-        @keyframes toast-slide-in {
-          from { opacity: 0; transform: scale(0.95) translateY(8px); }
-          to { opacity: 1; transform: scale(1) translateY(0); }
+        /* Toast 入场/退出：transition 实现（可中断），不使用 keyframes */
+        .toast-item {
+          opacity: 0;
+          transform: scale(0.95) translateY(8px);
+          transition:
+            opacity var(--dur-med) var(--ease-out),
+            transform var(--dur-med) var(--ease-out);
+        }
+
+        .toast-item:not([data-exiting="true"]) {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+
+        .toast-item[data-exiting="true"] {
+          opacity: 0;
+          transform: scale(0.95) translateY(4px);
+        }
+
+        /* Reduced motion: 仅保留透明度变化 */
+        @media (prefers-reduced-motion: reduce) {
+          .toast-item {
+            transition: opacity var(--dur-fast) ease;
+            transform: none !important;
+          }
         }
       `}</style>
     </div>

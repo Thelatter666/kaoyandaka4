@@ -9,17 +9,11 @@
 
 .file-upload-dropzone {
   position: relative;
-  group/file: & {
-    .file-upload-dashed-border {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
   cursor: pointer;
   overflow: hidden;
   border-radius: var(--radius-md);
   padding: var(--space-lg);
-  transition: all var(--dur-med) var(--ease-out);
+  transition: border-color var(--dur-med) var(--ease-out), background-color var(--dur-med) var(--ease-out);
 }
 
 .file-upload-hidden {
@@ -219,18 +213,18 @@
   border-radius: var(--radius-md);
   opacity: 0;
   transform: scale(0.96);
+  transition: opacity var(--dur-med) var(--ease-out), transform var(--dur-med) var(--ease-out);
 }
 
-.group/file:hover .file-upload-dashed-border {
+/* hover 时显示虚线边框 */
+.file-upload-dropzone:hover .file-upload-dashed-border {
   opacity: 1;
   transform: scale(1);
 }
 
 /* hover 阴影增强 */
-.group/file:hover {
-  .file-upload-placeholder {
-    box-shadow: 0px 10px 50px rgba(0, 0, 0, 0.1);
-  }
+.file-upload-dropzone:hover .file-upload-placeholder {
+  box-shadow: 0px 10px 50px rgba(0, 0, 0, 0.1);
 }
 
 /* 主题适配 */

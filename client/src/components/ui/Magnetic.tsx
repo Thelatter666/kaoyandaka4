@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useEffect } from 'react';
 
 interface MagneticProps {
   children: React.ReactNode;
@@ -35,7 +35,7 @@ export function Magnetic({
 
     const dx = targetRef.current.x - currentRef.current.x;
     const dy = targetRef.current.y - currentRef.current.y;
-    
+
     // 接近目标值时直接对齐，避免抖动
     if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1) {
       currentRef.current = { ...targetRef.current };
@@ -85,6 +85,15 @@ export function Magnetic({
     }
   };
 
+  // 组件卸载时清理 RAF
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, []);
+
   // 使用 React.createElement 支持动态标签
   return React.createElement(
     Tag,
@@ -92,9 +101,8 @@ export function Magnetic({
       ref: elRef,
       className,
       onPointerMove: handlePointerMove,
-      onPointerLeave: handlePointerLeave,
+      onPointerLeave: handlePointerLeave, // 修复：使用标准事件名
       onPointerEnter: startRAF,
-      onPointerExit: stopRAF,
       style: {
         display: 'inline-block',
         willChange: 'transform',

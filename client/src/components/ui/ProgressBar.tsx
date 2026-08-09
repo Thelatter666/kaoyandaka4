@@ -58,11 +58,13 @@ export function ProgressBar({
       >
         <div
           style={{
-            width: `${pct}%`,
+            width: '100%',
             height: '100%',
             background: `linear-gradient(90deg, ${color}, ${colorEnd ?? color})`,
             borderRadius: 'var(--radius-full)',
-            transition: animated ? 'width var(--dur-med) var(--ease-out)' : 'none',
+            transform: `scaleX(${pct / 100})`,
+            transformOrigin: 'left',
+            transition: animated ? 'transform var(--dur-med) var(--ease-out)' : 'none',
           }}
         />
       </div>
