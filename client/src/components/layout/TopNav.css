@@ -38,55 +38,75 @@
 
 /* 中：6 项导航（lucide 16px + 文字） */
 .top-nav__links {
-  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-xs);
 }
 
-/* 滑动指示器：iOS 26 液态玻璃滑块——半透明主色染色 + 背景模糊 +
-   顶部镜面高光 + 弹性滑动（位移仅 transform，回弹用 --ease-spring） */
-.top-nav__indicator {
+/* 灯管指示器（tubelight）：活动链接内的主色 tint 胶囊 + 顶部发光灯管。
+   layoutId 弹簧滑动由 framer 承载（位移/投影全交给布局动画），
+   z-index -1 落在 .top-nav 玻璃堆叠上下文内：胶囊底之上、链接文字之下 */
+.top-nav__lamp {
   position: absolute;
-  top: 3px;
-  bottom: 3px;
-  left: 0;
+  inset: 0;
+  z-index: -1;
   border-radius: var(--radius-full);
   background: var(--color-accent-primary-light);
-  -webkit-backdrop-filter: blur(8px) saturate(1.6);
-  backdrop-filter: blur(8px) saturate(1.6);
   border: 1px solid var(--color-glass-border);
   box-shadow:
     inset 0 1px 0 var(--color-glass-border),
-    inset 0 -6px 10px var(--color-accent-primary-light),
     var(--shadow-glass-sm);
-  overflow: hidden;
   pointer-events: none;
 }
 
-/* 顶部斜向镜面高光（液态玻璃反射带，随主题玻璃高光色自适应） */
-.top-nav__indicator::after {
-  content: '';
+/* 灯管竖条：探出胶囊顶 4px（与 demo 一致的 -top-2 视觉比例） */
+.top-nav__lamp-tube {
   position: absolute;
-  top: 1px;
-  left: 8%;
-  right: 8%;
-  height: 46%;
-  border-radius: var(--radius-full);
-  background: linear-gradient(180deg, var(--color-glass-border), transparent);
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 4px;
+  border-radius: var(--radius-full) var(--radius-full) 0 0;
+  background: var(--color-accent-primary);
   pointer-events: none;
 }
 
-/* 高频导航指示器：240ms ease-out 快速跟随（420ms spring 回弹在频繁切换时显拖沓） */
-.top-nav__indicator--animated {
-  transition:
-    transform var(--dur-med) var(--ease-out),
-    opacity var(--dur-fast) var(--ease-out);
+/* 灯管光晕：三团主色模糊光斑（跟随双主题自动变色） */
+.top-nav__lamp-glow {
+  position: absolute;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-primary);
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+.top-nav__lamp-glow--lg {
+  width: 48px;
+  height: 24px;
+  top: -8px;
+  left: -8px;
+  filter: blur(12px);
+}
+
+.top-nav__lamp-glow--md {
+  width: 32px;
+  height: 24px;
+  top: -4px;
+  left: 0;
+  filter: blur(12px);
+}
+
+.top-nav__lamp-glow--sm {
+  width: 16px;
+  height: 16px;
+  top: 0;
+  left: 8px;
+  filter: blur(4px);
 }
 
 .top-nav__link {
   position: relative;
-  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -101,8 +121,7 @@
   white-space: nowrap;
   transition:
     background-color var(--dur-fast) var(--ease-out),
-    color var(--dur-fast) var(--ease-out),
-    box-shadow var(--dur-fast) var(--ease-out);
+    color var(--dur-fast) var(--ease-out);
 }
 
 .top-nav__link:hover {
@@ -111,7 +130,7 @@
   text-decoration: none;
 }
 
-/* 当前页：主色文字（高亮玻璃由滑动指示器承载，aria-current="page" 双通道表达） */
+/* 当前页：主色文字（主色 tint 胶囊由灯管承载，aria-current="page" 双通道表达） */
 .top-nav__link[aria-current="page"] {
   color: var(--color-accent-primary-strong);
   font-weight: var(--font-semibold);
