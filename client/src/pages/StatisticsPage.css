@@ -83,6 +83,16 @@
   border-radius: var(--radius-card);
 }
 
+/* 范围/模式切换更新中：数据区 opacity 微降作「更新中」信号，
+   新数据到达后恢复——避免旧值瞬跳新值的生硬感（reveal 不重播的既定决策不变） */
+.stats-layout {
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.stats-layout[data-updating="true"] {
+  opacity: 0.55;
+}
+
 @media (max-width: 767px) {
   .stats-skeleton__scene {
     height: auto;

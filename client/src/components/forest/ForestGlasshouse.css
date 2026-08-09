@@ -199,6 +199,19 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* 生长入场：从地面长出（origin bottom），stagger 由 --tree-delay 内联驱动 */
+  transform-origin: bottom center;
+  transition:
+    opacity var(--dur-slow) var(--ease-out) var(--tree-delay, 0ms),
+    transform var(--dur-slow) var(--ease-out) var(--tree-delay, 0ms);
+}
+
+/* 生长入场起始态：translateX(-50%) 必须保留（否则水平位置跳变） */
+@starting-style {
+  .forest__tree-wrap {
+    opacity: 0;
+    transform: translateX(-50%) scaleY(0.5);
+  }
 }
 
 /* 每棵树：≥44px 触控区，视觉树形居中 */
@@ -212,8 +225,11 @@
   transition: transform var(--dur-fast) var(--ease-out);
 }
 
-.forest__tree:hover {
-  transform: translateY(-2px);
+/* hover 位移仅鼠标设备生效（触摸 tap 后粘性 hover 会卡住） */
+@media (hover: hover) and (pointer: fine) {
+  .forest__tree:hover {
+    transform: translateY(-2px);
+  }
 }
 
 .forest__tree:active {
@@ -234,7 +250,8 @@
   opacity: 0.5;
 }
 
-/* 露珠 tooltip：glass-3 + 水滴圆角（hover/focus 触发，Escape 关闭） */
+/* 露珠 tooltip：glass-3 + 水滴圆角（hover/focus 触发，Escape 关闭）
+   入场：@starting-style + transition，从水滴尖角（树的方向）scale 长出 */
 .forest__tooltip {
   position: absolute;
   bottom: calc(100% + 6px);
@@ -247,6 +264,10 @@
   font-weight: var(--font-medium);
   white-space: nowrap;
   pointer-events: none;
+  transform-origin: bottom left;
+  transition:
+    opacity var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
 /* 场景左/右边缘的树：tooltip 从树中心向内展开（场景 overflow:hidden 防裁切），
@@ -258,6 +279,45 @@
 .forest__tooltip--align-right {
   transform: translateX(-90%);
   border-radius: 16px 16px 4px 16px;
+  transform-origin: bottom right;
+}
+
+/* tooltip 入场起始态：从尖角方向 scale(0.9) + 透明长出 */
+@starting-style {
+  .forest__tooltip {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.9);
+  }
+
+  .forest__tooltip--align-left {
+    transform: translateX(-10%) scale(0.9);
+  }
+
+  .forest__tooltip--align-right {
+    transform: translateX(-90%) scale(0.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .forest__tooltip {
+    transition: opacity var(--dur-fast) ease;
+  }
+
+  /* 起始帧仅透明：transform 显式设为目标值，不产生位移 */
+  @starting-style {
+    .forest__tooltip {
+      opacity: 0;
+      transform: translateX(-50%);
+    }
+
+    .forest__tooltip--align-left {
+      transform: translateX(-10%);
+    }
+
+    .forest__tooltip--align-right {
+      transform: translateX(-90%);
+    }
+  }
 }
 
 /* ---- 5. 玻璃罩反光：顶部弧形高光 + 对角反光带（位于树层之上） ---- */
@@ -417,7 +477,7 @@
   color: var(--color-text-primary);
 }
 
-/* ---- reduced-motion：尘埃静止、树按压形变取消（全局 0.01ms 之外的显式降级） ---- */
+/* ---- reduced-motion：尘埃静止、树按压形变取消、生长入场降级为纯淡入 ---- */
 @media (prefers-reduced-motion: reduce) {
   .forest__mote {
     animation: none;
@@ -426,5 +486,13 @@
   .forest__tree:hover,
   .forest__tree:active {
     transform: none;
+  }
+
+  /* 生长入场降级：仅淡入，无 scaleY 形变 */
+  @starting-style {
+    .forest__tree-wrap {
+      opacity: 0;
+      transform: translateX(-50%);
+    }
   }
 }

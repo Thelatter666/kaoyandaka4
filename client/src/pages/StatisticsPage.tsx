@@ -147,7 +147,7 @@ export function StatisticsPage() {
       ) : !data ? (
         <EmptyState title="暂无数据" />
       ) : (
-        <div className="bento-grid stats-layout">
+        <div className="bento-grid stats-layout" data-updating={loading}>
           {/* 主角：森林玻璃花房全景（span 12）+ 场景数据条 */}
           <div className="bento-span-12 stats-hero reveal" style={{ '--i': 1 } as React.CSSProperties}>
             {/* 玻璃花房场景 */}

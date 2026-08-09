@@ -173,6 +173,8 @@ export function ForestGlasshouse({
                           left: `${leftPct}%`,
                           bottom: `calc(${bottomPct}% + ${jitter}px)`,
                           zIndex: isActive ? 30 : i + 1,
+                          /* 生长入场 stagger：每棵延迟 40ms，上限 280ms（24 棵不拖沓） */
+                          ['--tree-delay' as string]: `${Math.min(i, 7) * 40}ms`,
                         }}
                       >
                         <button
