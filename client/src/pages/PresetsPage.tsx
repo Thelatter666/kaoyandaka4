@@ -19,6 +19,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { SubjectBadge } from '../components/ui/SubjectBadge';
+import { Dropdown } from '../components/ui/Dropdown';
 import { DurationSelector } from '../components/presets/DurationSelector';
 import { PresetCard } from '../components/presets/PresetCard';
 import { showToast } from '../components/ui/Toast';
@@ -327,7 +328,7 @@ export function PresetsPage() {
 
           {/* Subject */}
           <div>
-            <label htmlFor="preset-subject" style={labelStyle}>科目</label>
+            <label style={labelStyle}>科目</label>
             {lockedSubject ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
                 <SubjectBadge subject={lockedSubject} size="md" />
@@ -343,44 +344,44 @@ export function PresetsPage() {
                 </span>
               </div>
             ) : (
-              <select
-                id="preset-subject"
+              <Dropdown
+                block
                 value={formData.subject}
-                onChange={(e) => setFormData((prev) => ({
+                onChange={(v) => setFormData((prev) => ({
                   ...prev,
-                  subject: e.target.value as Subject,
+                  subject: v as Subject,
                   subSubject: null,
                 }))}
-                style={fieldStyle}
-              >
-                <option value="math">数学</option>
-                <option value="english">英语</option>
-                <option value="408">408 计算机综合</option>
-              </select>
+                options={[
+                  { value: 'math', label: '数学' },
+                  { value: 'english', label: '英语' },
+                  { value: '408', label: '408 计算机综合' },
+                ]}
+                ariaLabel="科目"
+              />
             )}
           </div>
 
           {/* Sub-subject (only for 408) */}
           {formData.subject === '408' && (
             <div>
-              <label htmlFor="preset-subsubject" style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}>
+              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}>
                 子科目
                 <span style={{ color: 'var(--color-text-muted)', fontWeight: 400, fontSize: 'var(--text-xs)' }}>（可选）</span>
               </label>
-              <select
-                id="preset-subsubject"
-                value={formData.subSubject || ''}
-                onChange={(e) => setFormData((prev) => ({
+              <Dropdown
+                block
+                value={formData.subSubject ?? ''}
+                onChange={(v) => setFormData((prev) => ({
                   ...prev,
-                  subSubject: (e.target.value || null) as SubSubject | null,
+                  subSubject: (v || null) as SubSubject | null,
                 }))}
-                style={fieldStyle}
-              >
-                <option value="">不限</option>
-                {SUB_SUBJECT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+                options={[
+                  { value: '', label: '不限' },
+                  ...SUB_SUBJECT_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label })),
+                ]}
+                ariaLabel="子科目"
+              />
             </div>
           )}
 

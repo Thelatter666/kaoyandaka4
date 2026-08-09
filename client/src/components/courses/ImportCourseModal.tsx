@@ -9,6 +9,7 @@ import { Check, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { SubjectBadge } from '../ui/SubjectBadge';
+import { Dropdown } from '../ui/Dropdown';
 import { showToast } from '../ui/Toast';
 import { FileUpload } from '../ui/FileUpload';
 import { coursesApi, ParseResult } from '../../api/courses';
@@ -162,16 +163,14 @@ export function ImportCourseModal({ isOpen, zone, zones, onZoneChange, onClose, 
             <div className="import-modal__zone">
               <label htmlFor="import-zone" className="import-modal__label">目标分区</label>
               <div className="import-modal__zone-control">
-                <select
-                  id="import-zone"
+                <Dropdown
+                  block
+                  className="import-modal__zone-dropdown"
                   value={zone ? zoneKey(zone) : ''}
-                  onChange={(e) => handleZoneChange(e.target.value)}
-                  style={fieldStyle}
-                >
-                  {zones.map((z) => (
-                    <option key={zoneKey(z)} value={zoneKey(z)}>{z.label}</option>
-                  ))}
-                </select>
+                  onChange={handleZoneChange}
+                  options={zones.map((z) => ({ value: zoneKey(z), label: z.label }))}
+                  ariaLabel="目标分区"
+                />
                 {zone && (
                   <SubjectBadge subject={zone.subject} subSubject={zone.subSubject} size="md" />
                 )}
