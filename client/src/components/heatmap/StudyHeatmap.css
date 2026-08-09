@@ -65,12 +65,12 @@
   gap: 2px;
 }
 
-/* 格子本体：宽由列定，高按 aspect-ratio 自适应 */
+/* 格子本体：宽由列定，高按 aspect-ratio 自适应；空白格用令牌色（亮色 #EEEEEE） */
 .heatmap-cell {
   width: 100%;
   aspect-ratio: 1;
   border-radius: 2.5px;
-  background: var(--color-glass-bg-strong);
+  background: var(--color-heatmap-empty);
   transition: transform 0.12s ease;
 }
 

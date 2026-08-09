@@ -32,6 +32,9 @@
   --color-glass-3-solid: #1D2939;                     /* glass-3 降级实底（其上色的全不透明形态） */
   --color-glass-3-text: #FFFFFF;                      /* glass-3 深底上的文字 */
 
+  /* 热力图空白格（l0）：亮色浅灰 #EEEEEE，不用纯白；暗色由深色主题覆盖 */
+  --color-heatmap-empty: #EEEEEE;
+
   /* glass-3 深底上的状态色（取自深色主题提亮色，保证深底对比度） */
   --color-accent-success-ondark: #3ECF8E;
   --color-accent-danger-ondark: #F4786A;
@@ -242,6 +245,9 @@
   --color-glass-3-bg: rgba(16, 24, 40, 0.85);
   --color-glass-3-solid: #101828;
   --color-glass-3-text: #FFFFFF;
+
+  /* 热力图空白格（l0）：暗色保持玻璃深底，覆盖亮色的 #EEEEEE */
+  --color-heatmap-empty: rgba(23, 32, 51, 0.78);
 
   --color-border: rgba(255, 255, 255, 0.09);
   --color-border-focus: #F4786A;
