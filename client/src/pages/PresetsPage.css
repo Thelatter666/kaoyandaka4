@@ -4,59 +4,142 @@
    （特色卡 span 8 / 其余 span 4，全页唯一 hero 主角卡）
    ============================================================ */
 
-/* ---- 页头操作槽创建按钮组：通用主按钮 + 三科锁定玻璃钮（科目色区分） ---- */
+/* ---- 页头操作槽：渐变胶囊快捷创建钮（GradientMenu）----
+   60px 圆形图标钮，hover 展开 180px 胶囊：渐变底淡入 + 模糊辉光 +
+   图标缩没、文字延迟淡入（原版比例与动效保留） */
 
 .presets-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-lg); /* 原版 gap-6 = 24px */
   flex-wrap: wrap;
 }
 
 .presets-create {
-  display: inline-flex;
+  position: relative;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  min-height: 44px;
-  padding: 10px 16px;
-  border-radius: var(--radius-md);
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-input);
+  box-shadow: var(--shadow-glass-md);
+  cursor: pointer;
+  transition:
+    width 500ms var(--ease-out),
+    box-shadow 500ms var(--ease-out);
+}
+
+.presets-create:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+/* 渐变底：hover 淡入填充胶囊 */
+.presets-create__bg {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-full);
+  background: linear-gradient(45deg, var(--gradient-from), var(--gradient-to));
+  opacity: 0;
+  transition: opacity 500ms var(--ease-out);
+  pointer-events: none;
+}
+
+/* 辉光：渐变模糊副本（原版 top-10px / blur 15px / 50%），悬浮胶囊身后 */
+.presets-create__glow {
+  position: absolute;
+  top: 10px;
+  inset-inline: 0;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: linear-gradient(45deg, var(--gradient-from), var(--gradient-to));
+  filter: blur(15px);
+  opacity: 0;
+  z-index: -1;
+  transition: opacity 500ms var(--ease-out);
+  pointer-events: none;
+}
+
+/* 图标：hover 缩没 */
+.presets-create__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  transition: transform 500ms var(--ease-out);
+  pointer-events: none;
+}
+
+/* 文字：hover 淡入（150ms 延迟） */
+.presets-create__title {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
-  color: var(--_subject-color);
-  transition:
-    transform var(--dur-fast) var(--ease-spring),
-    box-shadow var(--dur-fast) var(--ease-out),
-    color var(--dur-fast) var(--ease-out);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  transform: scale(0);
+  transition: transform 500ms var(--ease-out) 150ms;
+  pointer-events: none;
 }
 
-.presets-create:hover {
-  box-shadow: var(--shadow-glass-md);
+/* 渐变配色：新建预设走主色；三科走科目色（加深端用 color-mix，双主题自适应） */
+.presets-create--primary {
+  --gradient-from: var(--color-accent-primary);
+  --gradient-to: var(--color-accent-primary-strong);
 }
 
-/* 位移仅鼠标设备生效（触摸 tap 后粘性 hover 会卡住上浮状态） */
+.presets-create--math {
+  --gradient-from: var(--color-subject-math);
+  --gradient-to: color-mix(in srgb, var(--color-subject-math), #000 30%);
+}
+
+.presets-create--english {
+  --gradient-from: var(--color-subject-english);
+  --gradient-to: color-mix(in srgb, var(--color-subject-english), #000 30%);
+}
+
+.presets-create--408 {
+  --gradient-from: var(--color-subject-408);
+  --gradient-to: color-mix(in srgb, var(--color-subject-408), #000 30%);
+}
+
+/* 展开交互仅鼠标设备生效（触摸屏 hover 不适用，点击直接打开弹窗）；
+   键盘 focus 同步展开以显示文字标签 */
 @media (hover: hover) and (pointer: fine) {
-  .presets-create:hover {
-    transform: translateY(-1px);
+  .presets-create:hover,
+  .presets-create:focus-visible {
+    width: 180px;
+    box-shadow: none;
+  }
+
+  .presets-create:hover .presets-create__bg,
+  .presets-create:focus-visible .presets-create__bg {
+    opacity: 1;
+  }
+
+  .presets-create:hover .presets-create__glow,
+  .presets-create:focus-visible .presets-create__glow {
+    opacity: 0.5;
+  }
+
+  .presets-create:hover .presets-create__icon,
+  .presets-create:focus-visible .presets-create__icon {
+    transform: scale(0);
+  }
+
+  .presets-create:hover .presets-create__title,
+  .presets-create:focus-visible .presets-create__title {
+    transform: scale(1);
   }
 }
-
-/* CTA 按压回弹（设计文档 13.4）：scale(0.96) + --ease-spring */
-.presets-create:active {
-  transform: scale(0.96);
-}
-
-.presets-actions .btn {
-  transition-timing-function: var(--ease-spring);
-}
-
-.presets-actions .btn:active:not(:disabled):not(.btn--loading) {
-  transform: scale(0.96);
-}
-
-/* 14px 科目色文字用文字色令牌（AA ≥4.5:1） */
-.presets-create--math { --_subject-color: var(--color-subject-math-text); }
-.presets-create--english { --_subject-color: var(--color-subject-english-text); }
-.presets-create--408 { --_subject-color: var(--color-subject-408-text); }
 
 /* ---- 三科分组（v2 12.3：主体内部区块间隔 40px 语义） ---- */
 
@@ -126,8 +209,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .presets-create:active,
-  .presets-actions .btn:active:not(:disabled) {
-    transform: none;
+  .presets-create,
+  .presets-create__bg,
+  .presets-create__glow,
+  .presets-create__icon,
+  .presets-create__title {
+    transition: none;
   }
 }
