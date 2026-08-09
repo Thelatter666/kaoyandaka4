@@ -215,23 +215,35 @@ export function PresetsPage() {
       subtitle="按科目整理专注时长，创建后可在番茄钟一键开始"
       actions={
         <div className="presets-actions">
-          <Button variant="primary" onClick={() => openCreate()}>
-            <Plus size={16} strokeWidth={1.75} aria-hidden="true" />
-            新建预设
-          </Button>
+          <button
+            type="button"
+            className="presets-create presets-create--primary"
+            onClick={() => openCreate()}
+            aria-label="新建预设"
+          >
+            <span className="presets-create__bg" aria-hidden="true" />
+            <span className="presets-create__glow" aria-hidden="true" />
+            <span className="presets-create__icon" aria-hidden="true">
+              <Plus size={24} strokeWidth={1.75} />
+            </span>
+            <span className="presets-create__title" aria-hidden="true">新建预设</span>
+          </button>
           {SUBJECT_ORDER.map((subj) => {
             const SubjectIcon = SUBJECT_ICONS[subj];
             return (
               <button
                 key={subj}
                 type="button"
-                className={`presets-create presets-create--${subj} glass-1`}
+                className={`presets-create presets-create--${subj}`}
                 onClick={() => openCreate(subj)}
                 aria-label={`新建${SUBJECT_LABELS[subj]}预设（科目锁定）`}
               >
-                <Plus size={14} strokeWidth={1.75} aria-hidden="true" />
-                <SubjectIcon size={16} strokeWidth={1.75} aria-hidden="true" />
-                {SUBJECT_LABELS[subj]}
+                <span className="presets-create__bg" aria-hidden="true" />
+                <span className="presets-create__glow" aria-hidden="true" />
+                <span className="presets-create__icon" aria-hidden="true">
+                  <SubjectIcon size={24} strokeWidth={1.75} />
+                </span>
+                <span className="presets-create__title" aria-hidden="true">{SUBJECT_LABELS[subj]}</span>
               </button>
             );
           })}
