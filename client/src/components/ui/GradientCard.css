@@ -1,0 +1,219 @@
+/* ============================================================
+   GradientCard 渐变内容卡（原版源码适配，极光玻璃体系）
+   卡面 = glass 底 + 135° 染色层（::before）+ 可选水印；
+   hover scale 1.03 + y -4（--ease-spring），水印 scale 1.1 + rotate 3°；
+   交互全部 (hover:hover)(pointer:fine) 门控，reduced-motion 取消。
+   ============================================================ */
+
+.gradient-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-card);
+  padding: var(--space-xl);
+  transition:
+    transform var(--dur-slow) var(--ease-spring),
+    box-shadow var(--dur-med) var(--ease-out);
+}
+
+.gradient-card--elevated {
+  border-radius: var(--radius-lg);
+}
+
+.gradient-card--clickable {
+  cursor: pointer;
+}
+
+/* ---- 渐变变体（令牌化，双主题由令牌自动切换，禁止裸色值） ---- */
+.gradient-card {
+  --_gc-color: var(--color-text-secondary);
+}
+
+.gradient-card--primary {
+  --_gc-color: var(--color-accent-primary);
+}
+
+.gradient-card--math {
+  --_gc-color: var(--color-subject-math);
+}
+
+.gradient-card--english {
+  --_gc-color: var(--color-subject-english);
+}
+
+.gradient-card--408 {
+  --_gc-color: var(--color-subject-408);
+}
+
+/* 染色层：135° 变体色扫过玻璃底（内容区 z-1 之上，水印 z-0 之下） */
+.gradient-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--_gc-color) 14%, transparent) 0%,
+    color-mix(in srgb, var(--_gc-color) 6%, transparent) 55%,
+    transparent 78%
+  );
+  pointer-events: none;
+}
+
+/* ---- 内容区 ---- */
+.gradient-card__content {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.gradient-card__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* ---- 徽章胶囊：圆点 + 文字，半透明白底 + blur ---- */
+.gradient-card__badge {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--space-md);
+  padding: 3px 12px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-bg-card-solid) 55%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-text-secondary);
+}
+
+.gradient-card__badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--_gc-color);
+}
+
+/* ---- 标题 / 描述 ---- */
+.gradient-card__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+}
+
+.gradient-card__title .lucide {
+  flex-shrink: 0;
+  color: var(--color-accent-primary);
+}
+
+.gradient-card__description {
+  max-width: 36ch;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+/* ---- CTA：文字 + ArrowRight（hover 箭头右移，原版 group-hover 语义） ---- */
+.gradient-card__cta {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin-top: var(--space-lg);
+  margin-left: -8px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.gradient-card__cta .lucide {
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+
+.gradient-card__cta:hover {
+  background: var(--color-glass-bg-strong);
+}
+
+.gradient-card__cta:hover .lucide {
+  transform: translateX(3px);
+}
+
+/* ---- 水印：光斑垫底 + 大图标（右下角，hover 放大微旋） ---- */
+.gradient-card__watermark {
+  position: absolute;
+  right: -10px;
+  bottom: -10px;
+  z-index: 0;
+  width: 150px;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  transform-origin: 80% 80%;
+  transition: transform var(--dur-slow) var(--ease-spring);
+}
+
+.gradient-card__blob {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--_gc-color) 20%, transparent) 0%,
+    transparent 68%
+  );
+}
+
+/* 尺寸/描边由 CSS 统一（调用方只传 lucide 图标，不传 size） */
+.gradient-card__icon .lucide {
+  width: 88px;
+  height: 88px;
+  stroke-width: 1;
+  color: var(--_gc-color);
+  opacity: 0.13;
+}
+
+/* ---- 交互（仅鼠标设备，触摸不粘滞） ---- */
+@media (hover: hover) and (pointer: fine) {
+  .gradient-card:hover {
+    transform: scale(1.03) translateY(-4px);
+    box-shadow: var(--shadow-glass-lg);
+  }
+
+  .gradient-card:hover .gradient-card__watermark {
+    transform: scale(1.1) rotate(3deg);
+  }
+}
+
+/* ---- reduced-motion：hover 形变 / 箭头位移 / 水印旋转取消 ---- */
+@media (prefers-reduced-motion: reduce) {
+  .gradient-card,
+  .gradient-card__cta .lucide,
+  .gradient-card__watermark {
+    transition: none;
+  }
+
+  .gradient-card:hover,
+  .gradient-card:hover .gradient-card__watermark,
+  .gradient-card__cta:hover .lucide {
+    transform: none;
+  }
+}

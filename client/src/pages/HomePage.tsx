@@ -1,9 +1,11 @@
 /**
  * 首页（设计文档 8.1 / v2 12.4 Bento 构图）
  *
- * Bento 主次网格：今日专注卡 span 8（唯一主角卡，Card hero 变体 + 光泽扫过）；
- * 考试倒计时卡 span 4 + row-2 高卡；今日任务摘要 span 8（最多 4 条 + 查看全部）；
- * 学习预设概览 span 12 横条卡（最多 3 个，预设项横向排列）。
+ * Bento 主次网格：今日专注卡 span 8（唯一主角卡，GradientCard primary
+ * elevated 变体 + 光泽扫过）；考试倒计时卡 span 4 + row-2 高卡；
+ * 今日任务摘要 span 8（最多 4 条 + 查看全部 CTA）；学习预设概览 span 12
+ * 横条卡（最多 3 个，预设项横向排列，水印 SlidersHorizontal）。
+ * 今日任务/预设概览用 GradientCard neutral 变体 + 右下角大图标水印。
  * 各卡按阅读顺序 .reveal 依次入场（--i 0→3，≤8 个）。
  * 倒计时规则、任务/预设/会话数据口径保持现状；数字全部 tabular-nums，标题宋体。
  * 1366×768 桌面视口含导航无纵向滚动；小屏单列自然滚动。
@@ -15,13 +17,13 @@ import {
   Pin,
   CheckCircle2,
   Circle,
-  ChevronRight,
   ClipboardList,
   SlidersHorizontal,
   AlertCircle,
 } from 'lucide-react';
 import { PageShell } from '../components/layout/PageShell';
 import { Card } from '../components/ui/Card';
+import { GradientCard } from '../components/ui/GradientCard';
 import { Button } from '../components/ui/Button';
 import { InteractiveHoverButton } from '../components/ui/InteractiveHoverButton';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -98,9 +100,11 @@ export function HomePage({ navigate }: HomePageProps) {
       </header>
 
       <div className="bento-grid home-grid">
-        {/* 今日专注卡（span 8，唯一主角卡）：hero 变体；主 CTA / 进行中会话迷你进度环 */}
-        <Card
-          hero
+        {/* 今日专注卡（span 8，唯一主角卡）：GradientCard primary elevated 变体；
+            主 CTA / 进行中会话迷你进度环（无水印，进行中会话占位） */}
+        <GradientCard
+          tone="primary"
+          elevated
           className="bento-span-8 home-focus sheen-hover reveal"
           style={{ '--i': 0 } as React.CSSProperties}
         >
@@ -135,7 +139,7 @@ export function HomePage({ navigate }: HomePageProps) {
               </InteractiveHoverButton>
             </div>
           )}
-        </Card>
+        </GradientCard>
 
         {/* 考试倒计时卡（span 4 + row-2 高卡，纵向跨两行）：蜜金光斑 + 超大等宽数字 */}
         <Card
@@ -165,21 +169,22 @@ export function HomePage({ navigate }: HomePageProps) {
           </div>
         </Card>
 
-        {/* 今日任务摘要（span 8）：玻璃列表行，最多 5 条 */}
-        <Card
+        {/* 今日任务摘要（span 8）：GradientCard neutral + ClipboardList 水印，
+            查看全部 CTA；玻璃列表行，最多 4 条 */}
+        <GradientCard
+          tone="neutral"
+          watermark={<ClipboardList />}
+          title={
+            <>
+              <ClipboardList size={18} strokeWidth={1.75} aria-hidden="true" />
+              今日任务
+            </>
+          }
+          ctaText="查看全部"
+          onCta={() => navigate('#/plan')}
           className="bento-span-8 home-tasks reveal"
           style={{ '--i': 2 } as React.CSSProperties}
         >
-          <div className="home-card-head">
-            <h2 className="home-card-title">
-              <ClipboardList size={18} strokeWidth={1.75} aria-hidden="true" />
-              今日任务
-            </h2>
-            <button type="button" className="home-card-link" onClick={() => navigate('#/plan')}>
-              查看全部
-              <ChevronRight size={16} strokeWidth={1.75} aria-hidden="true" />
-            </button>
-          </div>
           {tasks === null && !tasksError ? (
             <div className="home-list" role="status">
               <span className="sr-only">加载任务中...</span>
@@ -233,23 +238,24 @@ export function HomePage({ navigate }: HomePageProps) {
               ))}
             </ul>
           )}
-        </Card>
+        </GradientCard>
 
-        {/* 学习预设概览（span 12 横条卡）：最多 3 个，预设项横向排列 */}
-        <Card
+        {/* 学习预设概览（span 12 横条卡）：GradientCard neutral + SlidersHorizontal
+            水印，查看全部 CTA；最多 3 个，预设项横向排列 */}
+        <GradientCard
+          tone="neutral"
+          watermark={<SlidersHorizontal />}
+          title={
+            <>
+              <SlidersHorizontal size={18} strokeWidth={1.75} aria-hidden="true" />
+              学习预设
+            </>
+          }
+          ctaText="查看全部"
+          onCta={() => navigate('#/presets')}
           className="bento-span-12 home-presets reveal"
           style={{ '--i': 3 } as React.CSSProperties}
         >
-          <div className="home-card-head">
-            <h2 className="home-card-title">
-              <SlidersHorizontal size={18} strokeWidth={1.75} aria-hidden="true" />
-              学习预设
-            </h2>
-            <button type="button" className="home-card-link" onClick={() => navigate('#/presets')}>
-              查看全部
-              <ChevronRight size={16} strokeWidth={1.75} aria-hidden="true" />
-            </button>
-          </div>
           {presets === null && !presetsError ? (
             <div className="home-list home-preset-strip" role="status">
               <span className="sr-only">加载预设中...</span>
@@ -288,7 +294,7 @@ export function HomePage({ navigate }: HomePageProps) {
               ))}
             </ul>
           )}
-        </Card>
+        </GradientCard>
       </div>
     </PageShell>
   );
