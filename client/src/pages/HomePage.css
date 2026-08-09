@@ -152,12 +152,19 @@
   font-size: var(--text-xs);
 }
 
-/* ---- 热力图区块（宽卡右侧，与数字并排）---- */
+/* ---- 热力图区块（宽卡右侧，与数字并排）----
+   玻璃面板背景：GradientCard 右下角水印光晕（z-0）会被透明的
+   content 视觉穿透，给热力图区域盖一层同色系玻璃底，
+   保证热力图在卡片视觉最上层、无任何遮拦 */
 .home-countdown__heatmap {
   position: relative;
   z-index: 1;
   flex: 1;
   min-width: 0;
+  padding: var(--space-sm) var(--space-sm) var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-bg);
+  border: 1px solid var(--color-glass-bg-strong);
 }
 
 /* 宽卡里限制热力图宽度，格子约 13px 封顶，避免过度放大 */
