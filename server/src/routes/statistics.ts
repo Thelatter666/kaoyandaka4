@@ -219,6 +219,40 @@ router.get('/today-summary', async (req: Request, res: Response, next: NextFunct
   }
 });
 
+// GET /api/v1/statistics/heatmap
+// 学习趋势热力图：近 6 个月每日专注秒数（按服务器本地日期分组）
+// 去重口径与 /forest 一致：focus_session 全计；course_video 仅计未关联 focus_session_id 的记录
+router.get('/heatmap', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const todayStr = formatDate(new Date());
+    const rangeStartDate = new Date();
+    rangeStartDate.setMonth(rangeStartDate.getMonth() - 6);
+    const rangeStart = formatDate(rangeStartDate);
+
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT DATE(created_at) AS date, COALESCE(SUM(actual_duration_seconds), 0) AS seconds
+       FROM study_records
+       WHERE user_id = ? AND created_at >= ? AND created_at < ?
+         AND (
+           source = 'focus_session'
+           OR (source = 'course_video' AND focus_session_id IS NULL)
+         )
+       GROUP BY DATE(created_at)`,
+      [req.userId, `${rangeStart} 00:00:00`, `${getNextDate(todayStr)} 00:00:00`]
+    );
+
+    // SUM 可能以 DECIMAL 字符串返回，统一 Number 转换
+    const days = rows.map((row) => ({
+      date: String(row.date),
+      seconds: Number(row.seconds) || 0,
+    }));
+
+    res.json({ rangeStart, rangeEnd: todayStr, days });
+  } catch (err) {
+    next(err);
+  }
+});
+
 function formatDate(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');

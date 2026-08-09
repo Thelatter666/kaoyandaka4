@@ -87,6 +87,7 @@ shared/src/          → Shared between front-end and back-end
 - **Unit/Integration**: `npx vitest run` (files matching `**/*.test.ts`, `**/*.test.tsx`)
 - **E2E**: `npm run test:e2e` (Playwright, config at `e2e/playwright.config.ts`)
 - E2E tests authenticate via real session (not mocked)
+- 当前仓库**尚无单元测试文件**（vitest `passWithNoTests`，仅 e2e/tests/smoke.spec.ts 存在）
 
 ## Build & Run
 
@@ -152,10 +153,20 @@ import { CreateTaskSchema } from '../../../shared/src/schemas/task.js';
 
 - **操作安全**（根目录 `memory.md` 事故教训, 2026-07-28）: 修改任何已有文件前**先 Read**; 密钥/配置类文件操作前先 `cp file file.bak`; 用户说"写到/放入/添加"一律视为**追加**, 除非明确说"覆盖/替换"
 - **服务器管理**: `.claude/skills/manage-server/` 项目 skill — 腾讯云服务器部署、日志、重启; 部署文件在 `deploy/` (deploy.sh, nginx.conf, nginx.ip.conf, server-management-prompt.txt)
+- **服务器管家**: `server-butler/` (OVERVIEW.md + butler.sh) — 腾讯云实例状态/防火墙/带宽/快照管理，密钥从 `~/.tccli/env.sh` 注入，不出网直连（仅 API）
 - **E2E**: `e2e/tests/smoke.spec.ts` 冒烟测试, 通过真实会话认证（非 mock）
 
-## 开发工作流约束（2026-08-07 定）
+## 开发工作流约束（2026-08-10 修订）
 
-1. **新功能/模块修改**：必须先加载 `creative-development-workflow` skill，按 brainstorm → grilling → spec → plan → 实现 流程执行
-2. **分支策略**：每次添加新功能或修改模块，必须从 `main` 新建分支（如 `feat/xxx`、`refactor/xxx`），禁止直接改 main
-3. **完成确认**：任务完成后只汇报效果，**等待用户确认**；用户确认后才可执行 commit / 合并到 main 的指令
+添加新模块时，必须按以下流程执行，每个阶段都需要用户确认后才进入下一步：
+
+1. **提需求**：用户提出需求
+2. **探索理解**：探索代码库、理解需求
+3. **复述对齐**：将理解后的需求用自己的话说一遍，**用户确认对齐**后才动手
+4. **新建分支**：从 `main` 新建分支（如 `feat/xxx`、`refactor/xxx`），禁止直接改 main
+5. **执行任务**：新功能/模块修改必须先加载 `creative-development-workflow` skill（brainstorm → grilling → spec → plan → 实现）
+6. **效果确认**：任务完成后只汇报效果，**用户亲自确认效果**
+7. **commit**：用户确认后执行 commit
+8. **合并 main**：合并回 `main`
+9. **同步远端**：push 到远端仓库（github）
+10. **同步服务器**：按 `manage-server` skill 部署到服务器

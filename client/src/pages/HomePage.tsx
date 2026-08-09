@@ -32,8 +32,11 @@ import { RingCountdown } from '../components/timer/RingCountdown';
 import { tasksApi, Task } from '../api/tasks';
 import { presetsApi, Preset } from '../api/presets';
 import { focusApi, ActiveSession } from '../api/focus';
+import { statisticsApi } from '../api/statistics';
+import { StudyHeatmap } from '../components/heatmap/StudyHeatmap';
 import { today, formatDateDisplay, getDaysRemaining } from '../utils/date';
 import type { Subject, SubSubject, SessionSubject } from '@shared/types';
+import type { HeatmapResponse } from '@shared/types';
 import './HomePage.css';
 
 interface HomePageProps {
@@ -61,6 +64,19 @@ export function HomePage({ navigate }: HomePageProps) {
   // 进行中专注会话：有则展示 RingCountdown mini（120px 简化模式）
   const [activeSession, setActiveSession] = useState<ActiveSession | null>(null);
 
+  // 学习趋势热力图（近 6 个月每日专注秒数）
+  const [heatmap, setHeatmap] = useState<HeatmapResponse | null>(null);
+  const [heatmapError, setHeatmapError] = useState<string | null>(null);
+
+  const fetchHeatmap = useCallback(async () => {
+    setHeatmapError(null);
+    try {
+      setHeatmap(await statisticsApi.getHeatmap());
+    } catch (err) {
+      setHeatmapError(err instanceof Error ? err.message : '加载学习趋势失败');
+    }
+  }, []);
+
   const fetchTasks = useCallback(async () => {
     setTasksError(null);
     try {
@@ -82,10 +98,11 @@ export function HomePage({ navigate }: HomePageProps) {
   useEffect(() => {
     fetchTasks();
     fetchPresets();
+    fetchHeatmap();
     focusApi.getActive().then(setActiveSession).catch(() => {
       /* 会话状态获取失败静默降级为「无进行中会话」 */
     });
-  }, [fetchTasks, fetchPresets]);
+  }, [fetchTasks, fetchPresets, fetchHeatmap]);
 
 
   const taskRows = (tasks ?? []).slice(0, MAX_TASK_ROWS);
@@ -166,6 +183,20 @@ export function HomePage({ navigate }: HomePageProps) {
                 <p className="home-countdown__sub">2026 年 12 月 20 日</p>
               </>
             )}
+          </div>
+
+          {/* 学习趋势热力图：近 6 个月每日专注时长（5 档强度） */}
+          <div className="home-countdown__heatmap">
+            <p className="home-countdown__heatmap-title">
+              学习趋势
+              <span className="home-countdown__heatmap-range tabular-nums">近 6 个月</span>
+            </p>
+            <StudyHeatmap
+              data={heatmap}
+              loading={heatmap === null}
+              error={heatmapError}
+              onRetry={fetchHeatmap}
+            />
           </div>
         </Card>
 
