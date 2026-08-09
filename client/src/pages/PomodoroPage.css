@@ -27,6 +27,19 @@
   padding: var(--space-2xl) var(--space-2xl) var(--space-xl);
 }
 
+/* 进行中态：收紧舞台垂直留白，保证圆盘与操作按钮 720px 视口内完整可见 */
+.pomodoro-active .pomodoro-hero__stage {
+  padding: var(--space-lg) 0 var(--space-md);
+}
+
+.pomodoro-active .pomodoro-hero {
+  gap: var(--space-md);
+}
+
+.pomodoro-active + .pomodoro-below {
+  margin-top: var(--space-lg);
+}
+
 .pomodoro-hero__stage--short_break {
   --_stage-glow: var(--color-accent-success);
 }
@@ -222,6 +235,32 @@
   box-shadow: var(--shadow-glass-sm), var(--glow-primary);
 }
 
+/* ---- 常驻舞台：completed 时隐藏（节点保持挂载，回 idle 不复播入场） ---- */
+.pomodoro-hero__stage--hidden {
+  display: none;
+}
+
+/* ---- 开始专注「点火」：一次 scale 沉降 + 聚光灯涌起（设计文档 13.4 弹性家族） ---- */
+@keyframes stage-ignite {
+  from {
+    transform: scale(0.97);
+  }
+}
+
+.pomodoro-hero__stage--ignite {
+  animation: stage-ignite 240ms var(--ease-out);
+}
+
+@keyframes stage-glow-surge {
+  from {
+    opacity: 0;
+  }
+}
+
+.pomodoro-hero__stage--ignite .pomodoro-stage__glow {
+  animation: stage-glow-surge 240ms var(--ease-out);
+}
+
 .pomodoro-roam__icon {
   display: inline-flex;
   line-height: 0;
@@ -338,5 +377,10 @@
   .pomodoro-roam:hover,
   .pomodoro-roam:active {
     transform: none;
+  }
+
+  .pomodoro-hero__stage--ignite,
+  .pomodoro-hero__stage--ignite .pomodoro-stage__glow {
+    animation: none;
   }
 }

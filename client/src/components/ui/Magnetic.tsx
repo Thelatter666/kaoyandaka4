@@ -36,14 +36,18 @@ export function Magnetic({
     const dx = targetRef.current.x - currentRef.current.x;
     const dy = targetRef.current.y - currentRef.current.y;
 
-    // 接近目标值时直接对齐，避免抖动
+    // 接近目标值时直接对齐并停止循环（避免空闲时 60fps 空转）
     if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1) {
       currentRef.current = { ...targetRef.current };
-    } else {
-      currentRef.current.x += dx * 0.12;
-      currentRef.current.y += dy * 0.12;
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      return;
     }
 
+    currentRef.current.x += dx * 0.12;
+    currentRef.current.y += dy * 0.12;
     elRef.current.style.transform = `translate(${currentRef.current.x}px, ${currentRef.current.y}px)`;
     rafRef.current = requestAnimationFrame(applyTransform);
   }, []);
@@ -106,7 +110,6 @@ export function Magnetic({
       style: {
         display: 'inline-block',
         willChange: 'transform',
-        transition: 'transform var(--dur-fast) var(--ease-out)',
         ...style,
       },
       ...props,
