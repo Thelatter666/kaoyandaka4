@@ -1,0 +1,41 @@
+/* ============================================================
+   EmptyState 组件样式（空状态提示）
+   ============================================================ */
+
+.empty-state {
+  animation: empty-state-reveal var(--dur-rise) var(--ease-out) forwards;
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.empty-state__icon {
+  animation: empty-state-icon-reveal var(--dur-rise) var(--ease-out) 80ms both;
+}
+
+@keyframes empty-state-reveal {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes empty-state-icon-reveal {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Reduced motion: 直接呈现，无动画 */
+@media (prefers-reduced-motion: reduce) {
+  .empty-state,
+  .empty-state__icon {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

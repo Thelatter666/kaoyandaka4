@@ -68,7 +68,7 @@ export function ToastContainer() {
               padding: '12px 20px',
               borderRadius: 'var(--radius-md)',
               fontSize: 'var(--text-sm)',
-              animation: 'toast-slide-in 200ms var(--ease-out)',
+              animation: 'toast-slide-in 300ms var(--ease-out)',
               /* 375px 窄屏不横向溢出：宽度上限随视口收敛 */
               maxWidth: 'min(360px, calc(100vw - 48px))',
             }}
@@ -80,8 +80,8 @@ export function ToastContainer() {
       })}
       <style>{`
         @keyframes toast-slide-in {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
+          from { opacity: 0; transform: scale(0.95) translateY(8px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
         }
       `}</style>
     </div>

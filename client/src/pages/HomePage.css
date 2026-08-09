@@ -230,6 +230,22 @@
   gap: 4px;
 }
 
+/* 列表项 stagger 入场：从 translateY(8px) + opacity 0 → settled */
+.home-list > li,
+.home-preset-strip > li {
+  animation: list-item-reveal var(--dur-rise) var(--ease-out) forwards;
+  animation-delay: calc(var(--i, 0) * var(--stagger-step));
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+@keyframes list-item-reveal {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* 任务行：纵向 padding 7→4 紧凑化 */
 .home-task {
   display: flex;
@@ -348,10 +364,17 @@
   color: var(--color-text-secondary);
 }
 
-/* ---- reduced-motion：按压/上浮形变取消 ---- */
+/* ---- reduced-motion：按压/上浮形变取消，列表入场直接呈现 ---- */
 @media (prefers-reduced-motion: reduce) {
   .home-card-link:hover,
   .home-focus:hover {
+    transform: none;
+  }
+
+  .home-list > li,
+  .home-preset-strip > li {
+    animation: none;
+    opacity: 1;
     transform: none;
   }
 }

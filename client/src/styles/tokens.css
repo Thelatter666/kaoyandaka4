@@ -141,7 +141,7 @@
   /* v2 页面级动效编排（设计文档 13.1）：--ease-out 复用上方既有定义 */
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);  /* 弹性强调 */
   --dur-page-exit: 140ms;                             /* 页面退出 */
-  --dur-page-enter: 320ms;                            /* 页面进入 */
+  --dur-page-enter: 240ms;                            /* 页面进入 (从 320ms 优化至 240ms) */
   --dur-rise: 420ms;                                  /* 入场 rise-in 单段时长 */
   --stagger-step: 70ms;                               /* stagger 逐级延迟步长 */
 

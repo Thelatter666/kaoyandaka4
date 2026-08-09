@@ -62,7 +62,7 @@ export function ProgressBar({
             height: '100%',
             background: `linear-gradient(90deg, ${color}, ${colorEnd ?? color})`,
             borderRadius: 'var(--radius-full)',
-            transition: animated ? 'width 300ms ease-out' : 'none',
+            transition: animated ? 'width var(--dur-med) var(--ease-out)' : 'none',
           }}
         />
       </div>

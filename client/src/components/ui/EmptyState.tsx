@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sprout } from 'lucide-react';
 import { Button } from './Button';
+import './EmptyState.css';
 
 interface EmptyStateProps {
   /** 图标：推荐传入 lucide 图标节点；缺省为 Sprout 新芽 */
@@ -16,6 +17,7 @@ interface EmptyStateProps {
 export function EmptyState({ icon, title, description, actionLabel, onAction, compact = false }: EmptyStateProps) {
   return (
     <div
+      className="empty-state"
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -27,7 +29,7 @@ export function EmptyState({ icon, title, description, actionLabel, onAction, co
     >
       {/* 96px 玻璃圆 + 内图标 40px secondary */}
       <span
-        className="glass-1"
+        className="glass-1 empty-state__icon"
         aria-hidden="true"
         style={{
           width: 96,

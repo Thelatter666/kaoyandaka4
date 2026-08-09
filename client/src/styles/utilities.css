@@ -78,7 +78,7 @@
   left: -12%;
   background: radial-gradient(circle, var(--color-aurora-1) 0%, transparent 70%);
   opacity: var(--aurora-opacity-a);
-  animation: aurora-drift-a 36s ease-in-out infinite alternate;
+  animation: aurora-drift-a 36s linear infinite alternate;
 }
 
 .aurora-blob--2 {
@@ -88,7 +88,7 @@
   right: -10%;
   background: radial-gradient(circle, var(--color-aurora-2) 0%, transparent 70%);
   opacity: var(--aurora-opacity-b);
-  animation: aurora-drift-b 48s ease-in-out infinite alternate;
+  animation: aurora-drift-b 48s linear infinite alternate;
 }
 
 .aurora-blob--3 {
@@ -98,7 +98,7 @@
   left: -8%;
   background: radial-gradient(circle, var(--color-aurora-3) 0%, transparent 70%);
   opacity: var(--aurora-opacity-b);
-  animation: aurora-drift-b 48s ease-in-out infinite alternate-reverse;
+  animation: aurora-drift-b 48s linear infinite alternate-reverse;
 }
 
 .aurora-blob--4 {
@@ -108,7 +108,7 @@
   right: -14%;
   background: radial-gradient(circle, var(--color-aurora-4) 0%, transparent 70%);
   opacity: var(--aurora-opacity-a);
-  animation: aurora-drift-a 36s ease-in-out infinite alternate-reverse;
+  animation: aurora-drift-a 36s linear infinite alternate-reverse;
 }
 
 @keyframes aurora-drift-a {

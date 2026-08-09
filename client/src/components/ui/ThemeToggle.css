@@ -26,3 +26,11 @@
 .theme-toggle:active {
   transform: scale(0.97);
 }
+
+/* Reduced motion: 取消形变 */
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle:hover,
+  .theme-toggle:active {
+    transform: none;
+  }
+}

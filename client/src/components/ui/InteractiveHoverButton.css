@@ -59,7 +59,7 @@
   border-radius: 50%;
   background-color: var(--color-text-inverse);
   transform: translate(-50%, -50%);
-  transition: transform 300ms;
+  transition: transform var(--dur-med) var(--ease-out);
 }
 
 .ihb:hover .ihb__dot {
@@ -73,7 +73,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-sm);
-  transition: transform 300ms, opacity 300ms;
+  transition: transform var(--dur-med) var(--ease-out), opacity var(--dur-med) var(--ease-out);
 }
 
 .ihb:hover .ihb__label {
@@ -93,7 +93,7 @@
   color: var(--color-accent-primary-strong);
   transform: translateX(48px);
   opacity: 0;
-  transition: transform 300ms, opacity 300ms;
+  transition: transform var(--dur-med) var(--ease-out), opacity var(--dur-med) var(--ease-out);
 }
 
 .ihb:hover .ihb__reveal {
