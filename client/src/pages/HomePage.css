@@ -34,25 +34,16 @@
   gap: var(--space-md);
 }
 
-/* ---- 主角卡·今日专注：hero 变体（glass-2 + 极光光斑由 Card 提供）---- */
+/* ---- 主角卡·今日专注：GradientCard primary elevated（玻璃 + 渐变染色由组件提供）---- */
 .home-focus {
   height: 100%;
-  /* 垂直内边距 32→20 紧凑化（水平保持 hero 32px 规格） */
+  /* 垂直内边距 32→20 紧凑化（水平保持 32px 规格） */
   padding: 20px var(--space-xl);
 }
 
 /* 进行中会话迷你环：120→104 紧凑化（mini 变体本就供首页使用） */
 .home-focus .ring-countdown--mini {
   width: 104px;
-}
-
-/* 主角卡 hover：上浮 3px + 阴影升一档（配合 .sheen-hover 光泽扫过）
-   位移仅鼠标设备生效（触摸 tap 后粘性 hover 会卡住上浮状态） */
-@media (hover: hover) and (pointer: fine) {
-  .home-focus:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-glass-lg);
-  }
 }
 
 .home-focus .home-card-title {
@@ -82,45 +73,8 @@
   flex-shrink: 0;
 }
 
-/* 卡片标题行（标题 + 查看全部链接） */
-.home-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-xs);
-}
-
-.home-card-head .home-card-title {
-  margin-bottom: 0;
-}
-
-.home-card-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  min-height: 44px;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--color-accent-primary-strong);
-  cursor: pointer;
-  transition:
-    background-color var(--dur-fast) var(--ease-out),
-    transform var(--dur-fast) var(--ease-out);
-}
-
-.home-card-link:hover {
-  background: var(--color-accent-primary-light);
-}
-
-/* 位移仅鼠标设备生效 */
-@media (hover: hover) and (pointer: fine) {
-  .home-card-link:hover {
-    transform: translateY(-1px);
-  }
-}
+/* 卡片标题行（标题 + 查看全部链接）由 GradientCard 槽位承担（title + cta），
+   旧 .home-card-head / .home-card-link 样式已移除 */
 
 /* ---- 倒计时高卡（span 4 + row-2）：纵向三段分布（标签 / 超大数字 / 副文案）---- */
 .home-countdown {
@@ -373,13 +327,9 @@
   color: var(--color-text-secondary);
 }
 
-/* ---- reduced-motion：按压/上浮形变取消，列表入场直接呈现 ---- */
+/* ---- reduced-motion：按压/上浮形变取消（GradientCard hover 由组件统一处理），
+   列表入场直接呈现 ---- */
 @media (prefers-reduced-motion: reduce) {
-  .home-card-link:hover,
-  .home-focus:hover {
-    transform: none;
-  }
-
   .home-list > li,
   .home-preset-strip > li {
     animation: none;

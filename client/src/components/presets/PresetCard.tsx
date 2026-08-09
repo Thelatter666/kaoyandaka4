@@ -1,13 +1,13 @@
 /**
- * 学习预设卡（设计文档 8.3 / 8.4）
+ * 学习预设卡（设计文档 8.3 / 8.4，GradientCard 容器化）
  *
- * glass-1 卡：顶部 3px 科目色渐变条 + 左侧科目 lucide 图标（形状+颜色双通道），
- * 名称宋体 18px，时长等宽大数字 + 分钟小字，hover 上浮，「最近」玻璃胶囊标签。
+ * GradientCard 科目色渐变卡面（无水印）：左侧科目 lucide 图标（形状+颜色双通道），
+ * 名称宋体 18px，时长等宽大数字 + 分钟小字，「最近」玻璃胶囊标签。
  * 选中态（番茄钟等选择场景）：主色 2px 描边 + 辉光 + 左上 CheckCircle2。
  */
 import React from 'react';
 import { CheckCircle2, Pencil, Trash2, Sigma, BookA, Cpu, type LucideProps } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { GradientCard } from '../ui/GradientCard';
 import { SubjectBadge } from '../ui/SubjectBadge';
 import type { Subject, SubSubject } from '@shared/types';
 import './PresetCard.css';
@@ -30,7 +30,7 @@ interface PresetCardProps {
   onDelete?: () => void;
   onEdit?: () => void;
   compact?: boolean;
-  /** v2 特色卡（设计文档 12.4）：Card hero 变体，仅用于每页唯一主角 */
+  /** v2 特色卡（设计文档 12.4）：GradientCard elevated 变体，仅用于每页唯一主角 */
   hero?: boolean;
   className?: string;
   style?: React.CSSProperties;
@@ -64,12 +64,11 @@ export function PresetCard({
     .join(' ');
 
   return (
-    <Card
+    <GradientCard
+      tone={subject}
+      elevated={hero}
       className={classNames}
-      padding={hero ? undefined : compact ? 'var(--space-md)' : 'var(--space-lg)'}
       onClick={onClick}
-      hoverable
-      hero={hero}
       style={style}
     >
       {isSelected && (
@@ -129,6 +128,6 @@ export function PresetCard({
           )}
         </div>
       </div>
-    </Card>
+    </GradientCard>
   );
 }

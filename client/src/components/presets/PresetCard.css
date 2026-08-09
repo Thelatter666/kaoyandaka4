@@ -1,6 +1,6 @@
 /* ============================================================
-   学习预设卡（设计文档 8.3 / 8.4）
-   glass-1 + 顶部 3px 科目色渐变条 + 科目 lucide 图标双通道；
+   学习预设卡（设计文档 8.3 / 8.4，GradientCard 容器化）
+   GradientCard 科目色渐变卡面（无水印）；
    选中态 = 主色 2px 描边 + 辉光 + 左上 CheckCircle2。
    ============================================================ */
 
@@ -10,6 +10,15 @@
   /* 科目色私有属性（由科目修饰类赋值，禁止裸色值） */
   --_subject-color: var(--color-text-secondary);
   --_subject-color-bg: var(--color-glass-bg);
+}
+
+/* 内边距档位（覆盖 GradientCard 默认 p-xl）：标准 24 / compact 16 */
+.preset-card.gradient-card {
+  padding: var(--space-lg);
+}
+
+.preset-card--compact.gradient-card {
+  padding: var(--space-md);
 }
 
 .preset-card--math {
@@ -27,17 +36,7 @@
   --_subject-color-bg: var(--color-subject-408-bg);
 }
 
-/* 顶部 3px 科目色渐变条 */
-.preset-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--_subject-color), var(--_subject-color-bg));
-  pointer-events: none;
-}
+/* 顶部 3px 科目色渐变条由 GradientCard 全卡渐变染色层替代，已移除 */
 
 .preset-card__body {
   display: flex;

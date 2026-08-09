@@ -300,7 +300,10 @@
 }
 
 .reveal {
-  animation: rise-in var(--dur-rise) var(--ease-out) both;
+  /* fill 用 backwards：入场视觉与 both 完全一致（rise-in 终点即自然状态），
+     但动画结束后不再持续控制 transform/opacity，
+     否则 Chrome 中该属性的 hover 过渡永不启动（直接跳到终值 = "一帧变大"） */
+  animation: rise-in var(--dur-rise) var(--ease-out) backwards;
   animation-delay: calc(var(--i, 0) * var(--stagger-step));
 }
 
