@@ -33,9 +33,13 @@ beforeEach(() => {
   vi.stubGlobal('AudioContext', MockAudioContext);
 });
 
+function headResponse(ok: boolean, contentType: string) {
+  return { ok, headers: { get: () => contentType } };
+}
+
 describe('sound utils', () => {
-  it('mp3 存在时用 Audio 播放，且探测只请求一次', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+  it('mp3 存在（audio/* Content-Type）时用 Audio 播放，且探测只请求一次', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(headResponse(true, 'audio/mpeg'));
     const audioMock = { play: vi.fn().mockResolvedValue(undefined) };
     vi.stubGlobal('fetch', fetchMock);
     vi.stubGlobal('Audio', vi.fn(() => audioMock));
@@ -49,7 +53,7 @@ describe('sound utils', () => {
   });
 
   it('mp3 404 时走合成音（创建 AudioContext，不创建 Audio）', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: false });
+    const fetchMock = vi.fn().mockResolvedValue(headResponse(false, 'text/html'));
     vi.stubGlobal('fetch', fetchMock);
     const AudioCtor = vi.fn();
     vi.stubGlobal('Audio', AudioCtor);
@@ -61,8 +65,21 @@ describe('sound utils', () => {
     expect(AudioCtor).not.toHaveBeenCalled();
   });
 
+  it('SPA fallback 误报 200（text/html）时视为无 mp3，走合成音', async () => {
+    // dev vite / 生产 nginx 对不存在的路径回退 index.html：200 + text/html
+    const fetchMock = vi.fn().mockResolvedValue(headResponse(true, 'text/html'));
+    vi.stubGlobal('fetch', fetchMock);
+    const AudioCtor = vi.fn();
+    vi.stubGlobal('Audio', AudioCtor);
+
+    const { playEndSound } = await import('./sound');
+    await playEndSound();
+
+    expect(AudioCtor).not.toHaveBeenCalled();
+  });
+
   it('Audio.play 失败时静默不抛错', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(headResponse(true, 'audio/mpeg')));
     vi.stubGlobal('Audio', vi.fn(() => ({ play: vi.fn().mockRejectedValue(new Error('blocked')) })));
 
     const { playEndSound } = await import('./sound');

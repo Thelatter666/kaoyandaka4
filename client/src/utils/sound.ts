@@ -37,7 +37,10 @@ async function detectMp3(): Promise<boolean> {
   if (mp3Available !== null) return mp3Available;
   try {
     const res = await fetch(MP3_URL, { method: 'HEAD' });
-    mp3Available = res.ok;
+    // 仅状态码 200 不够：dev vite / 生产 nginx 的 SPA fallback 会把不存在的
+    // 路径回退为 index.html（200 + text/html），须校验 Content-Type 为 audio/*
+    const contentType = res.headers.get('content-type') ?? '';
+    mp3Available = res.ok && contentType.startsWith('audio/');
   } catch {
     mp3Available = false;
   }
