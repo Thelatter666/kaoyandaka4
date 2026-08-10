@@ -214,6 +214,18 @@ async function constraintExists(
  * 调用方需已建好连接并选定数据库（USE）。
  */
 export async function migrateUsers(conn: mysql.Connection, dbName: string): Promise<void> {
+  // 0. user_settings 表（设置键值，CREATE TABLE IF NOT EXISTS 本身幂等）
+  await conn.query(`
+    CREATE TABLE IF NOT EXISTS user_settings (
+        user_id       CHAR(36)     NOT NULL,
+        setting_key   VARCHAR(64)  NOT NULL,
+        setting_value VARCHAR(255) NOT NULL,
+        PRIMARY KEY (user_id, setting_key),
+        CONSTRAINT fk_settings_user FOREIGN KEY (user_id)
+            REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  console.log('  [user_settings] table ready');
+
   // 1. users 表（CREATE TABLE IF NOT EXISTS 本身幂等）
   await conn.query(CREATE_USERS_TABLE);
   console.log('  [users] table ready');

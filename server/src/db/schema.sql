@@ -168,3 +168,17 @@ CREATE TABLE IF NOT EXISTS study_records (
     CONSTRAINT fk_records_user FOREIGN KEY (user_id)
         REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 9. user_settings（用户设置键值）
+-- ============================================================
+-- 按用户存储偏好：setting_key 为常量名（如 'pomodoro_sound_enabled'），
+-- setting_value 为字符串化值（'1' / '0'）。联合主键保证每用户每键仅一行。
+CREATE TABLE IF NOT EXISTS user_settings (
+    user_id       CHAR(36)     NOT NULL,
+    setting_key   VARCHAR(64)  NOT NULL,
+    setting_value VARCHAR(255) NOT NULL,
+
+    PRIMARY KEY (user_id, setting_key),
+    CONSTRAINT fk_settings_user FOREIGN KEY (user_id)
+        REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
