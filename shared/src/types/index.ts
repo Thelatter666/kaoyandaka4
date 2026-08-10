@@ -6,3 +6,4 @@ export type { StartFocusInput, FocusSource, BreakType, FocusStatus } from '../sc
 export type { EpisodeInput, ParseImportInput, CreateCourseInput } from '../schemas/course.js';
 export type { StatisticsQuery, ForestResponse, HeatmapResponse } from '../schemas/statistics.js';
 export type { UpsertReviewInput } from '../schemas/review.js';
+export type { UpdateSettingsInput } from '../schemas/settings.js';
