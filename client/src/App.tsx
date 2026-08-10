@@ -21,6 +21,7 @@ const pageLoaders = {
   statistics: () => import('./pages/StatisticsPage').then((m) => ({ default: m.StatisticsPage })),
   login: () => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })),
   register: () => import('./pages/RegisterPage').then((m) => ({ default: m.RegisterPage })),
+  review: () => import('./pages/ReviewPage').then((m) => ({ default: m.ReviewPage })),
 };
 
 const LandingPage = lazy(pageLoaders.landing);
@@ -33,6 +34,7 @@ const CourseDetailPage = lazy(pageLoaders.courseDetail);
 const StatisticsPage = lazy(pageLoaders.statistics);
 const LoginPage = lazy(pageLoaders.login);
 const RegisterPage = lazy(pageLoaders.register);
+const ReviewPage = lazy(pageLoaders.review);
 
 /* 顶栏导航 hash → 页面 chunk 预取（hover/focus 即加载，点击时 chunk 已就绪） */
 const NAV_PREFETCH: Record<string, () => Promise<{ default: React.ComponentType<never> } | unknown>> = {
@@ -42,6 +44,7 @@ const NAV_PREFETCH: Record<string, () => Promise<{ default: React.ComponentType<
   '#/pomodoro': pageLoaders.pomodoro,
   '#/courses': pageLoaders.courses,
   '#/statistics': pageLoaders.statistics,
+  '#/review': pageLoaders.review,
 };
 
 /* 未登录可访问的公开路由（账号系统 T2.4）：介绍页 + 登录 + 注册 */
@@ -227,6 +230,8 @@ export default function App() {
         return <CourseDetailPage courseId={displayed.params.id} />;
       case '/statistics':
         return <StatisticsPage />;
+      case '/review':
+        return <ReviewPage />;
       default:
         return <HomePage navigate={navigate} />;
     }
