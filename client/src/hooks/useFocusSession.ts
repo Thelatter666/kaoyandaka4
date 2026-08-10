@@ -24,6 +24,8 @@ interface UseFocusSessionReturn {
   breakRemainingSeconds: number;
   /** 休息结束时间戳（ms）：供页面用 rAF 计算毫秒级剩余，驱动平滑圆环 */
   breakEndsAt: number | null;
+  /** 休息是否自然结束（timer 归零）；null 表示未结束或手动结束 */
+  breakEndMode: 'natural' | null;
   roundCount: number;
   startFocus: (presetId: string | null, minutes: number, source: string) => Promise<void>;
   completeFocus: () => Promise<void>;
@@ -42,6 +44,8 @@ export function useFocusSession(): UseFocusSessionReturn {
   const [breakMode, setBreakMode] = useState<FocusMode | null>(null);
   const [breakRemainingSeconds, setBreakRemainingSeconds] = useState(0);
   const [breakEndsAt, setBreakEndsAt] = useState<number | null>(null);
+  /** 休息是否自然结束（timer 归零）；手动开始/跳过时清空，供页面兜底响铃判定 */
+  const [breakEndMode, setBreakEndMode] = useState<'natural' | null>(null);
   const [roundCount, setRoundCount] = useState(1);
   const breakTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -177,6 +181,7 @@ export function useFocusSession(): UseFocusSessionReturn {
     setBreakMode(mode === 'short' ? 'short_break' : 'long_break');
     setBreakRemainingSeconds(seconds);
     setBreakEndsAt(Date.now() + seconds * 1000);
+    setBreakEndMode(null);
     clearBreakTimer();
     breakTimerRef.current = setInterval(() => {
       setBreakRemainingSeconds((prev) => {
@@ -184,6 +189,7 @@ export function useFocusSession(): UseFocusSessionReturn {
           clearBreakTimer();
           setBreakMode(null);
           setBreakEndsAt(null);
+          setBreakEndMode('natural');
           return 0;
         }
         return prev - 1;
@@ -196,6 +202,7 @@ export function useFocusSession(): UseFocusSessionReturn {
     setBreakMode(null);
     setBreakRemainingSeconds(0);
     setBreakEndsAt(null);
+    setBreakEndMode(null);
   }, [clearBreakTimer]);
 
   // Cleanup on unmount
@@ -213,6 +220,7 @@ export function useFocusSession(): UseFocusSessionReturn {
     breakMode,
     breakRemainingSeconds,
     breakEndsAt,
+    breakEndMode,
     roundCount,
     startFocus,
     completeFocus,

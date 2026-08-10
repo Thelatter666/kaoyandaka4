@@ -15,6 +15,7 @@ import reviewsRouter from './routes/reviews.js';
 import focusRouter from './routes/focus.js';
 import coursesRouter from './routes/courses.js';
 import statisticsRouter from './routes/statistics.js';
+import settingsRouter from './routes/settings.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -77,6 +78,7 @@ app.use('/api/v1/reviews', requireAuth, reviewsRouter);
 app.use('/api/v1/focus', requireAuth, focusRouter);
 app.use('/api/v1/courses', requireAuth, coursesRouter);
 app.use('/api/v1/statistics', requireAuth, statisticsRouter);
+app.use('/api/v1/settings', requireAuth, settingsRouter);
 
 // Health check
 app.get('/api/v1/health', (_req, res) => {
@@ -97,6 +99,7 @@ app.listen(PORT, () => {
   console.log('  /api/v1/focus');
   console.log('  /api/v1/courses');
   console.log('  /api/v1/statistics');
+  console.log('  /api/v1/settings');
 });
 
 export default app;

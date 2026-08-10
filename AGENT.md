@@ -17,9 +17,10 @@
 ```
 client/src/          → React SPA (hash-router, lazy-loaded pages)
   api/               → Per-resource API wrappers (tasks, presets, focus, courses, reviews, statistics, auth)
-  components/        → UI primitives + feature components (layout/, tasks/, timer/, courses/, presets/, forest/, landing/, ui/)
-  pages/             → Page components with co-located CSS (HomePage, PlanPage, PomodoroPage, etc.)
-  hooks/             → useApi, useAuth, useCountdown, useFocusSession, useKeyboardSort, useTheme
+  components/        → UI primitives + feature components (layout/, tasks/, timer/, courses/, presets/, forest/, heatmap/, landing/, ui/)
+  pages/             → Page components with co-located CSS (HomePage, PlanPage, PomodoroPage, LoginPage/RegisterPage, etc.)
+  hooks/             → useApi, useAuth, useCountdown, useFocusSession, useKeyboardSort, useScreenWakeLock, useTheme
+  workers/           → Web Worker (countdown-title.ts: 标签页标题倒计时)
   styles/            → CSS tokens (tokens.css), global styles, utilities
 
 server/src/          → Express REST API
@@ -33,6 +34,9 @@ shared/src/          → Shared between front-end and back-end
   constants.ts       → 共享常量（科目分组、专注时长档位等）
   schemas/           → Zod validation schemas per resource
   types/             → Re-exported TS types inferred from schemas
+
+plans/               → 单文件实现计划（编号 md，多为动画/动效类任务，先写计划再实现）
+docs/ 交接文档/        → 设计文档、需求文档、组件集成报告
 ```
 
 ## Code Style
@@ -166,7 +170,7 @@ import { CreateTaskSchema } from '../../../shared/src/schemas/task.js';
 4. **新建分支**：从 `main` 新建分支（如 `feat/xxx`、`refactor/xxx`），禁止直接改 main
 5. **执行任务**：新功能/模块修改必须先加载 `creative-development-workflow` skill（brainstorm → grilling → spec → plan → 实现）
 6. **效果确认**：任务完成后只汇报效果，**用户亲自确认效果**
-7. **commit**：用户确认后执行 commit
+7. **commit**：仅当用户显式下达 commit / merge / push 指令后才执行；用户未发话时绝不提交代码、绝不合并分支、绝不推送远端
 8. **合并 main**：合并回 `main`
 9. **同步远端**：push 到远端仓库（github）
 10. **同步服务器**：按 `manage-server` skill 部署到服务器

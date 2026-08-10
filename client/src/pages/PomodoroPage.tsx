@@ -23,6 +23,9 @@ import { PresetCard } from '../components/presets/PresetCard';
 import { RingCountdown, PROGRESS_CIRCUMFERENCE } from '../components/timer/RingCountdown';
 import { BurstParticles } from '../components/timer/BurstParticles';
 import { useFocusSession } from '../hooks/useFocusSession';
+import type { FocusMode } from '../hooks/useFocusSession';
+import { SoundToggle } from '../components/ui/SoundToggle';
+import { initSoundOnGesture, playEndSound } from '../utils/sound';
 import { useScreenWakeLock } from '../hooks/useScreenWakeLock';
 import { presetsApi, Preset } from '../api/presets';
 import { statisticsApi } from '../api/statistics';
@@ -63,7 +66,7 @@ const SUBJECT_ORDER: Subject[] = ['math', 'english', '408'];
 export function PomodoroPage() {
   const {
     activeSession,
-    breakMode, breakRemainingSeconds, breakEndsAt, roundCount,
+    breakMode, breakRemainingSeconds, breakEndsAt, breakEndMode, roundCount,
     startFocus, completeFocus, cancelFocus,
     startBreak, completeBreak,
   } = useFocusSession();
@@ -92,6 +95,10 @@ export function PomodoroPage() {
   const prevSessionIdRef = useRef<string | null>(null);
   /** 完成/取消按钮触发的会话结束（区别于自然结束），避免重复触发粒子 */
   const selfEndedRef = useRef(false);
+  /** 响铃 worker：后台标签页准点触发（worker 定时器不受页面后台节流） */
+  const soundWorkerRef = useRef<Worker | null>(null);
+  /** 当前武装的响铃 tag：worker 到点消息只有 tag 匹配才播放，防竞态误响 */
+  const armedTagRef = useRef<string | null>(null);
   /** 开始专注瞬间的点火动画：一次 240ms scale 沉降 + 聚光灯涌起 */
   const [igniting, setIgniting] = useState(false);
 
@@ -180,11 +187,67 @@ export function PomodoroPage() {
         selfEndedRef.current = false;
         return;
       }
+      // 兜底：worker 未武装成功或消息丢失时，页面检测到自然结束补响一次
+      if (armedTagRef.current === prevId) {
+        armedTagRef.current = null;
+        void playEndSound();
+      }
       setBurstKey((k) => k + 1);
       setNaturalRounds((n) => n + 1);
       setStep('completed');
     }
   }, [activeSession]);
+
+  // 武装/解除响铃 worker：有进行中专注或休息时按结束时间武装；手动结束或
+  // 离开页面时解除（armedTagRef 同步清空，避免迟到的 'end' 消息误触发播放）
+  useEffect(() => {
+    let endMs: number | null = null;
+    let tag: string | null = null;
+    if (activeSession) {
+      endMs = new Date(activeSession.plannedEndAt).getTime();
+      tag = activeSession.id;
+    } else if (breakMode && breakEndsAt) {
+      endMs = breakEndsAt;
+      tag = `break:${breakEndsAt}`;
+    }
+
+    if (endMs === null || tag === null) {
+      if (soundWorkerRef.current) {
+        soundWorkerRef.current.postMessage({ type: 'disarm' });
+        soundWorkerRef.current.terminate();
+        soundWorkerRef.current = null;
+      }
+      armedTagRef.current = null;
+      return;
+    }
+
+    if (!soundWorkerRef.current) {
+      soundWorkerRef.current = new Worker(new URL('../workers/end-sound.ts', import.meta.url), {
+        type: 'module',
+      });
+      soundWorkerRef.current.onmessage = (e: MessageEvent<{ type: 'end'; tag: string }>) => {
+        const { type, tag: firedTag } = e.data;
+        // 仅当 tag 与当前武装一致且非手动结束（提前完成/取消）才播放
+        if (type === 'end' && firedTag === armedTagRef.current && !selfEndedRef.current) {
+          armedTagRef.current = null;
+          void playEndSound();
+        }
+      };
+    }
+    armedTagRef.current = tag;
+    soundWorkerRef.current.postMessage({ type: 'arm', endMs, tag });
+  }, [activeSession, breakMode, breakEndsAt]);
+
+  // 休息自然结束兜底：worker 未响时，页面检测 breakMode 消失 + natural 标记补响
+  const prevBreakModeRef = useRef<FocusMode | null>(null);
+  useEffect(() => {
+    const prev = prevBreakModeRef.current;
+    prevBreakModeRef.current = breakMode;
+    if (prev && !breakMode && breakEndMode === 'natural' && armedTagRef.current !== null) {
+      armedTagRef.current = null;
+      void playEndSound();
+    }
+  }, [breakMode, breakEndMode]);
 
   const handleSelectPreset = (preset: Preset) => {
     // 进行中/休息中其余内容保持可交互，但不允许切入新的专注流程
@@ -208,6 +271,8 @@ export function PomodoroPage() {
   const handleStartFocus = async () => {
     setActionLoading(true);
     try {
+      // 用户手势即解锁音频（浏览器自动播放策略），后续自然结束才能响铃
+      initSoundOnGesture();
       // 未选预设即漫游专注：presetId 传 null
       await startFocus(selectedPreset?.id ?? null, durationMinutes, 'pomodoro');
       setStep('active');
@@ -389,6 +454,7 @@ export function PomodoroPage() {
     <PageShell
       title="番茄钟"
       subtitle={breakMode ? '休息一下，恢复精力' : '设定时长，即刻开始一段专注'}
+      actions={<SoundToggle />}
       maxWidth={step === 'active' ? 1080 : step === 'completed' ? 720 : undefined}
     >
       <p className="sr-only">今日已完成 {completedRoundsToday} 轮</p>

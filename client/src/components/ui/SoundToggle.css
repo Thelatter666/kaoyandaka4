@@ -1,0 +1,53 @@
+/* ============================================================
+   提示音开关（番茄钟页头右上角）：44px 玻璃圆形图标按钮
+   ============================================================ */
+
+.sound-toggle {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.sound-toggle:hover:not(:disabled) {
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-glass-md);
+}
+
+/* 位移仅鼠标设备生效（触摸 tap 后粘性 hover 会卡住上浮状态） */
+@media (hover: hover) and (pointer: fine) {
+  .sound-toggle:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+}
+
+.sound-toggle:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.sound-toggle:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.sound-toggle__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Reduced motion: 取消形变 */
+@media (prefers-reduced-motion: reduce) {
+  .sound-toggle:hover:not(:disabled),
+  .sound-toggle:active:not(:disabled) {
+    transform: none;
+  }
+}
