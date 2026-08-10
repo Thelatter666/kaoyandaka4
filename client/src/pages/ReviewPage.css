@@ -48,29 +48,13 @@
   color: var(--color-accent-primary);
 }
 
-.review-list__picker {
-  display: block;
-  margin-bottom: var(--space-md);
-}
-
-.review-list__picker input {
+.review-calendar {
   width: 100%;
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
+  margin-bottom: var(--space-md);
+  padding: var(--space-sm);
   border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   background: var(--color-glass-bg);
-  color: var(--color-text-primary);
-  font-family: inherit;
-  font-size: var(--text-sm);
-  outline: none;
-  transition:
-    border-color var(--dur-fast) var(--ease-out),
-    box-shadow var(--dur-fast) var(--ease-out);
-}
-
-.review-list__picker input:focus {
-  border-color: var(--color-accent-primary);
-  box-shadow: var(--glow-primary);
 }
 
 .review-list {

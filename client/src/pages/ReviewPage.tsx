@@ -3,13 +3,14 @@ import { NotebookPen, RefreshCw, Check, AlertCircle, CalendarDays, BookOpen } fr
 import { PageShell } from '../components/layout/PageShell';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { Calendar } from '../components/ui/Calendar';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { showToast } from '../components/ui/Toast';
 import { reviewsApi, Review } from '../api/reviews';
-import { today, formatDateDisplay } from '../utils/date';
+import { today, formatDate, formatDateDisplay } from '../utils/date';
 import './ReviewPage.css';
 
 /**
@@ -130,20 +131,19 @@ export function ReviewPage() {
                 <CalendarDays size={18} strokeWidth={1.75} aria-hidden="true" />
                 日期
               </h2>
-              <label className="review-list__picker">
-                <span className="sr-only">选择日期</span>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => handleSelectDate(e.target.value)}
-                  aria-label="选择日期补写复盘"
-                />
-              </label>
+              <Calendar
+                className="review-calendar"
+                mode="single"
+                selected={new Date(selectedDate + 'T00:00:00')}
+                onSelect={(d) => {
+                  if (d) handleSelectDate(formatDate(d));
+                }}
+              />
               {history.length === 0 ? (
                 <EmptyState
                   icon={<BookOpen size={36} strokeWidth={1.75} />}
                   title="还没有复盘"
-                  description="选择右侧日期，写下第一篇复盘吧"
+                  description="在日历中选择日期，写下第一篇复盘吧"
                 />
               ) : (
                 <ul className="review-list">
