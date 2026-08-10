@@ -20,7 +20,7 @@
 ## 核心假设
 
 - **H1**：用户规模小，`user_settings` 表行数极少（每用户几行），无需缓存、无需索引优化，直接全表范围按 `(user_id, setting_key)` 查询即可。
-- **H2**：Chrome/主流浏览器允许已创建的 `AudioContext` 在后台标签页继续播放——用户切到网课标签页学习时，番茄钟页在后台仍能响铃。若某浏览器静音后台标签（如 iOS Safari），则后台不响、前台仍响，属可接受降级。
+- **H2**：桌面浏览器（Chrome/Firefox/Safari 桌面）允许已解锁的 `AudioContext` 在后台标签页继续发声——用户切到网课标签页学习时，番茄钟页在后台仍能准时响铃。移动浏览器可能静音后台标签，属可接受降级（本项目为桌面使用场景）。
 - **H3**：`client/public/sounds/pomodoro-end.mp3` 是可选文件——用户尚未下载音效；缺失时用 Web Audio 合成音兜底，功能不依赖文件存在。
 - **H4**：提示音开关的切换频率极低，PUT 采用乐观更新 + 失败回滚 + toast，无需防抖/节流。
 
@@ -82,6 +82,8 @@ CREATE TABLE IF NOT EXISTS user_settings (
   3. 不存在 → 用共享 `AudioContext` 合成双音提示音（两个短振荡音符，总长 <1s）
   4. 播放失败（AudioContext 被挂起等）静默忽略，不抛错、不打断页面
 
+新文件 `client/src/workers/end-sound.ts`（响铃 worker，见「播放时机」）：后台标签页准点触发响铃，worker 定时器不受页面后台节流。
+
 ### 开关 UI（客户端）
 
 新组件 `client/src/components/ui/SoundToggle.tsx`：
@@ -94,28 +96,30 @@ CREATE TABLE IF NOT EXISTS user_settings (
 
 ### 播放时机（客户端）
 
-专注自然结束（`PomodoroPage.tsx`）：
+### 响铃 worker（解决后台准时响铃，审查发现 H2 缺陷后的修正）
 
-- 现有检测逻辑（`prevSessionIdRef` + `selfEndedRef`）已能区分自然结束与手动结束，在自然结束分支（第 183-185 行处）调用 `playEndSound()`——需先经 `initSoundOnGesture` 解锁（用户点击过「开始专注」，已满足）
+页面 JS 在后台标签页会被节流（rAF 暂停、setInterval 降频、轮询停止），不能依赖页面定时器准点响铃。新增 `client/src/workers/end-sound.ts`（沿用 `countdown-title.ts` worker 模式——worker 定时器不受页面后台节流）：
 
-休息自然结束（`useFocusSession.ts` + `PomodoroPage.tsx`）：
+- 页面启动专注 / 休息时：`worker.postMessage({ type: 'arm', endMs, tag })`
+  - tag 专注 = `activeSession.id`；休息 = `'break'`（休息无服务端 id，用 `breakEndsAt` 时间戳辅助校验）
+- worker 内部 `setInterval`（250ms 粒度）检查到点 → `postMessage({ type: 'end' })`；收到 `{ type: 'disarm' }` 停止
+- 页面收到 `'end'`：校验当前状态匹配（tag 与当前 activeSession.id / breakEndsAt 一致，且无手动结束标记）后才 `playEndSound()`——消除 worker 消息迟到与手动结束的竞态误响
+- 手动路径（提前完成 / 取消 / 跳过休息）先 `disarm` 再执行，双保险
+- 页面切换路由卸载时 `disarm` + `terminate`
 
-- hook 新增状态 `breakEndMode: 'natural' | 'manual' | null`：
+### 专注自然结束
+
+- 响铃主通道：响铃 worker 基于 `plannedEndAt` 准点触发
+- 兜底路径：现有 `prevSessionIdRef` + `selfEndedRef` 自然结束检测（页面可见或 worker 未武装时）——检测到自然结束且响铃尚未发生时补响
+- 手动结束（提前完成 / 取消）不响铃（已确认），且先 disarm worker
+
+### 休息自然结束（`useFocusSession.ts` + `PomodoroPage.tsx`）
+
+- hook 新增状态 `breakEndMode: 'natural' | null`：
   - breakTimer 归零路径（现有 181-191 行）→ `'natural'`
-  - `startBreak` / `completeBreak` → 重置为 `null`（manual 跳过不算结束，不置 'manual' 即可，null 即不响）
-- 页面监听 `breakMode` 有→无 转换：`breakEndMode === 'natural'` 时 `playEndSound()` 并重置标记
-
-```ts
-// 页面内
-const prevBreakModeRef = useRef<FocusMode | null>(null);
-useEffect(() => {
-  const prev = prevBreakModeRef.current;
-  prevBreakModeRef.current = breakMode;
-  if (prev && !breakMode && breakEndMode === 'natural') {
-    playEndSound();
-  }
-}, [breakMode, breakEndMode]);
-```
+  - `startBreak` / `completeBreak` → 重置为 `null`（跳过休息不算结束）
+- 页面监听 `breakMode` 有→无 转换：`breakEndMode === 'natural'` 时触发响铃校验并重置标记
+- 响铃时刻由 worker 基于 `breakEndsAt` 准点触发，页面检测仅作兜底（后台时 worker 先到，页面 setState 不阻塞播放）
 
 ## 错误处理
 
@@ -137,6 +141,13 @@ useEffect(() => {
 | 手动结束 | 用户主动操作（提前完成、跳过休息、取消） |
 | 合成音 | Web Audio API 生成的提示音（mp3 缺失时兜底） |
 | 用户设置 | `user_settings` 表中按用户存储的偏好键值对 |
+| 响铃 worker | `workers/end-sound.ts`，后台标签页准点触发响铃的 Web Worker |
+
+## ADR（对抗性审查结论）
+
+- **ADR-1**：后台响铃依赖响铃 worker 而非页面定时器。审查发现页面 JS 在后台标签页被节流（rAF 暂停 / setInterval 降频 / 轮询停止），依赖页面定时器会迟到数分钟；worker 定时器不受节流。不选 Service Worker + 系统通知：本项目为桌面使用场景，Notification 需额外授权流程，成本大于收益。
+- **ADR-2**：播放前用 tag（sessionId / breakEndsAt）二次校验，消除 worker 消息迟到与手动结束的竞态误响。
+- **ADR-3**：多标签页并发修改设置采用最后写赢，不做冲突检测——单人使用场景可接受。
 
 ## 验证标准
 
@@ -145,5 +156,5 @@ useEffect(() => {
 3. 提前完成、跳过休息不响
 4. 开关关闭后不响；刷新页面后状态保持；换设备登录状态同步
 5. 无 mp3 文件时合成音可播放；放入 `public/sounds/pomodoro-end.mp3` 后自动切换
-6. 后台标签页（切到其他页面）时自然结束仍响（Chrome）
+6. 后台标签页（切到网课等其他页面）时自然结束仍准点响铃（桌面 Chrome）
 7. 页面无 console error；e2e 冒烟通过
