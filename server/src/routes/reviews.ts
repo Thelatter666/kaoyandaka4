@@ -43,6 +43,19 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
+// GET /api/v1/reviews/history — 全部复盘（倒序，含全文；个人数据量小不分页）
+router.get('/history', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [rows] = await pool.query<ReviewRow[]>(
+      'SELECT * FROM daily_reviews WHERE user_id = ? ORDER BY review_date DESC',
+      [req.userId]
+    );
+    res.json(rows.map(transformReview));
+  } catch (err) {
+    next(err);
+  }
+});
+
 // PUT /api/v1/reviews — 创建或更新复盘
 router.put('/', validate(UpsertReviewSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
