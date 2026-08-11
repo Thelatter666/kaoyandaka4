@@ -247,39 +247,12 @@ router.patch('/:id/episodes/:eid/toggle', async (req: Request, res: Response, ne
     const newCompleted = !episode.is_completed;
     const completedAt = newCompleted ? new Date() : null;
 
-    // 纯读查询放在事务外（仅标记完成时需要课程快照）
-    let course: CourseRow | null = null;
-    if (newCompleted) {
-      const [courseRows] = await pool.query<CourseRow[]>('SELECT * FROM online_courses WHERE id = ? AND user_id = ?', [id, req.userId]);
-      if (courseRows.length > 0) course = courseRows[0];
-    }
-
-    // 事务包裹「更新集数完成状态 + 写入/删除学习记录」，保证原子性
-    await withTransaction(async (connection) => {
-      await connection.query(
-        'UPDATE course_episodes SET is_completed = ?, completed_at = ? WHERE id = ? AND user_id = ?',
-        [newCompleted, completedAt, eid, req.userId]
-      );
-
-      // If completed, create a study_record for course_video source
-      if (newCompleted) {
-        if (course) {
-          const recordId = generateUUID();
-          await connection.query<ResultSetHeader>(
-            `INSERT INTO study_records
-             (id, user_id, preset_name_snapshot, subject_snapshot, sub_subject_snapshot,
-              actual_duration_seconds, course_episode_id,
-              course_name_snapshot, episode_title_snapshot, source)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'course_video')`,
-            [recordId, req.userId, episode.title, course.subject, course.sub_subject,
-              episode.duration_seconds, eid, course.name, episode.title]
-          );
-        }
-      } else {
-        // Remove study_record for this episode if uncompleted（同样限定本人记录）
-        await connection.query('DELETE FROM study_records WHERE course_episode_id = ? AND source = ? AND user_id = ?', [eid, 'course_video', req.userId]);
-      }
-    });
+    // 只更新完成状态，不写/不删学习记录：专注时长一律来自专注会话（番茄钟），
+    // 避免边番茄钟计时边看网课时同一集被重复计入（番茄钟计时 + 集数标称时长各一次）
+    await pool.query(
+      'UPDATE course_episodes SET is_completed = ?, completed_at = ? WHERE id = ? AND user_id = ?',
+      [newCompleted, completedAt, eid, req.userId]
+    );
 
     const [updated] = await pool.query<EpisodeRow[]>(
       'SELECT * FROM course_episodes WHERE id = ? AND user_id = ?',
