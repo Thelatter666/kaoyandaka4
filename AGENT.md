@@ -16,15 +16,15 @@
 
 ```
 client/src/          → React SPA (hash-router, lazy-loaded pages)
-  api/               → Per-resource API wrappers (tasks, presets, focus, courses, reviews, statistics, auth)
+  api/               → Per-resource API wrappers (auth, tasks, presets, focus, courses, reviews, statistics, settings)
   components/        → UI primitives + feature components (layout/, tasks/, timer/, courses/, presets/, forest/, heatmap/, landing/, ui/)
-  pages/             → Page components with co-located CSS (HomePage, PlanPage, PomodoroPage, LoginPage/RegisterPage, etc.)
+  pages/             → Page components with co-located CSS (HomePage, PlanPage, PomodoroPage, ReviewPage, LoginPage/RegisterPage, etc.)
   hooks/             → useApi, useAuth, useCountdown, useFocusSession, useKeyboardSort, useScreenWakeLock, useTheme
-  workers/           → Web Worker (countdown-title.ts: 标签页标题倒计时)
+  workers/           → Web Workers (countdown-title.ts: 标签页标题倒计时; end-sound.ts: 番茄钟准点响铃)
   styles/            → CSS tokens (tokens.css), global styles, utilities
 
 server/src/          → Express REST API
-  routes/            → 7 route files: auth, presets, tasks, reviews, focus, courses, statistics
+  routes/            → 8 route files: auth, presets, tasks, reviews, focus, courses, statistics, settings
   middleware/         → cors, auth (session), validate (Zod), errorHandler (AppError)
   db/                → connection.ts (pool), schema.sql, init.ts, migrate.ts
   utils/             → date.ts (UTC 日期工具), uuid.ts (generateUUID)
