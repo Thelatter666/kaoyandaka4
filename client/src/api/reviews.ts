@@ -13,4 +13,6 @@ export const reviewsApi = {
   getByDate: (date: string) => api.get<Review | null>(`/reviews?date=${date}`),
 
   upsert: (data: UpsertReviewInput) => api.put<Review>('/reviews', data),
+
+  getHistory: () => api.get<Review[]>('/reviews/history'),
 };

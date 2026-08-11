@@ -1,0 +1,204 @@
+/* ============================================================
+   复盘页（2026-08-10 设计文档）：双栏 grid（列表 span 4 + 详情 span 8）
+   ============================================================ */
+
+.review-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+.review-list-wrap,
+.review-detail-wrap {
+  min-width: 0;
+}
+
+.review-list-wrap {
+  grid-column: span 4;
+}
+
+.review-detail-wrap {
+  grid-column: span 8;
+}
+
+@media (max-width: 1023px) {
+  .review-grid {
+    gap: var(--space-md);
+  }
+  .review-list-wrap,
+  .review-detail-wrap {
+    grid-column: span 12;
+  }
+}
+
+/* ---- 左栏：日期列表 ---- */
+.review-list__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-md);
+}
+
+.review-list__title .lucide {
+  color: var(--color-accent-primary);
+}
+
+.review-calendar {
+  width: 100%;
+  margin-bottom: var(--space-md);
+  padding: var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-bg);
+}
+
+.review-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.review-list__item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: var(--color-glass-bg);
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+.review-list__item:hover {
+  border-color: var(--color-border);
+}
+
+.review-list__item--active {
+  border-color: var(--color-accent-primary);
+  background: var(--color-glass-bg-strong);
+}
+
+.review-list__date {
+  font-weight: var(--font-semibold);
+  font-size: var(--text-sm);
+}
+
+.review-list__item--active .review-list__date {
+  color: var(--color-accent-primary);
+}
+
+.review-list__summary {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+/* ---- 右栏：详情编辑（复用计划页复盘卡视觉模式） ---- */
+.review-detail__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.review-detail__title .lucide {
+  color: var(--color-accent-primary);
+}
+
+.review-detail__date {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-md);
+}
+
+.review-detail__textarea {
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-glass-bg);
+  color: var(--color-text-primary);
+  font-size: var(--text-base);
+  font-family: inherit;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.review-detail__textarea:focus {
+  border-color: var(--color-accent-primary);
+  box-shadow: var(--glow-primary);
+}
+
+.review-detail__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.review-detail__status-wrap {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.review-detail__status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.review-detail__status--saved {
+  color: var(--color-accent-success-strong);
+}
+
+.review-detail__status--error {
+  color: var(--color-accent-danger);
+}
+
+/* 保存中：RefreshCw 转动（transform 动画） */
+@keyframes review-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.review-spin {
+  animation: review-spin 0.8s linear infinite;
+}
+
+@media (max-width: 719px) {
+  .review-list {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: var(--space-xs);
+  }
+  .review-list__item {
+    min-width: 160px;
+  }
+}
