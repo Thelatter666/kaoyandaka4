@@ -1,4 +1,7 @@
-import React, { useRef, useCallback, useEffect } from 'react';
+import React, { useRef, useCallback, useEffect, useState } from 'react';
+
+// 磁吸为纯装饰位移：reduced-motion 下直接渲染 children，不注册指针逻辑
+const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 
 interface MagneticProps {
   children: React.ReactNode;
@@ -27,6 +30,17 @@ export function Magnetic({
   const currentRef = useRef({ x: 0, y: 0 });
   const targetRef = useRef({ x: 0, y: 0 });
 
+  const [reducedMotion, setReducedMotion] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia(REDUCED_MOTION_QUERY).matches
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia(REDUCED_MOTION_QUERY);
+    const onChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
   // 缓动函数：easeOutQuad
   const easing = useCallback((t: number) => t * (2 - t), []);
 
@@ -53,6 +67,7 @@ export function Magnetic({
   }, []);
 
   const handlePointerMove = (e: React.PointerEvent<HTMLElement>) => {
+    if (reducedMotion) return;
     const rect = elRef.current?.getBoundingClientRect();
     if (!rect) return;
 
@@ -74,6 +89,7 @@ export function Magnetic({
   };
 
   const handlePointerLeave = () => {
+    if (reducedMotion) return;
     targetRef.current = { x: 0, y: 0 };
   };
 
@@ -97,6 +113,9 @@ export function Magnetic({
       }
     };
   }, []);
+
+  // reduced-motion：磁吸为纯装饰，直接渲染 children，不注册指针逻辑
+  if (reducedMotion) return <>{children}</>;
 
   // 使用 React.createElement 支持动态标签
   return React.createElement(

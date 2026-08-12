@@ -71,7 +71,7 @@
   aspect-ratio: 1;
   border-radius: 2.5px;
   background: var(--color-heatmap-empty);
-  transition: transform 0.12s ease;
+  transition: transform var(--dur-fast) var(--ease-out);
 }
 
 .heatmap-cell:hover {

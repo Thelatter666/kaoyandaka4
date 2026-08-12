@@ -169,7 +169,7 @@ export function ReviewPage() {
 
           {/* 右栏：详情编辑 */}
           <section className="review-detail-wrap reveal" style={{ '--i': 1 } as React.CSSProperties} aria-label="复盘详情">
-            <Card>
+            <Card key={selectedDate}>
               <h2 className="review-detail__title">
                 <NotebookPen size={18} strokeWidth={1.75} aria-hidden="true" />
                 每日复盘

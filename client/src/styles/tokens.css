@@ -212,8 +212,7 @@
   --shadow-card: var(--shadow-glass-sm);
   --radius-button: var(--radius-md);
   --radius-nav: var(--radius-full);
-  --transition-fast: var(--dur-fast) var(--ease-out);
-  --transition-normal: var(--dur-med) var(--ease-out);
+  /* 过渡速写别名已删除：全站统一手写 `var(--dur-*) var(--ease-out)`（无第二套写法） */
   --nav-height: 56px;
   --z-dropdown: 100;
   --space-card-padding: var(--space-lg);
