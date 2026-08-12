@@ -1,7 +1,7 @@
 /* ============================================================
    GradientCard 渐变内容卡（原版源码适配，极光玻璃体系）
    卡面 = glass 底 + 135° 染色层（::before）+ 可选水印；
-   hover scale 1.03 + y -4（--ease-spring），水印 scale 1.1 + rotate 3°；
+   hover scale 1.03 + y -4（240ms ease-out），水印 scale 1.1 + rotate 3°；
    交互全部 (hover:hover)(pointer:fine) 门控，reduced-motion 取消。
    ============================================================ */
 
@@ -14,7 +14,7 @@
   border-radius: var(--radius-card);
   padding: var(--space-xl);
   transition:
-    transform var(--dur-slow) var(--ease-spring),
+    transform var(--dur-med) var(--ease-out),
     box-shadow var(--dur-med) var(--ease-out);
 }
 
@@ -144,7 +144,7 @@
 }
 
 .gradient-card__cta .lucide {
-  transition: transform var(--dur-slow) var(--ease-out);
+  transition: transform var(--dur-med) var(--ease-out);
 }
 
 .gradient-card__cta:hover {
@@ -168,7 +168,7 @@
   justify-content: center;
   pointer-events: none;
   transform-origin: 80% 80%;
-  transition: transform var(--dur-slow) var(--ease-spring);
+  transition: transform var(--dur-med) var(--ease-out);
 }
 
 .gradient-card__blob {

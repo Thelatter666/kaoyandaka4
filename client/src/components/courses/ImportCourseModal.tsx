@@ -156,7 +156,7 @@ export function ImportCourseModal({ isOpen, zone, zones, onZoneChange, onClose, 
       </ol>
       <p className="sr-only">第 {step} 步，共 {STEPS.length} 步：{STEPS[step - 1]}</p>
 
-      <div className="import-modal__body">
+      <div key={step} className="import-modal__body import-pane">
         {step === 1 && (
           <>
             {/* 目标分区选择：右上角/卡片入口均可在此切换 */}

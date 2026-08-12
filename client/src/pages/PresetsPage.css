@@ -28,8 +28,8 @@
   box-shadow: var(--shadow-glass-md);
   cursor: pointer;
   transition:
-    width 500ms var(--ease-out),
-    box-shadow 500ms var(--ease-out);
+    width var(--dur-med) var(--ease-out),
+    box-shadow var(--dur-med) var(--ease-out);
 }
 
 .presets-create:focus-visible {
@@ -44,7 +44,7 @@
   border-radius: var(--radius-full);
   background: linear-gradient(45deg, var(--gradient-from), var(--gradient-to));
   opacity: 0;
-  transition: opacity 500ms var(--ease-out);
+  transition: opacity var(--dur-med) var(--ease-out);
   pointer-events: none;
 }
 
@@ -59,7 +59,7 @@
   filter: blur(15px);
   opacity: 0;
   z-index: -1;
-  transition: opacity 500ms var(--ease-out);
+  transition: opacity var(--dur-med) var(--ease-out);
   pointer-events: none;
 }
 
@@ -69,7 +69,7 @@
   align-items: center;
   justify-content: center;
   color: var(--color-text-secondary);
-  transition: transform 500ms var(--ease-out);
+  transition: transform var(--dur-med) var(--ease-out);
   pointer-events: none;
 }
 
@@ -85,8 +85,11 @@
   font-weight: var(--font-medium);
   letter-spacing: 0.08em;
   white-space: nowrap;
-  transform: scale(0);
-  transition: transform 500ms var(--ease-out) 150ms;
+  transform: scale(0.9);
+  opacity: 0;
+  transition:
+    transform var(--dur-med) var(--ease-out) 120ms,
+    opacity var(--dur-med) var(--ease-out) 120ms;
   pointer-events: none;
 }
 
@@ -138,6 +141,7 @@
   .presets-create:hover .presets-create__title,
   .presets-create:focus-visible .presets-create__title {
     transform: scale(1);
+    opacity: 1;
   }
 }
 

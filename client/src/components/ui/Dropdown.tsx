@@ -91,8 +91,7 @@ export function Dropdown({
         aria-expanded={isOpen}
         aria-label={ariaLabel}
         disabled={disabled}
-        whileHover={reducedMotion ? undefined : { scale: 1.01 }}
-        whileTap={reducedMotion ? undefined : { scale: 0.99 }}
+        whileTap={reducedMotion ? undefined : { scale: 0.97 }}
         onClick={() => setIsOpen((v) => !v)}
       >
         <span className={selected ? 'dropdown__value' : 'dropdown__placeholder'}>
@@ -116,9 +115,9 @@ export function Dropdown({
             initial={reducedMotion ? false : { opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={reducedMotion ? undefined : { opacity: 0, y: -10 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
           >
-            {options.map((option, index) => {
+            {options.map((option) => {
               const isSelected = option.value === value;
               return (
                 <motion.li
@@ -132,7 +131,7 @@ export function Dropdown({
                   }
                   initial={reducedMotion ? false : { opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.2, delay: index * 0.05 }}
+                  transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
                 >
                   <button type="button" className="dropdown__option-button" onClick={() => handleSelect(option)}>
                     <span>
