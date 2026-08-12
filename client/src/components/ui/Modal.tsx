@@ -10,24 +10,29 @@ interface ModalProps {
 }
 
 /**
- * Modal 退出动画时长（与 CSS transition 一致）
+ * Modal 开合动画时长（与 tokens.css --dur-med 对齐；退出阶段先播动画再卸载 DOM）
  * 退出阶段：isOpen=false 后先播放退出动画，再卸载 DOM
  */
-const EXIT_DURATION = 200;
+const EXIT_DURATION = 240;
 
 export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
-  // visible 控制 DOM 是否挂载；exiting 标记退出动画阶段
+  // visible 控制 DOM 是否挂载；exiting 标记退出动画阶段；entering 标记开启动画阶段
   const [visible, setVisible] = useState(isOpen);
   const [exiting, setExiting] = useState(false);
+  // entering 标记开启动画阶段：挂载后下一帧移除，transition 从初始态平滑过渡
+  const [entering, setEntering] = useState(false);
 
-  // 两阶段开合：open → 立即挂载；close → 先播退出动画再卸载
+  // 两阶段开合：open → 立即挂载（entering 下一帧移除触发入场过渡）；close → 先播退出动画再卸载
   useEffect(() => {
     if (isOpen) {
       setVisible(true);
       setExiting(false);
-      return;
+      // 先渲染初始态（opacity 0 / scale 0.97），下一帧移除 entering 触发过渡
+      setEntering(true);
+      const raf = requestAnimationFrame(() => setEntering(false));
+      return () => cancelAnimationFrame(raf);
     }
     if (!visible) return;
     setExiting(true);
@@ -101,7 +106,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
           backgroundColor: 'var(--color-bg-overlay)',
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
-          opacity: exiting ? 0 : 1,
+          opacity: entering || exiting ? 0 : 1,
           transition: `opacity ${EXIT_DURATION}ms var(--ease-out)`,
         }}
       />
@@ -121,8 +126,8 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
           width: '100%',
           maxHeight: '85vh',
           overflowY: 'auto',
-          opacity: exiting ? 0 : 1,
-          transform: exiting ? 'scale(0.97)' : 'scale(1)',
+          opacity: entering || exiting ? 0 : 1,
+          transform: entering || exiting ? 'scale(0.97)' : 'scale(1)',
           transition: `opacity ${EXIT_DURATION}ms var(--ease-out), transform ${EXIT_DURATION}ms var(--ease-out)`,
         }}
       >
