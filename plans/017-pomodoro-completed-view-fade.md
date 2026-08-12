@@ -1,6 +1,6 @@
 # 017 — 番茄钟完成视图补一个轻量淡入
 
-- **Status**: TODO
+- **Status**: TODO（方案经验证无效，2026-08-12 实测：三元分支两侧同为 `<div>` 时 React 复用 DOM 节点（仅换 className），`@starting-style` 只对元素首次渲染生效故不触发；需给 completed 分支 div 加 `key` 强制重挂载，见 plans/README.md「实施验证结论」）
 - **Commit**: c23ba7c
 - **Severity**: LOW
 - **Category**: Missed opportunity（Delight / Preventing a jarring change）

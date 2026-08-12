@@ -1,6 +1,6 @@
 # 007 — 修复任务完成庆祝动画挂载即播
 
-- **Status**: TODO
+- **Status**: TODO（方案经验证无效，2026-08-12 实测：`animation: none` 抑制 + rAF 移除 class 后，`animation-name` 从 none 变有值会重新启动动画，挂载时庆祝动画照播；需改 JS 驱动方案，见 plans/README.md「实施验证结论」）
 - **Commit**: c23ba7c
 - **Severity**: HIGH
 - **Category**: Purpose & frequency / Interruptibility

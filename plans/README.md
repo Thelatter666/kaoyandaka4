@@ -12,18 +12,18 @@
 | 004 | 低时数字过渡同步 + 紧迫脉动 | LOW | 番茄钟 | TODO | **005** |
 | 005 | 补 `--ease-in-out` 令牌 | LOW | tokens | TODO | 无 |
 | 006 | 进行中态圆盘视口截断 | MEDIUM | 番茄钟 | TODO | 无 |
-| 007 | 任务完成庆祝动画挂载即播 → 挂载抑制 | HIGH | 计划页任务 | TODO | 无 |
-| 008 | Modal 打开补入场动画（开合对称 240ms） | HIGH | ui 组件 | TODO | 无 |
-| 009 | GradientCard hover 400ms 弹性 → 240ms ease-out | MEDIUM | ui 组件 | TODO | 无 |
-| 010 | 预设页创建胶囊 500ms/scale(0) 修正 | MEDIUM | 预设页 | TODO | 无 |
-| 011 | Dropdown 去逐项 stagger + 项目曲线对齐 | MEDIUM | ui 组件 | TODO | 无 |
-| 012 | 热力图格子 hover 换令牌 | LOW | 首页 | TODO | 无 |
-| 013 | SoundToggle 图标切换压缩至 200ms | LOW | 番茄钟 | TODO | 无 |
-| 014 | Magnetic 补 reduced-motion 门控 | LOW | 番茄钟 | TODO | 无 |
-| 015 | 删除无人使用的 transition 别名令牌 | LOW | tokens | TODO | 无 |
-| 016 | 导入弹窗步骤内容切换淡入 | MEDIUM | 网课 | TODO | 无 |
-| 017 | 番茄钟完成视图淡入 | LOW | 番茄钟 | TODO | 无 |
-| 018 | 复盘页日期切换详情淡入 | LOW | 复盘页 | TODO | 无 |
+| 007 | 任务完成庆祝动画挂载即播 → 挂载抑制 | HIGH | 计划页任务 | **TODO**（方案无效，见下） | 无 |
+| 008 | Modal 打开补入场动画（开合对称 240ms） | HIGH | ui 组件 | **DONE** | 无 |
+| 009 | GradientCard hover 400ms 弹性 → 240ms ease-out | MEDIUM | ui 组件 | **DONE** | 无 |
+| 010 | 预设页创建胶囊 500ms/scale(0) 修正 | MEDIUM | 预设页 | **DONE** | 无 |
+| 011 | Dropdown 去逐项 stagger + 项目曲线对齐 | MEDIUM | ui 组件 | **DONE** | 无 |
+| 012 | 热力图格子 hover 换令牌 | LOW | 首页 | **DONE** | 无 |
+| 013 | SoundToggle 图标切换压缩至 200ms | LOW | 番茄钟 | **DONE** | 无 |
+| 014 | Magnetic 补 reduced-motion 门控 | LOW | 番茄钟 | **DONE** | 无 |
+| 015 | 删除无人使用的 transition 别名令牌 | LOW | tokens | **DONE** | 无 |
+| 016 | 导入弹窗步骤内容切换淡入 | MEDIUM | 网课 | **DONE** | 无 |
+| 017 | 番茄钟完成视图淡入 | LOW | 番茄钟 | **TODO**（方案无效，见下） | 无 |
+| 018 | 复盘页日期切换详情淡入 | LOW | 复盘页 | **DONE** | 无 |
 
 ## 推荐执行顺序
 
@@ -38,6 +38,13 @@
 - 004 依赖 005（引用 `--ease-in-out`），其余互不依赖。
 - **同文件注意**：003 与 014 都改 `Magnetic.tsx`（一个停 rAF 空转、一个加 reduced-motion——可合并执行，两处改动不重叠）；017 与既有 001/006 都改 `PomodoroPage.css`（不同规则块）；018 触及 `.card` 选择器合并，执行时以 018 的"边界"节为准。
 - 007 与 018 都使用 `@starting-style` 模式，互相独立。
+
+## 实施验证结论（2026-08-12，docs/animation-audit-plans 分支实测）
+
+- **007、017 未实施**：两计划的"rAF 移除抑制 class / 条件渲染挂载"假设经 Playwright 实测均不成立——
+  - 007：`animation: none` 抑制 + 下一帧移除 class 时，`animation-name` 从 none 变有值会**重新启动动画**（CSS Animations 规范行为，最小复现已验证），挂载时庆祝动画照播；正确做法需 JS 驱动（如仅在状态切换时临时添加 `--celebrating` class）。
+  - 017：三元分支两侧同为 `<div>` 时 React **复用 DOM 节点**（仅换 className），`@starting-style` 只对元素首次渲染生效，故淡入不触发（MutationObserver 证实节点复用）；正确做法需给分支加 `key` 强制重挂载（016 已用 `key={step}` 因此生效）。
+- 其余 9 项（008/009/010/011/012/013/014/015/016/018）均已实施并通过机械验证（lint、tsc）与 Playwright 手感验证（含 reduced-motion 回归）。
 
 ## 范围外（已知，有意排除）
 
