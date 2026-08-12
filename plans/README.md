@@ -1,29 +1,48 @@
-# Animation Plans — 番茄钟模块
+# Animation Plans — 全库动效计划
 
-分支 `feat/pomodoro-animations` 的动效改进计划。审计含代码审读 + 浏览器实拍视觉 QA（截图存于临时目录，未入库）。
+审计分支 `docs/animation-audit-plans`（commit c23ba7c）。001-006 为番茄钟模块历史计划（`feat/pomodoro-animations`）；**007-018 为全库核心应用页动效审计产出**（improve-animations 流程：recon → deep audit → vet → 计划；范围排除 landing 介绍页）。
 
 ## 计划一览
 
-| # | 标题 | 严重度 | 状态 | 依赖 |
-|---|------|--------|------|------|
-| 001 | 钟跨步骤常驻（消除闪断重入）+ 开始点火 | HIGH | TODO | 无 |
-| 002 | 首页迷你钟每秒打嗝 → 900ms 连续推进 | MEDIUM | TODO | 无 |
-| 003 | Magnetic 停止永续 rAF + 去除双重缓动 | MEDIUM | TODO | 无 |
-| 006 | 进行中态圆盘视口截断（视觉 QA 发现） | MEDIUM | TODO | 无 |
-| 005 | 补 `--ease-in-out` 令牌 | LOW | TODO | 无 |
-| 004 | 低时数字过渡同步 + 紧迫脉动 | LOW | TODO | **005**（引用其令牌） |
+| # | 标题 | 严重度 | 模块 | 状态 | 依赖 |
+|---|------|--------|------|------|------|
+| 001 | 钟跨步骤常驻 + 开始点火 | HIGH | 番茄钟 | TODO | 无 |
+| 002 | 首页迷你钟 900ms 连续推进 | MEDIUM | 番茄钟 | TODO | 无 |
+| 003 | Magnetic 停止永续 rAF | MEDIUM | 番茄钟 | TODO | 无 |
+| 004 | 低时数字过渡同步 + 紧迫脉动 | LOW | 番茄钟 | TODO | **005** |
+| 005 | 补 `--ease-in-out` 令牌 | LOW | tokens | TODO | 无 |
+| 006 | 进行中态圆盘视口截断 | MEDIUM | 番茄钟 | TODO | 无 |
+| 007 | 任务完成庆祝动画挂载即播 → 挂载抑制 | HIGH | 计划页任务 | TODO | 无 |
+| 008 | Modal 打开补入场动画（开合对称 240ms） | HIGH | ui 组件 | TODO | 无 |
+| 009 | GradientCard hover 400ms 弹性 → 240ms ease-out | MEDIUM | ui 组件 | TODO | 无 |
+| 010 | 预设页创建胶囊 500ms/scale(0) 修正 | MEDIUM | 预设页 | TODO | 无 |
+| 011 | Dropdown 去逐项 stagger + 项目曲线对齐 | MEDIUM | ui 组件 | TODO | 无 |
+| 012 | 热力图格子 hover 换令牌 | LOW | 首页 | TODO | 无 |
+| 013 | SoundToggle 图标切换压缩至 200ms | LOW | 番茄钟 | TODO | 无 |
+| 014 | Magnetic 补 reduced-motion 门控 | LOW | 番茄钟 | TODO | 无 |
+| 015 | 删除无人使用的 transition 别名令牌 | LOW | tokens | TODO | 无 |
+| 016 | 导入弹窗步骤内容切换淡入 | MEDIUM | 网课 | TODO | 无 |
+| 017 | 番茄钟完成视图淡入 | LOW | 番茄钟 | TODO | 无 |
+| 018 | 复盘页日期切换详情淡入 | LOW | 复盘页 | TODO | 无 |
 
 ## 推荐执行顺序
 
-1. **001**（HIGH，杠杆最大：钟是页面中心元素，闪断每天发生数十次）→ 002 → 003 → 006 → **005 → 004**（004 依赖 005 的 `--ease-in-out`）
+**第一批（HIGH，体验破损）**：007 → 008
+**第二批（MEDIUM，明显违和）**：009 → 010 → 011 → 016
+**第三批（LOW，一致性打磨）**：012 → 013 → 014 → 015 → 017 → 018
 
-## 依赖说明
+每批内可按上表顺序；批间建议分批检查效果（工作流要求用户逐批确认）。
 
-- 004 的 CSS 引用 `var(--ease-in-out)`，必须先执行 005（两计划各只改 1-2 行，可合并提交）
-- 001 与其余计划文件互不重叠（001 改 PomodoroPage.tsx/.css；002/004/005 改 RingCountdown.css；003 改 Magnetic.tsx；006 改 PomodoroPage.css —— 001 与 006 同文件但改不同规则块，执行时注意合并冲突即可）
+## 依赖与冲突
+
+- 004 依赖 005（引用 `--ease-in-out`），其余互不依赖。
+- **同文件注意**：003 与 014 都改 `Magnetic.tsx`（一个停 rAF 空转、一个加 reduced-motion——可合并执行，两处改动不重叠）；017 与既有 001/006 都改 `PomodoroPage.css`（不同规则块）；018 触及 `.card` 选择器合并，执行时以 018 的"边界"节为准。
+- 007 与 018 都使用 `@starting-style` 模式，互相独立。
 
 ## 范围外（已知，有意排除）
 
-- `ForestGlasshouse.css` 的 9 处硬编码 `ease-in-out`（森林尘埃长周期环境动效，独立节奏）
-- Landing 页对 RingCountdown 的静态视觉复刻（无动效，不受影响）
-- 标签页标题倒计时 Worker、页面级 page-enter/page-exit（App 级，另属页面切换体系）
+- **landing 介绍页全部动效**（framer-motion 10 个 section：Hero/Feature×/Steps/Stats/Screenshots 等）——用户明确排除，另属滚动式介绍页体系
+- Card3D / GlowCard（仅 landing 使用）
+- 页面级 page-enter/page-exit / reveal / sheen-hover（v2 页面动效编排设计文档 13.x，既定设计）
+- aurora 背景漂移、skeleton shimmer、forest 尘埃/天空渐变（环境动效，已带 reduced-motion）
+- 番茄钟每秒数字跳字、时长 +5/-5 数字跳变（高频功能数据，Gate 拒绝）
