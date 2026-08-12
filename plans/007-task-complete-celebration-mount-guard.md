@@ -1,6 +1,11 @@
 # 007 — 修复任务完成庆祝动画挂载即播
 
-- **Status**: TODO（方案经验证无效，2026-08-12 实测：`animation: none` 抑制 + rAF 移除 class 后，`animation-name` 从 none 变有值会重新启动动画，挂载时庆祝动画照播；需改 JS 驱动方案，见 plans/README.md「实施验证结论」）
+- **Status**: DONE（2026-08-12 按用户批准的 JS 驱动方案实施，方案与原计划不同，见下）
+- **实际方案**（原 CSS 挂载抑制方案经验证无效：`animation: none` 抑制 + rAF 移除 class 会在移除瞬间重启动画，`animation-name` 从 none 变有值即创建动画）：
+  1. `TaskItem.tsx`：`useEffect` 监听 `task.isCompleted` 未完成→完成切换，临时挂 `task-item--celebrating` class（200ms 后移除）；`prevCompletedRef` 记录前值；挂载时初始已完成不触发。
+  2. `TaskItem.css`：`check-celebration` / `task-complete-settle` 动画规则从 `.task-item--done` 改挂到 `.task-item--celebrating`（reduced-motion 区块同步）。
+  3. `PlanPage.tsx`（配套，超出原计划文件清单）：`fetchTasks` 支持 `{ silent }` 模式，`handleToggle` 改走静默刷新——原实现每次勾选都会 `setTasksLoading(true)` 卸载整个列表再重挂，节点重建导致庆祝 effect 丢失且全表重播入场动画。
+- **验证**：加载计划页已完成任务零庆祝动画；勾选播放 check-celebration + task-complete-settle；取消再勾选再次播放；reduced-motion 零动画。
 - **Commit**: c23ba7c
 - **Severity**: HIGH
 - **Category**: Purpose & frequency / Interruptibility

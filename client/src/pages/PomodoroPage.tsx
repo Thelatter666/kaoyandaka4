@@ -566,8 +566,10 @@ export function PomodoroPage() {
       </div>
 
       {step === 'completed' ? (
-        /* 完成态：粒子爆散 + 继续/休息入口（钟随舞台隐藏，保持挂载不重挂） */
-        <div className="pomodoro-completed">
+        /* 完成态：粒子爆散 + 继续/休息入口（钟随舞台隐藏，保持挂载不重挂）。
+           key 强制重挂载：与下方 .pomodoro-below 分支的 div 区分，否则 React 复用
+           DOM 节点（仅换 className），@starting-style 入场不触发 */
+        <div key="completed" className="pomodoro-completed">
           {/* 完成粒子：自然结束/提前完成触发一次；取消/休息结束不触发 */}
           <BurstParticles burstKey={burstKey} colorVar="--color-accent-primary" />
 

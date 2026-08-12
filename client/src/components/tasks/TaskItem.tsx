@@ -53,6 +53,19 @@ export function TaskItem({
   const [editContent, setEditContent] = useState(task.content);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // 庆祝动画 JS 驱动：仅「未完成 → 完成」切换瞬间播放（挂载时初始已完成不播）
+  const [celebrating, setCelebrating] = useState(false);
+  const prevCompletedRef = useRef(task.isCompleted);
+  useEffect(() => {
+    const prev = prevCompletedRef.current;
+    prevCompletedRef.current = task.isCompleted;
+    if (task.isCompleted && !prev) {
+      setCelebrating(true);
+      const timer = setTimeout(() => setCelebrating(false), 200);
+      return () => clearTimeout(timer);
+    }
+  }, [task.isCompleted]);
+
   useEffect(() => {
     if (editing && inputRef.current) {
       inputRef.current.focus();
@@ -72,6 +85,7 @@ export function TaskItem({
     'glass-1',
     task.isCompleted ? 'task-item--done' : '',
     isSortMode ? 'task-item--sorting' : '',
+    celebrating ? 'task-item--celebrating' : '',
   ]
     .filter(Boolean)
     .join(' ');

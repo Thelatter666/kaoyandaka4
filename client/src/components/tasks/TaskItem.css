@@ -86,8 +86,9 @@
     color var(--dur-fast) var(--ease-out);
 }
 
-/* 完成瞬间：CheckCircle2 缩放进入（从 0.8 放大到 1） */
-.task-item--done .task-item__toggle svg {
+/* 完成瞬间：CheckCircle2 缩放进入（从 0.8 放大到 1）
+   动画由 JS 驱动：仅状态切换瞬间挂 --celebrating class（挂载时初始已完成不播） */
+.task-item--celebrating .task-item__toggle svg {
   animation: check-celebration var(--dur-fast) var(--ease-out);
 }
 
@@ -106,7 +107,7 @@
 }
 
 /* 完成时整卡微妙反馈：轻微下沉（物理感） */
-.task-item--done {
+.task-item--celebrating {
   animation: task-complete-settle var(--dur-fast) var(--ease-out);
 }
 
@@ -178,11 +179,11 @@
     transition: none;
   }
 
-  .task-item--done .task-item__toggle svg {
+  .task-item--celebrating .task-item__toggle svg {
     animation: none;
   }
 
-  .task-item--done {
+  .task-item--celebrating {
     animation: none;
   }
 }

@@ -79,15 +79,19 @@ export function PlanPage() {
   const [showUnfinished, setShowUnfinished] = useState(false);
   const [unfinishedProcessed, setUnfinishedProcessed] = useState(false);
 
-  const fetchTasks = useCallback(async () => {
-    setTasksLoading(true);
-    setTasksError(null);
+  const fetchTasks = useCallback(async (opts?: { silent?: boolean }) => {
+    // silent：不切 loading 态（列表保持挂载，节点复用，避免勾选后整表重挂载
+    // 重播入场动画、以及 TaskItem 庆祝动画的 JS 驱动被重挂载打断）
+    if (!opts?.silent) {
+      setTasksLoading(true);
+      setTasksError(null);
+    }
     try {
       setTasks(await tasksApi.getByDate(dateStr));
     } catch (err) {
       setTasksError(err instanceof Error ? err.message : '加载任务失败');
     } finally {
-      setTasksLoading(false);
+      if (!opts?.silent) setTasksLoading(false);
     }
   }, [dateStr]);
 
@@ -146,7 +150,8 @@ export function PlanPage() {
   const handleToggle = async (id: string) => {
     try {
       await tasksApi.toggle(id);
-      fetchTasks();
+      // 静默刷新：勾选后列表不卸载重挂（否则庆祝动画 JS 驱动失效 + 全表重播入场）
+      fetchTasks({ silent: true });
     } catch {
       showToast('error', '操作失败');
     }

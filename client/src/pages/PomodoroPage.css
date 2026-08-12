@@ -282,6 +282,17 @@
 /* ---- 完成态 ---- */
 .pomodoro-completed {
   position: relative;
+  /* 完成视图入场：挂载时 240ms 淡入 + 微缩放（@starting-style 仅播放一次） */
+  transition:
+    opacity var(--dur-med) var(--ease-out),
+    transform var(--dur-med) var(--ease-out);
+}
+
+@starting-style {
+  .pomodoro-completed {
+    opacity: 0;
+    transform: scale(0.96);
+  }
 }
 
 .pomodoro-completed__icon {
@@ -382,5 +393,9 @@
   .pomodoro-hero__stage--ignite,
   .pomodoro-hero__stage--ignite .pomodoro-stage__glow {
     animation: none;
+  }
+
+  .pomodoro-completed {
+    transition: none;
   }
 }

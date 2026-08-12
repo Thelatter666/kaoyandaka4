@@ -1,6 +1,10 @@
 # 017 — 番茄钟完成视图补一个轻量淡入
 
-- **Status**: TODO（方案经验证无效，2026-08-12 实测：三元分支两侧同为 `<div>` 时 React 复用 DOM 节点（仅换 className），`@starting-style` 只对元素首次渲染生效故不触发；需给 completed 分支 div 加 `key` 强制重挂载，见 plans/README.md「实施验证结论」）
+- **Status**: DONE（2026-08-12 按用户批准的加 key 方案实施，方案与原计划不同，见下）
+- **实际方案**（原方案只改 CSS 无效：三元分支两侧同为 `<div>` 时 React 复用 DOM 节点仅换 className，`@starting-style` 只对元素首次渲染生效故不触发，MutationObserver 证实节点复用）：
+  1. `PomodoroPage.tsx`：completed 分支根 div 加 `key="completed"`（与 else 分支 `.pomodoro-below` 的 div 区分），强制重挂载触发 `@starting-style`。
+  2. `PomodoroPage.css`：`.pomodoro-completed` 补 transition（opacity/transform 240ms `--dur-med` `--ease-out`）+ `@starting-style` 起始态（opacity 0 / scale 0.96）；reduced-motion 区块补 `transition: none`。
+- **验证**：首次/再次进入完成态均 240ms 淡入缩放（实测 30ms 时 opacity 0/scale 0.96 过渡中）；reduced-motion 直接呈现、零动画。
 - **Commit**: c23ba7c
 - **Severity**: LOW
 - **Category**: Missed opportunity（Delight / Preventing a jarring change）
