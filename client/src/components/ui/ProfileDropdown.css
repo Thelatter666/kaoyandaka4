@@ -1,0 +1,160 @@
+/* ============================================================
+   砚台考研打卡 — ProfileDropdown 账户菜单（极光玻璃）
+   参考视觉：头像圈 + 邮箱 trigger；菜单 = 账户信息 / 导出数据 / 登出
+   双主题自适应（[data-theme] 令牌），禁止裸色值。
+   ============================================================ */
+
+.profile-dropdown {
+  position: relative;
+}
+
+/* ---- Trigger：44px 玻璃胶囊，头像圈 + 邮箱（窄屏省略） ---- */
+
+.profile-dropdown__trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  height: 44px;
+  padding: 0 var(--space-md) 0 6px;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.profile-dropdown__trigger:hover {
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-glass-md);
+}
+
+.profile-dropdown__trigger:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+.profile-dropdown__avatar {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-warning));
+  color: var(--color-text-inverse);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+}
+
+.profile-dropdown__email {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+}
+
+/* ---- 菜单（glass 材质，悬浮于内容之上，z 高于导航层） ---- */
+
+.profile-dropdown__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: var(--z-dropdown);
+  min-width: 220px;
+  padding: var(--space-xs);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-bg-strong);
+  -webkit-backdrop-filter: blur(var(--blur-glass-strong)) saturate(1.4);
+  backdrop-filter: blur(var(--blur-glass-strong)) saturate(1.4);
+  box-shadow: var(--shadow-glass-lg);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .profile-dropdown__menu {
+    background: var(--color-bg-card-solid);
+  }
+}
+
+.profile-dropdown__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+}
+
+.profile-dropdown__name {
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-dropdown__divider {
+  height: 1px;
+  margin: var(--space-xs) 0;
+  background: var(--color-border);
+}
+
+.profile-dropdown__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 10px var(--space-sm);
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.profile-dropdown__item:hover:not(:disabled) {
+  background: var(--color-glass-bg);
+}
+
+.profile-dropdown__item:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.profile-dropdown__item--danger {
+  color: var(--color-accent-danger);
+}
+
+.profile-dropdown__item--danger:hover:not(:disabled) {
+  background: var(--color-accent-primary-light);
+  color: var(--color-accent-danger);
+}
+
+/* ---- 窄屏（<400px）：trigger 收至 40px 图标钮，邮箱隐藏 ---- */
+
+@media (max-width: 399px) {
+  .profile-dropdown__trigger {
+    width: 40px;
+    height: 40px;
+    padding: 0 4px;
+  }
+
+  .profile-dropdown__email {
+    display: none;
+  }
+
+  .profile-dropdown__avatar {
+    width: 30px;
+    height: 30px;
+  }
+}
