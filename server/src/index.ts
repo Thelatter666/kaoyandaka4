@@ -17,6 +17,7 @@ import coursesRouter from './routes/courses.js';
 import statisticsRouter from './routes/statistics.js';
 import settingsRouter from './routes/settings.js';
 import exportRouter from './routes/export.js';
+import importRouter from './routes/import.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -50,7 +51,8 @@ const sessionStore = new MySQLStore({
 app.use(corsMiddleware);
 // JSON 响应 gzip 压缩（统计/森林等聚合接口收益最大）；小于 1KB 的响应不压缩，避免得不偿失
 app.use(compression({ threshold: 1024 }));
-app.use(express.json());
+// 备份文件可达 MB 级，默认 100KB 不够
+app.use(express.json({ limit: '20mb' }));
 app.use(
   session({
     secret: SESSION_SECRET,
@@ -81,6 +83,7 @@ app.use('/api/v1/courses', requireAuth, coursesRouter);
 app.use('/api/v1/statistics', requireAuth, statisticsRouter);
 app.use('/api/v1/settings', requireAuth, settingsRouter);
 app.use('/api/v1/export', requireAuth, exportRouter);
+app.use('/api/v1/import', importRouter);
 
 // Health check
 app.get('/api/v1/health', (_req, res) => {
@@ -103,6 +106,7 @@ app.listen(PORT, () => {
   console.log('  /api/v1/statistics');
   console.log('  /api/v1/settings');
   console.log('  /api/v1/export');
+  console.log('  /api/v1/import');
 });
 
 export default app;
