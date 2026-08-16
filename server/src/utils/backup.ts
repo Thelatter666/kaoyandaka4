@@ -27,6 +27,7 @@ const str = (v: unknown): string | null => (v == null ? null : String(v));
 const strReq = (v: unknown): string => String(v);
 const bool = (v: unknown): boolean => Boolean(v);
 const num = (v: unknown): number => (typeof v === 'number' ? v : Number(v));
+const numOrNull = (v: unknown): number | null => (v == null ? null : num(v));
 
 const mapPreset = (r: Row) => ({
   id: strReq(r.id),
@@ -89,7 +90,7 @@ const mapFocusSession = (r: Row) => ({
   subjectSnapshot: strReq(r.subject_snapshot),
   subSubjectSnapshot: str(r.sub_subject_snapshot),
   plannedDurationSeconds: num(r.planned_duration_seconds),
-  actualDurationSeconds: num(r.actual_duration_seconds),
+  actualDurationSeconds: numOrNull(r.actual_duration_seconds),
   startedAt: strReq(r.started_at),
   plannedEndAt: strReq(r.planned_end_at),
   completedAt: str(r.completed_at),

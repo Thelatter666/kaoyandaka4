@@ -21,7 +21,44 @@ const rows = {
   reviews: [],
   courses: [],
   episodes: [],
-  focusSessions: [],
+  focusSessions: [
+    {
+      id: 'focus-1',
+      preset_id: 'preset-1',
+      preset_name_snapshot: '学习',
+      subject_snapshot: 'math',
+      sub_subject_snapshot: null,
+      planned_duration_seconds: 1500,
+      actual_duration_seconds: null,
+      started_at: '2026-08-16 09:00:00',
+      planned_end_at: '2026-08-16 09:25:00',
+      completed_at: null,
+      status: 'in_progress',
+      source: 'preset',
+      course_episode_id: null,
+      task_id: null,
+      created_at: '2026-08-16 09:00:00',
+      updated_at: '2026-08-16 09:00:00',
+    },
+    {
+      id: 'focus-2',
+      preset_id: 'preset-1',
+      preset_name_snapshot: '学习',
+      subject_snapshot: 'math',
+      sub_subject_snapshot: null,
+      planned_duration_seconds: 1500,
+      actual_duration_seconds: 1500,
+      started_at: '2026-08-16 10:00:00',
+      planned_end_at: '2026-08-16 10:25:00',
+      completed_at: '2026-08-16 10:25:00',
+      status: 'completed',
+      source: 'preset',
+      course_episode_id: null,
+      task_id: null,
+      created_at: '2026-08-16 10:00:00',
+      updated_at: '2026-08-16 10:25:00',
+    },
+  ],
   studyRecords: [],
   settings: [{ setting_key: 'pomodoro_sound_enabled', setting_value: '1' }],
 };
@@ -64,6 +101,12 @@ describe('buildBackupPayload', () => {
     expect(Object.keys(payload.data)).toEqual([
       'presets', 'tasks', 'reviews', 'courses', 'episodes', 'focusSessions', 'studyRecords', 'settings',
     ]);
+  });
+
+  it('focus 会话可空 actual_duration_seconds 原样导出为 null / 数值', () => {
+    const payload = buildBackupPayload(accountRow, rows);
+    expect(payload.data.focusSessions[0]!.actualDurationSeconds).toBe(null);
+    expect(payload.data.focusSessions[1]!.actualDurationSeconds).toBe(1500);
   });
 
   it('产出通过 BackupFileSchema 校验', () => {
