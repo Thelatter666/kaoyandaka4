@@ -3,6 +3,7 @@ import type { RowDataPacket } from 'mysql2';
 import { withTransaction } from '../db/transaction.js';
 import { formatDate } from '../utils/date.js';
 import { buildBackupPayload } from '../utils/backup.js';
+import { AppError } from '../middleware/errorHandler.js';
 
 const router = Router();
 
@@ -10,6 +11,15 @@ interface AccountRow extends RowDataPacket {
   email: string;
   password_hash: string;
   created_at: string;
+}
+
+/** 解析账号行：会话残留但账号已被物理删除时抛受控 401（而不是裸 TypeError→500） */
+export function resolveAccount(accountRows: { email: string; password_hash: string; created_at: string }[]): { email: string; password_hash: string; created_at: string } {
+  const account = accountRows[0];
+  if (!account) {
+    throw new AppError(401, 'UNAUTHORIZED', '账号不存在，请重新登录');
+  }
+  return account;
 }
 
 // GET /api/v1/export — 导出当前账号全部业务数据（含账号信息）为备份文件
@@ -21,7 +31,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         'SELECT email, password_hash, created_at FROM users WHERE id = ?',
         [req.userId]
       );
-      const account = accountRows[0]!;
+      const account = resolveAccount(accountRows);
 
       const [presets] = await connection.query(
         'SELECT * FROM study_presets WHERE user_id = ? ORDER BY created_at, id',
