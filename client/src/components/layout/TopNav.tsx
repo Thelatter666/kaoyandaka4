@@ -7,13 +7,11 @@ import {
   MonitorPlay,
   NotebookPen,
   Trees,
-  LogOut,
   type LucideIcon,
 } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ThemeToggle } from '../ui/ThemeToggle';
-import { showToast } from '../ui/Toast';
-import { logoutAuth } from '../../hooks/useAuth';
+import { ProfileDropdown } from '../ui/ProfileDropdown';
 import './TopNav.css';
 
 interface NavItem {
@@ -42,16 +40,6 @@ interface TopNavProps {
 
 export function TopNav({ activeHash, onNavigate, onPrefetch }: TopNavProps) {
   const reducedMotion = useReducedMotion();
-  const [loggingOut, setLoggingOut] = React.useState(false);
-
-  /* 退出登录（账号系统 T2.4）：销毁服务端会话并清空全局登录态，
-     App 随即回落到未登录分支（介绍页） */
-  const handleLogout = async () => {
-    if (loggingOut) return;
-    setLoggingOut(true);
-    await logoutAuth();
-    showToast('success', '已退出登录');
-  };
 
   return (
     <nav className="top-nav glass-2" aria-label="主导航">
@@ -107,19 +95,10 @@ export function TopNav({ activeHash, onNavigate, onPrefetch }: TopNavProps) {
         })}
       </div>
 
-      {/* 右：主题切换 + 退出登录 */}
+      {/* 右：主题切换 + 账户菜单（导出数据 / 登出） */}
       <div className="top-nav__actions">
         <ThemeToggle />
-        <button
-          type="button"
-          className="top-nav__logout glass-1"
-          onClick={() => { void handleLogout(); }}
-          disabled={loggingOut}
-          aria-label="退出登录"
-          title="退出登录"
-        >
-          <LogOut size={18} strokeWidth={1.75} aria-hidden="true" />
-        </button>
+        <ProfileDropdown />
       </div>
     </nav>
   );
