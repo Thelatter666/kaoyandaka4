@@ -56,6 +56,11 @@ const enumStrict = (allowed: readonly string[]) => (v: unknown, path: string): s
   return s;
 };
 
+const enumNullable = (allowed: readonly string[]) => (v: unknown, path: string): string | null => {
+  if (v === null || v === undefined) return null;
+  return enumStrict(allowed)(v, path);
+};
+
 const SUBJECTS = SubjectEnum.options;
 const SUB_SUBJECTS = SubSubjectEnum.options;
 const SESSION_SUBJECTS = ['math', 'english', '408', 'free'] as const;
@@ -67,7 +72,7 @@ const mapPreset = (e: Record<string, unknown>, p: string): Row => ({
   id: strRequired(e.id, `${p}.id`),
   name: strRequired(e.name, `${p}.name`),
   subject: enumStrict(SUBJECTS)(e.subject, `${p}.subject`),
-  sub_subject: strNullable(e.subSubject, `${p}.subSubject`),
+  sub_subject: enumNullable(SUB_SUBJECTS)(e.subSubject, `${p}.subSubject`),
   duration_minutes: intRequired(e.durationMinutes, `${p}.durationMinutes`),
   last_used_at: strNullable(e.lastUsedAt, `${p}.lastUsedAt`),
   created_at: strRequired(e.createdAt, `${p}.createdAt`),
@@ -79,7 +84,7 @@ const mapTask = (e: Record<string, unknown>, p: string): Row => ({
   task_date: strRequired(e.taskDate, `${p}.taskDate`),
   content: strRequired(e.content, `${p}.content`),
   subject: enumStrict(SUBJECTS)(e.subject, `${p}.subject`),
-  sub_subject: strNullable(e.subSubject, `${p}.subSubject`),
+  sub_subject: enumNullable(SUB_SUBJECTS)(e.subSubject, `${p}.subSubject`),
   is_completed: boolStrict(e.isCompleted, `${p}.isCompleted`),
   is_important: boolStrict(e.isImportant, `${p}.isImportant`),
   sort_order: intRequired(e.sortOrder, `${p}.sortOrder`),
@@ -99,7 +104,7 @@ const mapCourse = (e: Record<string, unknown>, p: string): Row => ({
   id: strRequired(e.id, `${p}.id`),
   name: strRequired(e.name, `${p}.name`),
   subject: enumStrict(SUBJECTS)(e.subject, `${p}.subject`),
-  sub_subject: strNullable(e.subSubject, `${p}.subSubject`),
+  sub_subject: enumNullable(SUB_SUBJECTS)(e.subSubject, `${p}.subSubject`),
   created_at: strRequired(e.createdAt, `${p}.createdAt`),
   updated_at: strRequired(e.updatedAt, `${p}.updatedAt`),
 });
@@ -122,7 +127,7 @@ const mapFocusSession = (e: Record<string, unknown>, p: string): Row => ({
   preset_id: strNullable(e.presetId, `${p}.presetId`),
   preset_name_snapshot: strRequired(e.presetNameSnapshot, `${p}.presetNameSnapshot`),
   subject_snapshot: enumStrict(SESSION_SUBJECTS)(e.subjectSnapshot, `${p}.subjectSnapshot`),
-  sub_subject_snapshot: strNullable(e.subSubjectSnapshot, `${p}.subSubjectSnapshot`),
+  sub_subject_snapshot: enumNullable(SUB_SUBJECTS)(e.subSubjectSnapshot, `${p}.subSubjectSnapshot`),
   planned_duration_seconds: intRequired(e.plannedDurationSeconds, `${p}.plannedDurationSeconds`),
   actual_duration_seconds: intNullable(e.actualDurationSeconds, `${p}.actualDurationSeconds`),
   started_at: strRequired(e.startedAt, `${p}.startedAt`),
@@ -140,7 +145,7 @@ const mapStudyRecord = (e: Record<string, unknown>, p: string): Row => ({
   id: strRequired(e.id, `${p}.id`),
   preset_name_snapshot: strRequired(e.presetNameSnapshot, `${p}.presetNameSnapshot`),
   subject_snapshot: enumStrict(SESSION_SUBJECTS)(e.subjectSnapshot, `${p}.subjectSnapshot`),
-  sub_subject_snapshot: strNullable(e.subSubjectSnapshot, `${p}.subSubjectSnapshot`),
+  sub_subject_snapshot: enumNullable(SUB_SUBJECTS)(e.subSubjectSnapshot, `${p}.subSubjectSnapshot`),
   actual_duration_seconds: intRequired(e.actualDurationSeconds, `${p}.actualDurationSeconds`),
   focus_session_id: strNullable(e.focusSessionId, `${p}.focusSessionId`),
   task_id: strNullable(e.taskId, `${p}.taskId`),
