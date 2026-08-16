@@ -95,7 +95,8 @@ export function ProfileDropdown() {
         onClick={() => setIsOpen((v) => !v)}
       >
         <span className="profile-dropdown__avatar" aria-hidden="true">{initial}</span>
-        <span className="profile-dropdown__email">{email}</span>
+        {/* trigger 只显示邮箱前 4 位（防止按钮挤出顶栏）；完整邮箱在菜单账户信息区展示，悬停 title 亦可查看 */}
+        <span className="profile-dropdown__email" title={email}>{email.slice(0, 4)}</span>
       </button>
 
       <AnimatePresence>
