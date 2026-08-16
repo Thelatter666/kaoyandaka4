@@ -23,6 +23,26 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
   unauthorizedHandler = handler;
 }
 
+/** 非 2xx 统一处理：解析错误形状、401 触发全局登出（/auth/* 除外）、抛 ApiError */
+async function throwIfNotOk(res: Response, path: string): Promise<void> {
+  if (res.ok) return;
+  let errorData: { error?: { code?: string; message?: string; details?: Array<{ field: string; message: string }> } } = {};
+  try {
+    errorData = await res.json();
+  } catch {
+    // ignore parse errors
+  }
+  if (res.status === 401 && !path.startsWith('/auth/')) {
+    unauthorizedHandler?.();
+  }
+  throw new ApiError(
+    res.status,
+    errorData.error?.code || 'UNKNOWN_ERROR',
+    errorData.error?.message || `请求失败 (${res.status})`,
+    errorData.error?.details
+  );
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE}${path}`;
   const res = await fetch(url, {
@@ -35,23 +55,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     },
   });
 
-  if (!res.ok) {
-    let errorData: { error?: { code?: string; message?: string; details?: Array<{ field: string; message: string }> } } = {};
-    try {
-      errorData = await res.json();
-    } catch {
-      // ignore parse errors
-    }
-    if (res.status === 401 && !path.startsWith('/auth/')) {
-      unauthorizedHandler?.();
-    }
-    throw new ApiError(
-      res.status,
-      errorData.error?.code || 'UNKNOWN_ERROR',
-      errorData.error?.message || `请求失败 (${res.status})`,
-      errorData.error?.details
-    );
-  }
+  await throwIfNotOk(res, path);
 
   // Handle 204 No Content
   if (res.status === 204) return undefined as T;
@@ -59,8 +63,26 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
+/** 下载文件：fetch → blob → 临时 <a download> 触发保存；文件名由调用方给定 */
+async function download(path: string, filename: string): Promise<void> {
+  const url = `${API_BASE}${path}`;
+  const res = await fetch(url, { credentials: 'include' });
+  await throwIfNotOk(res, path);
+
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = objectUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(objectUrl);
+}
+
 export const api = {
   get: <T>(path: string) => request<T>(path),
+  download: (path: string, filename: string) => download(path, filename),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),
   put: <T>(path: string, body?: unknown) =>
