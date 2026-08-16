@@ -8,3 +8,4 @@ export type { StatisticsQuery, ForestResponse, HeatmapResponse } from '../schema
 export type { UpsertReviewInput } from '../schemas/review.js';
 export type { UpdateSettingsInput } from '../schemas/settings.js';
 export type { BackupFile, BackupAccount, BackupSetting } from '../schemas/backup.js';
+export type { ImportMode, DiffItem, DiffSummary, ImportPreviewResponse, ImportRequest } from '../schemas/import.js';
