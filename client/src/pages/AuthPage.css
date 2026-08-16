@@ -153,6 +153,25 @@
   color: var(--color-text-secondary);
 }
 
+/* 从备份文件导入（P2）：次要链接样式 */
+.auth-card__import {
+  display: block;
+  margin: var(--space-sm) auto 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.auth-card__import:hover {
+  color: var(--color-accent-primary-strong);
+}
+
 .auth-card__back {
   display: block;
   margin-top: var(--space-md);

@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { Download, LogOut } from 'lucide-react';
+import { Download, LogOut, Upload } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { backupApi } from '../../api/backup';
 import { showToast } from './Toast';
+import { ImportBackupModal } from './ImportBackupModal';
 import './ProfileDropdown.css';
 
 interface ProfileMenuItem {
@@ -20,6 +21,7 @@ export function ProfileDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
 
@@ -73,6 +75,12 @@ export function ProfileDropdown() {
       icon: <Download size={16} strokeWidth={1.75} aria-hidden="true" />,
       disabled: exporting,
       action: () => { void handleExport(); },
+    },
+    {
+      key: 'import',
+      label: '导入数据',
+      icon: <Upload size={16} strokeWidth={1.75} aria-hidden="true" />,
+      action: () => setImportOpen(true),
     },
     {
       key: 'logout',
@@ -131,6 +139,15 @@ export function ProfileDropdown() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ImportBackupModal
+        isOpen={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={() => {
+          // 导入改变了当前账号数据：刷新页面让所有页面拉到最新数据
+          window.location.reload();
+        }}
+      />
     </div>
   );
 }

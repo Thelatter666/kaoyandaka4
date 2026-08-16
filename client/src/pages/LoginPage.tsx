@@ -4,6 +4,7 @@ import { ThemeToggle } from '../components/ui/ThemeToggle';
 import { authApi } from '../api/auth';
 import { ApiError } from '../api/client';
 import { applyAuthUser } from '../hooks/useAuth';
+import { ImportBackupModal } from '../components/ui/ImportBackupModal';
 import './AuthPage.css';
 
 /**
@@ -19,6 +20,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -114,9 +116,24 @@ export function LoginPage() {
           <p className="auth-card__switch">
             还没有账号？<a href="#/register">免费注册</a>
           </p>
+          <button
+            type="button"
+            className="auth-card__import"
+            onClick={() => setImportOpen(true)}
+          >
+            从备份文件导入
+          </button>
           <a className="auth-card__back" href="#/">
             返回首页
           </a>
+          <ImportBackupModal
+            isOpen={importOpen}
+            onClose={() => setImportOpen(false)}
+            onImported={(user) => {
+              applyAuthUser(user);
+              window.location.hash = '#/';
+            }}
+          />
         </div>
       </main>
     </div>
