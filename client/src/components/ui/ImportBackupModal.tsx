@@ -101,7 +101,9 @@ export function ImportBackupModal({ isOpen, onClose, onImported }: ImportBackupM
     }
   };
 
-  const canImport = preview && !preview.existingAccount;
+  // 已登录流程：preview 的 modeOptions 含 overwrite（服务端按登录态返回）；未登录仅 ['merge']
+  const isLoggedInFlow = preview ? preview.modeOptions.includes('overwrite') : false;
+  const canImport = preview && (isLoggedInFlow || !preview.existingAccount);
 
   return (
     <>
@@ -145,14 +147,14 @@ export function ImportBackupModal({ isOpen, onClose, onImported }: ImportBackupM
                 备份账号：<strong>{preview.accountEmail}</strong>
               </div>
 
-              {preview.existingAccount && (
+              {!isLoggedInFlow && preview.existingAccount && (
                 <p className="import-modal__warning" role="alert">
                   <AlertTriangle size={16} strokeWidth={1.75} aria-hidden="true" />
                   该邮箱已注册。请登录该账号后，从账户菜单的「导入数据」导入。
                 </p>
               )}
 
-              {!preview.existingAccount && (
+              {canImport && (
                 <>
                   <table className="import-modal__diff">
                     <thead>
