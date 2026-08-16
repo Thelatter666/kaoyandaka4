@@ -91,7 +91,7 @@ docs/ 交接文档/        → 设计文档、需求文档、组件集成报告
 - **Unit/Integration**: `npx vitest run` (files matching `**/*.test.ts`, `**/*.test.tsx`)
 - **E2E**: `npm run test:e2e` (Playwright, config at `e2e/playwright.config.ts`)
 - E2E tests authenticate via real session (not mocked)
-- 当前仓库**尚无单元测试文件**（vitest `passWithNoTests`，仅 e2e/tests/smoke.spec.ts 存在）
+- 单元测试已存在：`client/src/utils/sound.test.ts`（番茄钟提示音引擎）；新增逻辑请按 `**/*.test.ts(x)` 惯例补测（vitest 配置在根目录 `vitest.config.ts`，排除 e2e/）
 
 ## Build & Run
 
