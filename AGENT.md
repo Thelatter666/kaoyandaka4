@@ -172,5 +172,5 @@ import { CreateTaskSchema } from '../../../shared/src/schemas/task.js';
 6. **效果确认**：任务完成后只汇报效果，**用户亲自检查效果**
 7. **commit / merge 指令**：用户检查通过后，才会下达 **commit** 或 **commit + merge** 指令；在用户明确下令前，绝不 commit、绝不 merge、绝不 push
 8. **合并 main**：合并回 `main`
-9. **同步远端**：push 到远端仓库（github）
+9. **同步远端**：push 到远端仓库（**github 与 gitee 双远端均需推送**：`git push github main` + `git push origin main`）
 10. **同步服务器**：按 `manage-server` skill 部署到服务器
