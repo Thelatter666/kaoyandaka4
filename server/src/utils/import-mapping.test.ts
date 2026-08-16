@@ -49,16 +49,13 @@ describe('mapBackupData', () => {
     expect(() => mapBackupData(bad2)).toThrow(MappingError);
   });
 
-  it('子科目枚举严格校验：非法 subSubject 拒绝', () => {
-    const bad = { ...data, tasks: [{ ...data.tasks[0]!, subSubject: 'invalid_subject' }] };
+  it('subSubject 走枚举校验：非法拒绝、null 与合法值通过', () => {
+    const bad = { ...data, presets: [{ ...data.presets[0]!, subSubject: 'invalid_subject' }] };
+    const okNull = { ...data, presets: [{ ...data.presets[0]!, subSubject: null }] };
+    const okValid = { ...data, presets: [{ ...data.presets[0]!, subSubject: 'data_structure' }] };
     expect(() => mapBackupData(bad)).toThrow(MappingError);
-  });
-
-  it('子科目 null / 合法值通过 enumNullable', () => {
-    const nullData = { ...data, tasks: [{ ...data.tasks[0]!, subSubject: null }] };
-    expect(mapBackupData(nullData).tasks[0]).toMatchObject({ sub_subject: null });
-    const validData = { ...data, tasks: [{ ...data.tasks[0]!, subSubject: 'data_structure' }] };
-    expect(mapBackupData(validData).tasks[0]).toMatchObject({ sub_subject: 'data_structure' });
+    expect(mapBackupData(okNull).presets[0]).toMatchObject({ sub_subject: null });
+    expect(mapBackupData(okValid).presets[0]).toMatchObject({ sub_subject: 'data_structure' });
   });
 
   it('错误信息包含字段路径', () => {
