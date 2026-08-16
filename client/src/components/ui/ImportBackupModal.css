@@ -1,0 +1,117 @@
+/* 导入备份 Modal（P2）：选文件 → 差异预览 → 覆盖/合并 */
+.import-modal__input {
+  display: none;
+}
+
+.import-modal__pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-lg) 0;
+}
+
+.import-modal__pick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 12px var(--space-lg);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+.import-modal__pick-btn:hover:not(:disabled) {
+  border-color: var(--color-accent-primary);
+  background: var(--color-glass-bg-strong);
+}
+
+.import-modal__pick-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.import-modal__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+.import-modal__error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-accent-primary-light);
+  color: var(--color-accent-danger);
+  font-size: var(--text-sm);
+}
+
+.import-modal__file {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.import-modal__account {
+  margin: var(--space-sm) 0;
+  color: var(--color-text-primary);
+  font-size: var(--text-base);
+}
+
+.import-modal__warning {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin: var(--space-sm) 0;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-accent-warning-light);
+  color: var(--color-accent-warning-strong);
+  font-size: var(--text-sm);
+}
+
+.import-modal__diff {
+  width: 100%;
+  margin: var(--space-sm) 0;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.import-modal__diff th,
+.import-modal__diff td {
+  padding: 6px var(--space-sm);
+  border-bottom: 1px solid var(--color-border);
+  text-align: right;
+}
+
+.import-modal__diff th:first-child,
+.import-modal__diff td:first-child {
+  text-align: left;
+  color: var(--color-text-secondary);
+}
+
+.import-modal__diff th {
+  color: var(--color-text-muted);
+  font-weight: var(--font-medium);
+}
+
+.import-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
+}
