@@ -112,43 +112,80 @@ export function resolveImportTarget(opts: ResolveImportTargetOptions): ImportTar
   return { ok: true, target: { kind: 'existing', userId: sessionUserId }, existingAccount: true };
 }
 
-/* ---- 批量 upsert SQL 构造 ---- */
+/* ---- 批量 INSERT SQL 构造 ---- */
 
 export interface TableDef {
   table: string;
-  /** ON DUPLICATE KEY UPDATE 的列（业务列，不含 id/user_id；reviews 不含 id 保留现有行 id） */
-  updateColumns: string[];
-  /** overwrite 模式的删除顺序（先删引用方） */
 }
 
-/** 8 表定义：表名 + upsert 更新列（删除顺序在路由中固定） */
-export const TABLE_DEFS: Record<keyof MappedData, { table: string; updateColumns: string[] }> = {
-  presets: { table: 'study_presets', updateColumns: ['name', 'subject', 'sub_subject', 'duration_minutes', 'last_used_at', 'created_at', 'updated_at'] },
-  tasks: { table: 'daily_tasks', updateColumns: ['task_date', 'content', 'subject', 'sub_subject', 'is_completed', 'is_important', 'sort_order', 'created_at', 'updated_at'] },
-  reviews: { table: 'daily_reviews', updateColumns: ['content', 'created_at', 'updated_at'] },
-  courses: { table: 'online_courses', updateColumns: ['name', 'subject', 'sub_subject', 'created_at', 'updated_at'] },
-  episodes: { table: 'course_episodes', updateColumns: ['course_id', 'title', 'duration_seconds', 'duration_text', 'sort_order', 'is_completed', 'completed_at', 'created_at', 'updated_at'] },
-  focusSessions: { table: 'focus_sessions', updateColumns: ['preset_id', 'preset_name_snapshot', 'subject_snapshot', 'sub_subject_snapshot', 'planned_duration_seconds', 'actual_duration_seconds', 'started_at', 'planned_end_at', 'completed_at', 'status', 'source', 'course_episode_id', 'task_id', 'created_at', 'updated_at'] },
-  studyRecords: { table: 'study_records', updateColumns: ['preset_name_snapshot', 'subject_snapshot', 'sub_subject_snapshot', 'actual_duration_seconds', 'focus_session_id', 'task_id', 'course_episode_id', 'course_name_snapshot', 'episode_title_snapshot', 'source', 'notes', 'created_at', 'updated_at'] },
-  settings: { table: 'user_settings', updateColumns: ['setting_value'] },
+/** 8 表定义：表名（overwrite 删除顺序在路由中固定） */
+export const TABLE_DEFS: Record<keyof MappedData, { table: string }> = {
+  presets: { table: 'study_presets' },
+  tasks: { table: 'daily_tasks' },
+  reviews: { table: 'daily_reviews' },
+  courses: { table: 'online_courses' },
+  episodes: { table: 'course_episodes' },
+  focusSessions: { table: 'focus_sessions' },
+  studyRecords: { table: 'study_records' },
+  settings: { table: 'user_settings' },
 };
 
 /**
- * 构造批量 upsert：INSERT INTO t (cols) VALUES (...) ON DUPLICATE KEY UPDATE col=VALUES(col)...
+ * 构造批量 INSERT：INSERT INTO t (cols) VALUES (...), (...)
  * 行对象键序即列序（映射函数产出固定键序）；空行返回 null。
+ * 刻意不含 ON DUPLICATE KEY UPDATE：导入文件保留原 UUID id，ODKU 会
+ * 在撞主键时更新"他人行"且 user_id 不在更新列（不换主人），造成跨账号
+ * 串号。改为先删后插（见路由），此处只做纯插入。
  */
-export function buildUpsertSql(
+export function buildInsertSql(
   table: string,
-  rows: Record<string, unknown>[],
-  updateColumns: string[]
+  rows: Record<string, unknown>[]
 ): { sql: string; params: unknown[] } | null {
   if (rows.length === 0) return null;
   const columns = Object.keys(rows[0]!);
   const placeholders = rows.map(() => `(${columns.map(() => '?').join(', ')})`).join(', ');
   const params = rows.flatMap((r) => columns.map((c) => r[c]));
-  const updates = updateColumns.map((c) => `${c}=VALUES(${c})`).join(', ');
   return {
-    sql: `INSERT INTO ${table} (${columns.join(', ')}) VALUES ${placeholders} ON DUPLICATE KEY UPDATE ${updates}`,
+    sql: `INSERT INTO ${table} (${columns.join(', ')}) VALUES ${placeholders}`,
     params,
   };
+}
+
+/* ---- merge 模式「目标账号内冲突清理」DELETE 构造 ---- */
+
+export type ConflictDelete = { sql: string; params: unknown[] };
+
+/**
+ * 构造 merge 模式下的「目标账号内冲突行删除」语句：
+ * - 'id'（普通表，含 presets/tasks/courses/episodes/focusSessions/studyRecords）：
+ *   按全局主键 id 删（`user_id=? AND id IN (...)`）。
+ * - 'review'（daily_reviews）：先按 id 删（全局主键），再按 (user_id, review_date)
+ *   唯一键删一条（`review_date IN (...)`），避免插入时撞该唯一约束。
+ * - 'setting'（user_settings）：按联合主键 (user_id, setting_key) 删（`setting_key IN`）。
+ * 空 rows 返回 []；rows 需已含 user_id（路由在写前统一注入）。
+ */
+export function collectConflictKeys(
+  table: string,
+  rows: Record<string, unknown>[],
+  mode: 'id' | 'review' | 'setting'
+): ConflictDelete[] {
+  if (rows.length === 0) return [];
+  const userId = String(rows[0]!.user_id);
+  const results: ConflictDelete[] = [];
+  const push = (column: string, values: string[]) => {
+    if (values.length === 0) return;
+    results.push({
+      sql: `DELETE FROM ${table} WHERE user_id = ? AND ${column} IN (${values.map(() => '?').join(', ')})`,
+      params: [userId, ...values],
+    });
+  };
+  if (mode === 'id') {
+    push('id', rows.map((r) => String(r.id)));
+  } else if (mode === 'review') {
+    push('id', rows.map((r) => String(r.id)));
+    push('review_date', rows.map((r) => String(r.review_date)));
+  } else {
+    push('setting_key', rows.map((r) => String(r.setting_key)));
+  }
+  return results;
 }

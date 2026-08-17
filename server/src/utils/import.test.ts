@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  computeDiffCounts, computeDiffSummary, resolveImportTarget, buildUpsertSql, TABLE_DEFS,
+  computeDiffCounts, computeDiffSummary, resolveImportTarget, buildInsertSql, collectConflictKeys, TABLE_DEFS,
 } from './import.js';
 import type { MappedData } from './import-mapping.js';
 
@@ -72,22 +72,66 @@ describe('resolveImportTarget', () => {
   });
 });
 
-describe('buildUpsertSql', () => {
-  it('生成批量 upsert SQL（列固定、参数展开、更新列 VALUES）', () => {
+describe('buildInsertSql', () => {
+  it('生成纯批量 INSERT（无 ON DUPLICATE KEY UPDATE，杜绝跨账号串号）', () => {
     const rows = [{ id: 'a', content: 'x', sort_order: 1 }, { id: 'b', content: 'y', sort_order: 2 }];
-    const r = buildUpsertSql('daily_tasks', rows, ['content', 'sort_order']);
+    const r = buildInsertSql('daily_tasks', rows);
     expect(r).not.toBeNull();
     expect(r!.sql).toContain('INSERT INTO daily_tasks (id, content, sort_order) VALUES');
-    expect(r!.sql).toContain('ON DUPLICATE KEY UPDATE content=VALUES(content), sort_order=VALUES(sort_order)');
+    expect(r!.sql).not.toContain('ON DUPLICATE KEY UPDATE');
     expect(r!.params).toEqual(['a', 'x', 1, 'b', 'y', 2]);
   });
 
   it('空行返回 null', () => {
-    expect(buildUpsertSql('daily_tasks', [], ['content'])).toBeNull();
+    expect(buildInsertSql('daily_tasks', [])).toBeNull();
   });
 
-  it('TABLE_DEFS 覆盖 8 表且 reviews 更新列不含 id', () => {
+  it('TABLE_DEFS 覆盖 8 表（仅表名，无 updateColumns）', () => {
     expect(Object.keys(TABLE_DEFS)).toEqual(['presets', 'tasks', 'reviews', 'courses', 'episodes', 'focusSessions', 'studyRecords', 'settings']);
-    expect(TABLE_DEFS.reviews.updateColumns).not.toContain('id');
+    expect(TABLE_DEFS.presets).toEqual({ table: 'study_presets' });
+    expect('updateColumns' in TABLE_DEFS.reviews).toBe(false);
+  });
+});
+
+describe('collectConflictKeys', () => {
+  it('普通表（id 模式）：按全局主键 id 删除', () => {
+    const rows = [
+      { user_id: 'u1', id: 'a', content: 'x' },
+      { user_id: 'u1', id: 'b', content: 'y' },
+    ];
+    const dels = collectConflictKeys('daily_tasks', rows, 'id');
+    expect(dels).toHaveLength(1);
+    expect(dels[0]!.sql).toBe('DELETE FROM daily_tasks WHERE user_id = ? AND id IN (?, ?)');
+    expect(dels[0]!.params).toEqual(['u1', 'a', 'b']);
+  });
+
+  it('reviews（review 模式）：先按 id、再按 review_date 两条删除', () => {
+    const rows = [
+      { user_id: 'u1', id: 'r1', review_date: '2026-08-16' },
+      { user_id: 'u1', id: 'r2', review_date: '2026-08-17' },
+    ];
+    const dels = collectConflictKeys('daily_reviews', rows, 'review');
+    expect(dels).toHaveLength(2);
+    expect(dels[0]!.sql).toContain('AND id IN (?, ?)');
+    expect(dels[0]!.params).toEqual(['u1', 'r1', 'r2']);
+    expect(dels[1]!.sql).toBe('DELETE FROM daily_reviews WHERE user_id = ? AND review_date IN (?, ?)');
+    expect(dels[1]!.params).toEqual(['u1', '2026-08-16', '2026-08-17']);
+  });
+
+  it('settings（setting 模式）：按联合主键 setting_key 删除', () => {
+    const rows = [
+      { user_id: 'u1', setting_key: 'theme', setting_value: 'dark' },
+      { user_id: 'u1', setting_key: 'pomodoro_sound_enabled', setting_value: '1' },
+    ];
+    const dels = collectConflictKeys('user_settings', rows, 'setting');
+    expect(dels).toHaveLength(1);
+    expect(dels[0]!.sql).toBe('DELETE FROM user_settings WHERE user_id = ? AND setting_key IN (?, ?)');
+    expect(dels[0]!.params).toEqual(['u1', 'theme', 'pomodoro_sound_enabled']);
+  });
+
+  it('空行返回 []', () => {
+    expect(collectConflictKeys('daily_tasks', [], 'id')).toEqual([]);
+    expect(collectConflictKeys('daily_reviews', [], 'review')).toEqual([]);
+    expect(collectConflictKeys('user_settings', [], 'setting')).toEqual([]);
   });
 });

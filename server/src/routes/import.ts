@@ -9,7 +9,7 @@ import { generateUUID } from '../utils/uuid.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { mapBackupData, MappingError } from '../utils/import-mapping.js';
 import {
-  computeDiffSummary, resolveImportTarget, buildUpsertSql, TABLE_DEFS,
+  computeDiffSummary, resolveImportTarget, buildInsertSql, collectConflictKeys, TABLE_DEFS,
   type ExistingKeys,
 } from '../utils/import.js';
 import type { RowDataPacket } from 'mysql2';
@@ -177,8 +177,30 @@ router.post('/', importLimiter, validate(ImportRequestSchema), async (req: Reque
 
       const write = async (key: keyof typeof TABLE_DEFS, rows: Record<string, unknown>[]) => {
         const withUser = rows.map((r) => ({ ...r, user_id: userId }));
-        const stmt = buildUpsertSql(TABLE_DEFS[key].table, withUser, TABLE_DEFS[key].updateColumns);
-        if (stmt) await connection.query(stmt.sql, stmt.params);
+
+        // merge：先删目标账号内冲突行（id / reviews 的 date / settings 的 key），
+        // 再纯插入文件行——弃用 ON DUPLICATE KEY UPDATE，杜绝跨账号更新他人行。
+        if (mode === 'merge') {
+          const conflictMode: 'id' | 'review' | 'setting' =
+            key === 'reviews' ? 'review' : key === 'settings' ? 'setting' : 'id';
+          for (const del of collectConflictKeys(TABLE_DEFS[key].table, withUser, conflictMode)) {
+            await connection.query(del.sql, del.params);
+          }
+        }
+
+        const stmt = buildInsertSql(TABLE_DEFS[key].table, withUser);
+        if (stmt) {
+          try {
+            await connection.query(stmt.sql, stmt.params);
+          } catch (err) {
+            // 先删后插仍无法避免文件 id 与目标账号之外其他行撞全局主键（cross-account）：
+            // 捕获 ER_DUP_ENTRY → 409（事务回滚，已删的目标内行一并还原）。
+            if ((err as { code?: string }).code === 'ER_DUP_ENTRY') {
+              throw new AppError(409, 'IMPORT_CONFLICT', '备份文件与现有数据存在 ID 冲突，请先导出备份或清理后重试');
+            }
+            throw err;
+          }
+        }
       };
 
       await write('presets', mapped.presets);
