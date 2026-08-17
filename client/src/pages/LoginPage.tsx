@@ -123,6 +123,15 @@ export function LoginPage() {
           >
             从备份文件导入
           </button>
+          <button
+            type="button"
+            className="auth-card__local"
+            onClick={() => {
+              window.location.hash = '#/local';
+            }}
+          >
+            离线使用（本地模式）
+          </button>
           <a className="auth-card__back" href="#/">
             返回首页
           </a>

@@ -1,4 +1,6 @@
 import { api } from './client';
+import { localStore } from '../local/localStore';
+import { isLocalMode } from '../local/mode';
 import type { CreatePresetInput, UpdatePresetInput } from '@shared/types';
 
 export interface Preset {
@@ -12,12 +14,16 @@ export interface Preset {
   updatedAt: string;
 }
 
+/* 本地模式（P3）：同名同签名切到 IndexedDB，页面组件零改动 */
 export const presetsApi = {
-  getAll: () => api.get<Preset[]>('/presets'),
+  getAll: () => (isLocalMode() ? localStore.presets.getAll() : api.get<Preset[]>('/presets')),
 
-  create: (data: CreatePresetInput) => api.post<Preset>('/presets', data),
+  create: (data: CreatePresetInput) =>
+    isLocalMode() ? localStore.presets.create(data) : api.post<Preset>('/presets', data),
 
-  update: (id: string, data: UpdatePresetInput) => api.put<Preset>(`/presets/${id}`, data),
+  update: (id: string, data: UpdatePresetInput) =>
+    isLocalMode() ? localStore.presets.update(id, data) : api.put<Preset>(`/presets/${id}`, data),
 
-  delete: (id: string) => api.delete<void>(`/presets/${id}`),
+  delete: (id: string) =>
+    isLocalMode() ? localStore.presets.delete(id) : api.delete<void>(`/presets/${id}`),
 };

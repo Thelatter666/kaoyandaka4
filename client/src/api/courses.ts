@@ -1,4 +1,6 @@
 import { api } from './client';
+import { localStore } from '../local/localStore';
+import { isLocalMode } from '../local/mode';
 import type { ParseImportInput, CreateCourseInput } from '@shared/types';
 
 export interface Course {
@@ -41,17 +43,24 @@ export interface ParseResult {
   unrecognizedLines: string[];
 }
 
+/* 本地模式（P3）：同名同签名切到 IndexedDB，页面组件零改动 */
 export const coursesApi = {
-  getAll: () => api.get<Course[]>('/courses'),
+  getAll: () => (isLocalMode() ? localStore.courses.getAll() : api.get<Course[]>('/courses')),
 
-  getById: (id: string) => api.get<CourseDetail>(`/courses/${id}`),
+  getById: (id: string) =>
+    isLocalMode() ? localStore.courses.getById(id) : api.get<CourseDetail>(`/courses/${id}`),
 
-  parse: (data: ParseImportInput) => api.post<ParseResult>('/courses/parse', data),
+  parse: (data: ParseImportInput) =>
+    isLocalMode() ? localStore.courses.parse(data) : api.post<ParseResult>('/courses/parse', data),
 
-  create: (data: CreateCourseInput) => api.post<Course>('/courses', data),
+  create: (data: CreateCourseInput) =>
+    isLocalMode() ? localStore.courses.create(data) : api.post<Course>('/courses', data),
 
-  delete: (id: string) => api.delete<void>(`/courses/${id}`),
+  delete: (id: string) =>
+    isLocalMode() ? localStore.courses.delete(id) : api.delete<void>(`/courses/${id}`),
 
   toggleEpisode: (courseId: string, episodeId: string) =>
-    api.patch<Episode>(`/courses/${courseId}/episodes/${episodeId}/toggle`),
+    isLocalMode()
+      ? localStore.courses.toggleEpisode(courseId, episodeId)
+      : api.patch<Episode>(`/courses/${courseId}/episodes/${episodeId}/toggle`),
 };

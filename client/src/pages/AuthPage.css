@@ -164,12 +164,36 @@
   font-family: var(--font-body);
   font-size: var(--text-sm);
   text-decoration: underline;
+  text-wrap: balance;
   cursor: pointer;
   transition: color var(--dur-fast) var(--ease-out);
 }
 
 .auth-card__import:hover {
   color: var(--color-accent-primary-strong);
+}
+
+/* 本地模式入口（P3）：描边按钮，与主表单区分层级 */
+.auth-card__local {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-md);
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.auth-card__local:hover {
+  border-color: var(--color-border-focus);
+  color: var(--color-text-primary);
 }
 
 .auth-card__back {

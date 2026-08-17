@@ -6,6 +6,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { showToast } from './Toast';
 import { backupApi } from '../../api/backup';
 import { ApiError } from '../../api/client';
+import { isLocalApp } from '../../local/mode';
 import type { BackupFile } from '@shared/types';
 import type { ImportMode, ImportPreviewResponse, DiffSummary } from '@shared/types';
 import './ImportBackupModal.css';
@@ -104,6 +105,7 @@ export function ImportBackupModal({ isOpen, onClose, onImported }: ImportBackupM
   // 已登录流程：preview 的 modeOptions 含 overwrite（服务端按登录态返回）；未登录仅 ['merge']
   const isLoggedInFlow = preview ? preview.modeOptions.includes('overwrite') : false;
   const canImport = preview && (isLoggedInFlow || !preview.existingAccount);
+  const isLocal = isLocalApp();
 
   return (
     <>
@@ -126,7 +128,9 @@ export function ImportBackupModal({ isOpen, onClose, onImported }: ImportBackupM
                 {busy ? '正在分析文件...' : '选择备份文件（.json）'}
               </button>
               <p className="import-modal__hint">
-                支持 P1 导出的 yantai-backup-*.json（schemaVersion 1）
+                {isLocal
+                  ? '支持 P1 服务器导出的 yantai-backup-*.json 与本地账户导出的备份文件'
+                  : '支持 P1 导出的 yantai-backup-*.json（schemaVersion 1）'}
               </p>
               {error && (
                 <p className="import-modal__error" role="alert">

@@ -22,6 +22,7 @@ const pageLoaders = {
   login: () => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })),
   register: () => import('./pages/RegisterPage').then((m) => ({ default: m.RegisterPage })),
   review: () => import('./pages/ReviewPage').then((m) => ({ default: m.ReviewPage })),
+  local: () => import('./pages/LocalModePage').then((m) => ({ default: m.LocalModePage })),
 };
 
 const LandingPage = lazy(pageLoaders.landing);
@@ -35,6 +36,7 @@ const StatisticsPage = lazy(pageLoaders.statistics);
 const LoginPage = lazy(pageLoaders.login);
 const RegisterPage = lazy(pageLoaders.register);
 const ReviewPage = lazy(pageLoaders.review);
+const LocalModePage = lazy(pageLoaders.local);
 
 /* 顶栏导航 hash → 页面 chunk 预取（hover/focus 即加载，点击时 chunk 已就绪） */
 const NAV_PREFETCH: Record<string, () => Promise<{ default: React.ComponentType<never> } | unknown>> = {
@@ -47,10 +49,10 @@ const NAV_PREFETCH: Record<string, () => Promise<{ default: React.ComponentType<
   '#/review': pageLoaders.review,
 };
 
-/* 未登录可访问的公开路由（账号系统 T2.4）：介绍页 + 登录 + 注册 */
-const PUBLIC_PAGES = new Set(['/', '/login', '/register']);
-/* 仅未登录可访问：已登录访问这两个路由会被守卫重定向回 #/ */
-const GUEST_ONLY_PAGES = new Set(['/login', '/register']);
+/* 未登录可访问的公开路由（账号系统 T2.4）：介绍页 + 登录 + 注册 + 本地账户页（P3） */
+const PUBLIC_PAGES = new Set(['/', '/login', '/register', '/local']);
+/* 仅未登录可访问：已登录访问这些路由会被守卫重定向回 #/ */
+const GUEST_ONLY_PAGES = new Set(['/login', '/register', '/local']);
 
 function getHash(): string {
   return window.location.hash || '#/';
@@ -274,6 +276,8 @@ export default function App() {
             <LoginPage />
           ) : incoming.page === '/register' ? (
             <RegisterPage />
+          ) : incoming.page === '/local' ? (
+            <LocalModePage />
           ) : (
             <LandingPage />
           )}

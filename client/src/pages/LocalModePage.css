@@ -1,0 +1,123 @@
+/* ============================================================
+   本地模式页（#/local，P3）
+   与 AuthPage.css 共用 auth-card 骨架；此处定义账户图标、
+   激活区、账户列表与操作按钮。动效仅 transform / opacity。
+   ============================================================ */
+
+.local-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: var(--space-md);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-accent-primary) 12%, transparent);
+  color: var(--color-accent-primary);
+}
+
+/* ---- 激活账户区 ---- */
+.local-active {
+  padding: var(--space-md);
+  margin-bottom: var(--space-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--color-bg-card) 60%, transparent);
+}
+
+.local-active__label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-xs);
+}
+
+.local-active__email {
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-md);
+  word-break: break-all;
+}
+
+.local-active__enter {
+  width: 100%;
+}
+
+/* ---- 账户列表 ---- */
+.local-section__title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.local-accounts__list {
+  list-style: none;
+  margin: 0 0 var(--space-lg);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.local-accounts__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.local-accounts__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.local-accounts__email {
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.local-accounts__meta {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.local-accounts__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+.local-accounts__delete {
+  color: var(--color-text-muted);
+}
+
+.local-accounts__delete:hover {
+  color: var(--color-accent-danger);
+  border-color: var(--color-accent-danger);
+}
+
+/* ---- 新建账户 ---- */
+.local-create {
+  margin-bottom: var(--space-md);
+}
+
+@media (max-width: 479px) {
+  .local-accounts__row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .local-accounts__actions {
+    justify-content: flex-end;
+  }
+}

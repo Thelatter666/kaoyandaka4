@@ -1,4 +1,6 @@
 import { api } from './client';
+import { localStore } from '../local/localStore';
+import { isLocalMode } from '../local/mode';
 import type { StartFocusInput } from '@shared/types';
 
 export interface ActiveSession {
@@ -13,12 +15,17 @@ export interface ActiveSession {
   source: 'pomodoro' | 'plan' | 'course';
 }
 
+/* 本地模式（P3）：同名同签名切到 IndexedDB，页面组件零改动 */
 export const focusApi = {
-  start: (data: StartFocusInput) => api.post<ActiveSession>('/focus/start', data),
+  start: (data: StartFocusInput) =>
+    isLocalMode() ? localStore.focus.start(data) : api.post<ActiveSession>('/focus/start', data),
 
-  complete: (id: string) => api.post<void>(`/focus/${id}/complete`),
+  complete: (id: string) =>
+    isLocalMode() ? localStore.focus.complete(id) : api.post<void>(`/focus/${id}/complete`),
 
-  cancel: (id: string) => api.post<void>(`/focus/${id}/cancel`),
+  cancel: (id: string) =>
+    isLocalMode() ? localStore.focus.cancel(id) : api.post<void>(`/focus/${id}/cancel`),
 
-  getActive: () => api.get<ActiveSession | null>('/focus/active'),
+  getActive: () =>
+    isLocalMode() ? localStore.focus.getActive() : api.get<ActiveSession | null>('/focus/active'),
 };

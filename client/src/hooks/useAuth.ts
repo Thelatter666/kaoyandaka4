@@ -1,18 +1,21 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { setUnauthorizedHandler } from '../api/client';
 import { authApi, type AuthUser } from '../api/auth';
+import { getActiveLocalAccount, setActiveLocalAccount } from '../local/accounts';
+import { isLocalMode } from '../local/mode';
 
 /**
- * 登录态管理（账号系统 T2.4，真实 API 版）
+ * 登录态管理（账号系统 T2.4，真实 API 版 + P3 本地模式双源）
  *
  * 机制：模块级 store + useSyncExternalStore 订阅。
  * - 首次挂载时以 GET /api/v1/auth/me 探测会话（httpOnly cookie），
  *   进行中 isLoading=true（App 渲染加载壳，避免未登录闪现 landing）；
+ * - P3 本地模式：存在激活的本地账户（localStorage）时跳过 /me 探测，
+ *   直接以本地账户身份进入应用（本地账户 email 即登录邮箱）；
  * - 登录/注册成功后由页面调 applyAuthUser 直接写入全局态，立即生效；
  * - 业务请求 401（UNAUTHORIZED）由 api/client 回调本模块，全局回到未登录分支；
- * - 登出走 logoutAuth：先销毁服务端会话，再清空本地态。
- *
- * 原 mock（localStorage yantai_mock_auth）已删除；e2e 脚本适配见 T2.5。
+ * - 登出走 logoutAuth：本地模式仅清除激活账户；服务器模式先销毁服务端会话，
+ *   再清空本地态。
  */
 
 type AuthStatus = 'loading' | 'authenticated' | 'guest';
@@ -44,8 +47,14 @@ function getSnapshot(): AuthStoreState {
 /* /auth/me 探测去重：并发调用方共享同一请求 */
 let meInflight: Promise<void> | null = null;
 
-/** 重新查询会话（GET /api/v1/auth/me），刷新全局登录态 */
+/** 重新查询会话（本地模式走本地账户；服务器模式 GET /api/v1/auth/me），刷新全局登录态 */
 export function refreshAuth(): Promise<void> {
+  // 本地模式：无需网络探测，直接以激活的本地账户登录
+  const localAccount = getActiveLocalAccount();
+  if (localAccount) {
+    emit({ status: 'authenticated', user: { id: localAccount.accountId, email: localAccount.email } });
+    return Promise.resolve();
+  }
   if (!meInflight) {
     meInflight = authApi
       .me()
@@ -63,8 +72,13 @@ export function applyAuthUser(user: AuthUser): void {
   emit({ status: 'authenticated', user });
 }
 
-/** 退出登录：销毁服务端会话后清空本地登录态；网络异常也强制回到未登录态 */
+/** 退出登录：本地模式仅清除激活账户；服务器模式先销毁服务端会话再清空本地态 */
 export async function logoutAuth(): Promise<void> {
+  if (isLocalMode()) {
+    setActiveLocalAccount(null);
+    emit({ status: 'guest', user: null });
+    return;
+  }
   try {
     await authApi.logout();
   } catch {

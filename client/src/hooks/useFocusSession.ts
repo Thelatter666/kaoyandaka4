@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { SessionSubject, SubSubject } from '@shared/types';
+import type { SessionSubject, SubSubject, FocusSource } from '@shared/types';
 import { focusApi } from '../api/focus';
+import { ApiError } from '../api/client';
 
 export interface ActiveSession {
   id: string;
@@ -34,8 +35,6 @@ interface UseFocusSessionReturn {
   completeBreak: () => void;
   checkActive: () => Promise<void>;
 }
-
-const API_BASE = '/api/v1';
 
 export function useFocusSession(): UseFocusSessionReturn {
   const [activeSession, setActiveSession] = useState<ActiveSession | null>(null);
@@ -102,26 +101,17 @@ export function useFocusSession(): UseFocusSessionReturn {
     };
   }, [checkActive]);
 
-  const startFocus = useCallback(async (presetId: string | null, minutes: number, source: string) => {
+const startFocus = useCallback(async (presetId: string | null, minutes: number, source: string) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/focus/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          // presetId 为 null 即漫游专注：body 中不携带该字段
-          ...(presetId ? { presetId } : {}),
-          plannedDurationMinutes: minutes,
-          source,
-        }),
+      const session = await focusApi.start({
+        // presetId 为 null 即漫游专注：body 中不携带该字段
+        ...(presetId ? { presetId } : {}),
+        plannedDurationMinutes: minutes,
+        source: source as FocusSource,
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error?.message || '启动专注失败');
-      }
-      const session = await res.json();
-      setActiveSession(session);
+      setActiveSession(session as ActiveSession);
     } catch (err) {
       setError(err instanceof Error ? err.message : '启动专注失败');
       throw err;
@@ -134,22 +124,16 @@ export function useFocusSession(): UseFocusSessionReturn {
     if (!activeSession) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/focus/${activeSession.id}/complete`, {
-        method: 'POST',
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        if (res.status === 409) {
-          // Already completed, just clear
-          setActiveSession(null);
-          return;
-        }
-        throw new Error(err.error?.message || '完成专注失败');
-      }
+      await focusApi.complete(activeSession.id);
       setActiveSession(null);
       // Record round
       setRoundCount((prev) => prev + 1);
     } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        // Already completed, just clear
+        setActiveSession(null);
+        return;
+      }
       setError(err instanceof Error ? err.message : '完成专注失败');
       throw err;
     } finally {
@@ -161,13 +145,7 @@ export function useFocusSession(): UseFocusSessionReturn {
     if (!activeSession) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/focus/${activeSession.id}/cancel`, {
-        method: 'POST',
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error?.message || '取消专注失败');
-      }
+      await focusApi.cancel(activeSession.id);
       setActiveSession(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : '取消专注失败');
