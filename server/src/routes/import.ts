@@ -1,8 +1,8 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { validate } from '../middleware/validate.js';
-import { BackupFileSchema } from '../../../shared/src/schemas/backup.js';
-import { ImportRequestSchema, ImportModeSchema } from '../../../shared/src/schemas/import.js';
+import { BackupFileSchema, type BackupFile } from '../../../shared/src/schemas/backup.js';
+import { ImportRequestSchema } from '../../../shared/src/schemas/import.js';
 import pool from '../db/connection.js';
 import { withTransaction } from '../db/transaction.js';
 import { generateUUID } from '../utils/uuid.js';
@@ -36,6 +36,18 @@ interface AccountRow extends RowDataPacket {
 function assertHash(hash: string): void {
   if (!BCRYPT_RE.test(hash)) {
     throw new AppError(400, 'VALIDATION_ERROR', '备份文件账号密码哈希格式非法', [{ field: 'account.passwordHash', message: '不是合法的 bcrypt 哈希' }]);
+  }
+}
+
+/** 映射备份数据：MappingError 包装为 400，其它错误原样抛出（preview 与 import 共用） */
+function mapOrThrow(data: BackupFile['data']): ReturnType<typeof mapBackupData> {
+  try {
+    return mapBackupData(data);
+  } catch (err) {
+    if (err instanceof MappingError) {
+      throw new AppError(400, 'VALIDATION_ERROR', '导入数据校验失败', err.issues.map((i) => ({ field: i.path, message: i.message })));
+    }
+    throw err;
   }
 }
 
@@ -92,7 +104,7 @@ router.post('/preview', importLimiter, validate(BackupFileSchema), async (req: R
       currentUser,
     });
 
-    const mapped = mapBackupData(payload.data);
+    const mapped = mapOrThrow(payload.data);
     const diff = decision.target && decision.target.kind === 'existing'
       ? computeDiffSummary(mapped, await loadExistingKeys(decision.target.userId))
       : computeDiffSummary(mapped, {
@@ -138,22 +150,10 @@ router.post('/', importLimiter, validate(ImportRequestSchema), async (req: Reque
     }
 
     // 先映射（纯函数早失败，避免事务空转）；失败整体 400
-    let mapped: ReturnType<typeof mapBackupData>;
-    try {
-      mapped = mapBackupData(payload.data);
-    } catch (err) {
-      if (err instanceof MappingError) {
-        throw new AppError(400, 'VALIDATION_ERROR', '导入数据校验失败', err.issues.map((i) => ({ field: i.path, message: i.message })));
-      }
-      throw err;
-    }
-
+    const mapped = mapOrThrow(payload.data);
     const mode: 'overwrite' | 'merge' = decision.target.kind === 'create'
       ? 'merge'
       : (payload.mode ?? 'merge');
-    if (decision.target.kind === 'existing' && payload.mode && !ImportModeSchema.safeParse(payload.mode).success) {
-      throw new AppError(400, 'VALIDATION_ERROR', 'mode 必须为 overwrite 或 merge');
-    }
 
     const targetUserId = await withTransaction(async (connection) => {
       let userId = decision.target!.kind === 'existing' ? decision.target!.userId : '';
