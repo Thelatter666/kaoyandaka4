@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -84,7 +85,10 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
 
   const maxWidth = size === 'sm' ? 400 : size === 'lg' ? 720 : 560;
 
-  return (
+  /* Portal 到 body：fixed 定位脱离祖先链（backdrop-filter/transform 祖先会把 fixed
+     containing block 劫持为自身尺寸，导致弹窗顶置/错位——见 top-nav glass-2 场景） */
+  return createPortal(
+    (
     <div
       style={{
         position: 'fixed',
@@ -168,5 +172,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
         {children}
       </div>
     </div>
+    ),
+    document.body
   );
 }
