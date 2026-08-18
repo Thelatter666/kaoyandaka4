@@ -9,34 +9,36 @@
 | Database | MySQL 8 (mysql2/promise) |
 | Validation | Zod (shared schemas) |
 | Auth | Session-based (express-session + MySQL store) |
-| Testing | Vitest + Playwright |
+| Testing | Vitest + Playwright + fake-indexeddb（本地模式单测） |
 | Lint | ESLint 9 (flat config) |
 
 ## Project Structure
 
 ```
 client/src/          → React SPA (hash-router, lazy-loaded pages)
-  api/               → Per-resource API wrappers (auth, tasks, presets, focus, courses, reviews, statistics, settings)
+  api/               → Per-resource API wrappers (auth, tasks, presets, focus, courses, reviews, statistics, settings, backup) + client.ts (统一 fetch + 401 全局登出；P3 各方法内按 isLocalMode() 分支到本地)
+  local/             → **P3 本地模式数据层** (IndexedDB): db.ts, localStore.ts (LocalDataStore), mode.ts (isLocalMode/isLocalApp), storage.ts, accounts.ts, types.ts
   components/        → UI primitives + feature components (layout/, tasks/, timer/, courses/, presets/, forest/, heatmap/, landing/, ui/)
-  pages/             → Page components with co-located CSS (HomePage, PlanPage, PomodoroPage, ReviewPage, LoginPage/RegisterPage, etc.)
-  hooks/             → useApi, useAuth, useCountdown, useFocusSession, useKeyboardSort, useScreenWakeLock, useTheme
+  pages/             → Page components with co-located CSS (HomePage, PlanPage, PomodoroPage, ReviewPage, LoginPage/RegisterPage, LocalModePage, etc.)
+  hooks/             → useApi, useAuth(双源: 服务器会话 | 本地账户), useCountdown, useFocusSession, useKeyboardSort, useScreenWakeLock, useTheme
+  utils/             → date/duration/sound/accessibility + localStatistics(统计前端复刻) + localImport(导入映射/去重) + parseCourseText + uuid
   workers/           → Web Workers (countdown-title.ts: 标签页标题倒计时; end-sound.ts: 番茄钟准点响铃)
   styles/            → CSS tokens (tokens.css), global styles, utilities
 
 server/src/          → Express REST API
-  routes/            → 8 route files: auth, presets, tasks, reviews, focus, courses, statistics, settings
+  routes/            → 9 route files: auth, presets, tasks, reviews, focus, courses, statistics, settings, import(P2: /api/v1/import 与 /import/preview)
   middleware/         → cors, auth (session), validate (Zod), errorHandler (AppError)
   db/                → connection.ts (pool), schema.sql, init.ts, migrate.ts
-  utils/             → date.ts (UTC 日期工具), uuid.ts (generateUUID)
+  utils/             → date.ts, uuid.ts, backup.ts (导出组装), import.ts / import-mapping.ts (导入纯函数)
   types/             → express-mysql-session 类型扩展
 
 shared/src/          → Shared between front-end and back-end
   constants.ts       → 共享常量（科目分组、专注时长档位等）
-  schemas/           → Zod validation schemas per resource
+  schemas/           → Zod validation schemas per resource（含 backup.ts 导出格式 v1、import.ts 导入模式/差异摘要）
   types/             → Re-exported TS types inferred from schemas
 
 plans/               → 单文件实现计划（编号 md，多为动画/动效类任务，先写计划再实现）
-docs/ 交接文档/        → 设计文档、需求文档、组件集成报告
+docs/ 交接文档/        → 设计文档、需求文档、组件集成报告、交接文档（01-04：进度/后续任务/P3交接/P3完成报告）
 ```
 
 ## Code Style
@@ -77,6 +79,15 @@ docs/ 交接文档/        → 设计文档、需求文档、组件集成报告
 - `user_id` is NEVER accepted from client — always from `req.session.userId`
 - All queries use `WHERE user_id = ?` pattern; 404 for another user's resource (no enumeration)
 
+### 双后端数据模式（P3 本地模式）
+- **服务器模式（默认）**：所有 `xxxApi` → REST → MySQL
+- **本地模式**：登录页「离线使用（本地模式）」→ `#/local` 本地账户页（选/建/导入/删）→ 激活账户存 `localStorage['kaoyandaily_local_activeAccount']`
+- **开关**：`client/src/local/mode.ts` — `isLocalMode()` / `isLocalApp()`（本地账户上下文）；8 个 api 模块 + backup 的每个方法内部 `isLocalMode() ? localStore.xxx() : api.xxx()`
+- **存储**：单 IndexedDB 库 `kaoyandaily_local`，8 数据域 + accounts + meta；记录带 `accountId` 索引（**本地归属用 accountId——UUID，绝不用服务器 user_id**）；settings 主键 `[accountId, key]`；reviews 复合索引 `accountId_reviewDate`
+- **鉴权双源**：`useAuth` 激活本地账户时免 `/auth/me` 探测，直接以本地账户 email 进入应用；登出本地 = 清激活账户
+- **统计/导入复刻**：`client/src/utils/localStatistics.ts` 前端复刻服务器 SQL 口径（`focus_session` 全计、`course_video` 仅计 focusSessionId 为空、树 = floor(秒/3600) 按科目独立）；`localImport.ts` 导入映射/去重/合并覆盖
+- **同构格式**：导出文件 `BackupFile`（shared backup.ts，schemaVersion 1）双模式互通；服务器导入先删后插防跨账号 ID 串号（P2 设计文档）
+
 ## Key Conventions
 
 - **Validation**: All input validated with Zod schemas in `shared/src/schemas/`. New routes MUST use `validate()` middleware.
@@ -85,13 +96,14 @@ docs/ 交接文档/        → 设计文档、需求文档、组件集成报告
 - **204 responses**: DELETE and some PATCH endpoints return 204 with no body → client handles with `undefined as T`
 - **COALESCE updates**: PUT endpoints use `COALESCE(?, column)` for partial updates — omit a field to keep existing value
 - **Toggle pattern**: `PATCH /:id/toggle` uses `SET is_completed = NOT is_completed`
+- **本地模式规则**: 新增本地数据逻辑进 `client/src/local/`；本地归属用 accountId；本地模式单测文件头部须 `import 'fake-indexeddb/auto'`
 
 ## Testing
 
-- **Unit/Integration**: `npx vitest run` (files matching `**/*.test.ts`, `**/*.test.tsx`)
-- **E2E**: `npm run test:e2e` (Playwright, config at `e2e/playwright.config.ts`)
-- E2E tests authenticate via real session (not mocked)
-- 单元测试已存在：`client/src/utils/sound.test.ts`（番茄钟提示音引擎）；新增逻辑请按 `**/*.test.ts(x)` 惯例补测（vitest 配置在根目录 `vitest.config.ts`，排除 e2e/）
+- **Unit/Integration**: `npx vitest run` (files matching `**/*.test.ts`, `**/*.test.tsx`) — 当前 **97 tests**
+- **E2E**: `npm run test:e2e` (Playwright, config at `e2e/playwright.config.ts`) — 需 dev server，真实会话
+- **本地模式单测**: 依赖 fake-indexeddb，测试文件头部 `import 'fake-indexeddb/auto'`（vitest 环境为 node）
+- **测试分布**: server 纯函数（backup/import/import-mapping/export…）+ shared schema + client（sound/localStore/localStatistics/localImport）；新增逻辑按 `**/*.test.ts(x)` 惯例补测
 
 ## Build & Run
 
@@ -122,7 +134,7 @@ npm run db:migrate   # Run migrations
 
 ## UI 组件库与动效
 
-- **通用组件**: `client/src/components/ui/` — Button, Card, Modal, Toast, ConfirmDialog, ProgressBar, EmptyState/ErrorState/LoadingState, SkipLink, SubjectBadge
+- **通用组件**: `client/src/components/ui/` — Button, Card, Modal(portal 到 body), Toast, ConfirmDialog, ProgressBar, EmptyState/ErrorState/LoadingState, SkipLink, SubjectBadge, Dropdown, Calendar, ImportBackupModal(导入向导), ProfileDropdown(顶栏账户菜单: 导出/导入/登出), SoundToggle
 - **动效组件** (framer-motion): `AnimatedThemeToggle` (主题切换动画), `Magnetic` (磁性吸引), `GlowCard` (辉光边框), `Card3D` (3D 透视), `FileUpload` (拖放上传)
 - **新组件加入 `components/ui/`**, co-located CSS + `var(--color-xxx)` token, 动画统一用 framer-motion
 - **构建分包**: `client/vite.config.ts` 的 `manualChunks` 将 react / lucide / framer-motion 拆为独立 vendor chunk（性能优化，勿破坏）
@@ -140,6 +152,7 @@ npm run db:migrate   # Run migrations
 - **Static assets**: `client/dist/` served by nginx with fingerprint caching (`/assets/` → 1y immutable)
 - **SPA fallback**: `try_files $uri $uri/ /index.html`
 - **API proxy**: `/api/` → `http://127.0.0.1:3001`
+- **Body limit**: `location /api/` 已配 `client_max_body_size 20m`（备份导入；Express 侧 `express.json({ limit: '20mb' })`）
 - **Reference config**: `deploy/nginx.conf`, `deploy/deploy.sh`
 
 ## Shared Package
@@ -159,6 +172,7 @@ import { CreateTaskSchema } from '../../../shared/src/schemas/task.js';
 - **服务器管理**: `.claude/skills/manage-server/` 项目 skill — 腾讯云服务器部署、日志、重启; 部署文件在 `deploy/` (deploy.sh, nginx.conf, nginx.ip.conf, server-management-prompt.txt)
 - **服务器管家**: `server-butler/` (OVERVIEW.md + butler.sh) — 腾讯云实例状态/防火墙/带宽/快照管理，密钥从 `~/.tccli/env.sh` 注入，不出网直连（仅 API）
 - **E2E**: `e2e/tests/smoke.spec.ts` 冒烟测试, 通过真实会话认证（非 mock）
+- **交接文档**: `交接文档/03-P3本地模式交接.md`（P3 完整设计/踩坑/验收）、`04-P3本地模式完成交接报告.md`（P3 实现记录）；P1/P2 设计文档在 `docs/superpowers/specs|plans/2026-08-16-*`
 
 ## 开发工作流约束（2026-08-12 修订）
 
