@@ -13,6 +13,7 @@
 | 📺 网课 | 7 分区课程管理、文本粘贴导入集数、双进度条（集数+时长） |
 | 🌳 统计 | 学习森林（日/周/月）、三科树木可视化、累计成果、时间线 |
 | 📝 复盘 | 历史复盘浏览/编辑/补写（日历选日期、倒序列表） |
+| 🔒 数据 | 全量备份导出（`yantai-backup-*.json`）、导入恢复（差异预览 + 覆盖/合并）、**本地模式**（浏览器 IndexedDB 离线使用，与服务器互通） |
 
 ## 技术栈
 
@@ -22,7 +23,8 @@
 | 后端 | Express 4 + TypeScript |
 | 数据库 | MySQL 8 + mysql2/promise |
 | 校验 | Zod（前后端共享） |
-| 测试 | Vitest + Playwright |
+| 本地存储 | IndexedDB（本地模式，浏览器内，与 MySQL 并存互通） |
+| 测试 | Vitest + Playwright + fake-indexeddb |
 | Lint | ESLint |
 
 ## 快速开始
@@ -71,18 +73,19 @@ npm run dev
 ```
 kaoyandaily/
 ├── client/src/           # React 前端
-│   ├── api/              #   API 封装（8 个资源模块）
+│   ├── api/              #   API 封装（9 个模块，服务器/本地双后端分支）
+│   ├── local/            #   本地模式数据层（IndexedDB：数据/账户/模式开关）
 │   ├── components/       #   UI / 布局 / 预设 / 计时器 / 任务
-│   ├── pages/            #   10 个页面
+│   ├── pages/            #   11 个页面
 │   ├── hooks/            #   自定义 Hooks
 │   ├── styles/           #   CSS 主题 Token + 全局样式
-│   └── utils/            #   日期 / 时长 / 无障碍
+│   └── utils/            #   日期 / 时长 / 无障碍 / 本地统计·导入
 ├── server/src/           # Express 后端
-│   ├── routes/           #   8 个路由（完整 CRUD）
+│   ├── routes/           #   9 个路由（完整 CRUD）
 │   ├── db/               #   连接池 + 建表 SQL
 │   └── middleware/        #   CORS / 校验 / 错误处理
 ├── shared/src/           # 前后端共享
-│   ├── schemas/          #   Zod 校验 Schema
+│   ├── schemas/          #   Zod 校验 Schema（含备份格式 v1）
 │   └── types/            #   TypeScript 类型
 ├── e2e/                  # Playwright E2E 测试
 └── 桌面快捷方式.command    # 一键启动脚本
@@ -118,6 +121,8 @@ npm run db:init      # 初始化数据库
 ## 设计原则
 
 - 账号系统：邮箱 + 密码注册/登录，会话存 MySQL（7 天有效）
+- **双数据模式**：服务器（MySQL）与本地（IndexedDB）并存、互不干扰，通过备份文件互通
+- **数据可迁移**：全量导出为单个 JSON，可导入恢复（未登录建号导入 / 已登录差异预览 + 覆盖或合并）
 - 删除操作为永久删除，不设回收站
 - 学习记录使用快照保存，原实体删除后记录仍保留
 - 统计去重：同一学习行为仅计一次
