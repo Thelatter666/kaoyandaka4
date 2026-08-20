@@ -90,12 +90,26 @@
   --glow-primary: 0 0 24px rgba(224, 85, 69, 0.45);
   --glow-success: 0 0 24px rgba(47, 163, 107, 0.45);
 
-  /* 番茄钟「光晕核心」（设计文档 5.1）：数字渐变提亮端（模式色混入 30% 白）与低时警示金 */
-  /* 深色主题下数字用纯色，不引用下列提亮色；--color-timer-low 双主题同值 */
-  --color-timer-focus-light: #DB7466;    /* 数字渐变提亮端（大字号 3.2:1 达标） */
-  --color-timer-success-light: #4FA37B;  /* 数字渐变提亮端（大字号 3.1:1 达标） */
+  /* 番茄钟砚池：低时警示金；下列「渐变提亮端」为旧环形设计遗留，砚池不再引用 */
+  --color-timer-focus-light: #DB7466;    /* 旧环形数字渐变提亮端（砚池未使用） */
+  --color-timer-success-light: #4FA37B;  /* 旧环形数字渐变提亮端（砚池未使用） */
   --color-timer-deep-green-light: #569388;
-  --color-timer-low: #F5A45C;
+  --color-timer-low: #F5A45C;            /* 低时警示金，双主题同值 */
+
+  /* 砚池墨色（spec docs/superpowers/specs/2026-08-21-pomodoro-inkwell-design.md §3.4）
+     墨是材质色，语义不同于交互强调色，故不复用 --color-accent-* */
+  --color-ink-math: #7E2418;             /* 朱砂 */
+  --color-ink-english: #123A5C;          /* 靛青 */
+  --color-ink-408: #2A2A33;              /* 松烟 */
+  --color-ink-free: #3E4650;             /* 漫游：中性墨 */
+  --color-ink-break: #17705A;            /* 休息：清水/淡茶 */
+  --color-ink-stone: #E8E6E1;            /* 砚石池底 */
+  --color-ink-stone-deep: #D6D2CA;       /* 砚石池底暗部与斑点 */
+  --color-ink-highlight: rgba(255, 255, 255, 0.55);       /* 反光带 */
+  --color-ink-highlight-break: rgba(255, 255, 255, 0.78); /* 休息态反光带更亮 */
+  --color-ink-mark: #8C8578;             /* 水痕（统一中性色，不分科目，见 spec §4.3） */
+  --color-ink-concave: rgba(16, 24, 40, 0.16);            /* 凹面暗角 */
+  --ink-opacity: 1;                      /* 墨体不透明度（深色主题为半透荧光墨） */
 
   /* 学习森林「玻璃花房」（设计文档 6.1/6.2）：场景插画专用色，双主题同值 */
   /* 天空五档（黎明/上午/午后/黄昏/夜晚，渐变自上而下） */
@@ -140,6 +154,8 @@
   --dur-med: 240ms;
   --dur-slow: 400ms;
   --dur-ring: 900ms; /* 秒环逐秒过渡：≈1s 周期连续推进，不打嗝 */
+  --dur-inking: 520ms;  /* 砚池注墨：底部上升注满（JS 内插值，不作 CSS 过渡用） */
+  --dur-clarify: 700ms; /* 砚池澄清：转清 + 涟漪 + 水痕刻入 */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* v2 页面级动效编排（设计文档 13.1）：--ease-out 复用上方既有定义 */
@@ -238,6 +254,22 @@
   --color-accent-warning: #F5A45C;
   --color-accent-warning-strong: #F5A45C;
   --color-accent-danger: #F4786A;
+
+  /* 砚池墨色（深色主题：荧光彩墨半透 + 内发光；池底转暗）
+     深色不做阴文，计时文字恒为阳文近白字 —— 依据 docs/adr/0004（实测：半透暗墨
+     挖空仅 1.96:1，低于大字号 3:1 下限；恒阳文 15.53:1） */
+  --color-ink-math: #F4786A;
+  --color-ink-english: #6BA8E8;
+  --color-ink-408: #A9B4C4;
+  --color-ink-free: #8B95A5;
+  --color-ink-break: #3ECF8E;
+  --color-ink-stone: #16202F;
+  --color-ink-stone-deep: #0E1622;
+  --color-ink-highlight: rgba(255, 255, 255, 0.30);
+  --color-ink-highlight-break: rgba(255, 255, 255, 0.46);
+  --color-ink-mark: #7C8796;
+  --color-ink-concave: rgba(0, 0, 0, 0.34);
+  --ink-opacity: 0.38;
 
   /* 玻璃材质 */
   --color-glass-bg: rgba(255, 255, 255, 0.06);        /* 烟熏玻璃 */
