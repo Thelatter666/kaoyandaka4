@@ -182,7 +182,7 @@ import { CreateTaskSchema } from '../../../shared/src/schemas/task.js';
 2. **探索理解**：探索代码库、理解需求
 3. **复述对齐**：将理解后的需求用自己的话说一遍，**用户确认对齐**后才动手
 4. **新建分支**：先新开分支，从 `main` 新建（如 `feat/xxx`、`refactor/xxx`），禁止直接改 main
-5. **执行任务**：加载 `creative-development-workflow` skill（brainstorm → grilling → spec → plan → 实现）
+5. **执行任务**：加载 `mywf` skill（brainstorm → grilling → spec → plan → 实现）
 6. **效果确认**：任务完成后只汇报效果，**用户亲自检查效果**
 7. **commit / merge 指令**：用户检查通过后，才会下达 **commit** 或 **commit + merge** 指令；在用户明确下令前，绝不 commit、绝不 merge、绝不 push
 8. **合并 main**：合并回 `main`

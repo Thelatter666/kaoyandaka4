@@ -36,7 +36,7 @@ deploy/      nginx.conf + deploy.sh（生产：nginx 反代 → 3001）
 
 任何代码修改必须走 10 步流程，**每阶段需用户确认**：
 
-1. 提需求 → 2. 探索理解 → 3. 复述对齐（用户确认后才动手）→ 4. 新建分支（从 main，如 `feat/xxx`，禁止直接改 main）→ 5. 执行任务（加载 `creative-development-workflow` skill）→ 6. 效果确认（只汇报效果，用户亲自检查）→ 7. 用户下达 commit/merge 指令（**用户明确下令前绝不 commit/merge/push**）→ 8. 合并 main → 9. push 远端 → 10. 按 manage-server skill 部署服务器
+1. 提需求 → 2. 探索理解 → 3. 复述对齐（用户确认后才动手）→ 4. 新建分支（从 main，如 `feat/xxx`，禁止直接改 main）→ 5. 执行任务（加载 `mywf` skill）→ 6. 效果确认（只汇报效果，用户亲自检查）→ 7. 用户下达 commit/merge 指令（**用户明确下令前绝不 commit/merge/push**）→ 8. 合并 main → 9. push 远端 → 10. 按 manage-server skill 部署服务器
 
 ## 红线
 
