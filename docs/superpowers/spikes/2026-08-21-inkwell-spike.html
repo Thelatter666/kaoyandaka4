@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>砚池 Inkstone Well · 视觉 Spike</title>
+<style>
+/* ============================================================
+   砚池视觉 Spike — 阶段二「有条件通过」条件二的验证载体
+   令牌值取自 client/src/styles/tokens.css（未改动、未编造）
+   本文件是设计验证原型，不是生产代码
+   ============================================================ */
+
+:root {
+  --color-bg-page: #F7F8FA;
+  --color-bg-card-solid: #FFFFFF;
+  --color-text-primary: #1D2939;
+  --color-text-secondary: #475467;
+  --color-text-muted: #667085;
+  --color-border: rgba(16, 24, 40, 0.08);
+  --color-glass-bg: rgba(255, 255, 255, 0.55);
+  --color-glass-bg-strong: rgba(255, 255, 255, 0.72);
+  --color-glass-border: rgba(255, 255, 255, 0.65);
+  --color-accent-primary: #E05545;
+  --color-accent-primary-strong: #B93A2C;
+  --color-accent-success: #2FA36B;
+  --color-accent-success-strong: #1E7A4E;
+  --color-accent-deep-green: #0E6655;
+  --color-timer-low: #F5A45C;
+  --shadow-glass-md: 0 8px 32px rgba(16,24,40,.10), inset 0 1px 0 var(--color-glass-border);
+  --radius-card: 24px;
+  --radius-md: 14px;
+  --radius-full: 9999px;
+  --font-mono: ui-monospace,'SF Mono','JetBrains Mono',Menlo,'Cascadia Mono',Consolas,monospace;
+  --font-heading: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* ▼ 新增墨色令牌（Q20：不复用 accent，墨是材质色） */
+  --color-ink-math: #7E2418;
+  --color-ink-english: #123A5C;
+  --color-ink-408: #2A2A33;
+  --color-ink-free: #3E4650;
+  --color-ink-break: #17705A;
+  --color-ink-stone: #E8E6E1;
+  --color-ink-stone-deep: #D6D2CA;
+  --color-ink-highlight: rgba(255,255,255,.55);
+  --color-ink-highlight-break: rgba(255,255,255,.78);
+  --color-ink-mark: #8C8578;
+  --ink-opacity: 1;
+  --ink-glow: 0;
+}
+
+[data-theme="dark"] {
+  --color-bg-page: #101828;
+  --color-bg-card-solid: #1D2939;
+  --color-text-primary: #F2F4F7;
+  --color-text-secondary: #C4CBD6;
+  --color-text-muted: #98A2B3;
+  --color-border: rgba(255,255,255,.09);
+  --color-glass-bg: rgba(255,255,255,.06);
+  --color-glass-bg-strong: rgba(255,255,255,.10);
+  --color-glass-border: rgba(255,255,255,.10);
+  --color-accent-primary: #F4786A;
+  --color-accent-primary-strong: #F4786A;
+  --color-accent-success: #3ECF8E;
+  --color-accent-deep-green: #2DD4BF;
+
+  /* Q3：深色主题墨会隐形 → 荧光彩墨 + 半透 + 内发光 */
+  --color-ink-math: #F4786A;
+  --color-ink-english: #6BA8E8;
+  --color-ink-408: #A9B4C4;
+  --color-ink-free: #8B95A5;
+  --color-ink-break: #3ECF8E;
+  --color-ink-stone: #16202F;
+  --color-ink-stone-deep: #0E1622;
+  --color-ink-highlight: rgba(255,255,255,.30);
+  --color-ink-highlight-break: rgba(255,255,255,.46);
+  --color-ink-mark: #7C8796;
+  --ink-opacity: .38;
+  --ink-glow: 1;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 28px 24px 60px;
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
+  font-family: var(--font-heading);
+  transition: background .3s, color .3s;
+}
+h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: .02em; }
+.sub { color: var(--color-text-muted); font-size: 13px; margin: 0 0 22px; }
+.sub code { font-family: var(--font-mono); font-size: 12px; }
+
+.layout { display: flex; gap: 30px; align-items: flex-start; flex-wrap: wrap; }
+
+/* ---------------- 控制面板 ---------------- */
+.panel {
+  width: 268px; flex-shrink: 0; position: sticky; top: 20px;
+  background: var(--color-glass-bg-strong);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-glass-md);
+  padding: 18px; backdrop-filter: blur(16px);
+}
+.panel h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .09em;
+  color: var(--color-text-muted); margin: 0 0 12px; font-weight: 600; }
+.row { margin-bottom: 15px; }
+.row > label { display: block; font-size: 12px; color: var(--color-text-secondary);
+  margin-bottom: 6px; display: flex; justify-content: space-between; }
+.row > label b { font-family: var(--font-mono); color: var(--color-text-primary); font-weight: 600; }
+input[type=range] { width: 100%; accent-color: var(--color-accent-primary); }
+.seg { display: flex; gap: 4px; }
+.seg button, .btn {
+  flex: 1; font: inherit; font-size: 12px; padding: 7px 4px; cursor: pointer;
+  background: var(--color-bg-card-solid); color: var(--color-text-secondary);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  transition: all .16s cubic-bezier(.22,1,.36,1);
+}
+.seg button:hover, .btn:hover { border-color: var(--color-accent-primary); }
+.seg button[aria-pressed=true] {
+  background: var(--color-accent-primary); border-color: var(--color-accent-primary);
+  color: #fff; font-weight: 600;
+}
+.btn { width: 100%; margin-bottom: 7px; font-weight: 600; }
+.chk { display: flex; align-items: center; gap: 8px; font-size: 12.5px;
+  color: var(--color-text-secondary); cursor: pointer; margin-bottom: 9px; }
+.chk input { accent-color: var(--color-accent-primary); width: 15px; height: 15px; }
+.hr { height: 1px; background: var(--color-border); margin: 16px 0; }
+.note { font-size: 11.5px; line-height: 1.55; color: var(--color-text-muted); }
+
+/* ---------------- 舞台 ---------------- */
+.stage { flex: 1; min-width: 480px; }
+.wells { display: flex; gap: 40px; align-items: flex-end; flex-wrap: wrap; }
+.wellbox { text-align: center; }
+.wellcap { font-size: 11.5px; color: var(--color-text-muted); margin-top: 12px;
+  font-family: var(--font-mono); }
+
+/* ============================================================
+   Q22 路线 C：主题不对称的文字手法（纯 CSS 分支，无 JS 分叉）
+   浅色（日常主题）：阴阳文切换 —— 墨面之上阳文实体字、之下从墨中镂空
+   深色：恒阳文近白字 + 保留半透荧光墨
+     依据（spike 实测像素对比度）：深色若沿用阴文，半透暗墨挖洞露出暗池底，
+     仅 1.96:1，低于大字号 3:1 下限；把墨提到 0.85 不透明可达 4.85:1，但下半盘
+     变成实心亮珊瑚，牺牲久盯静谧且副标题仅勉强过线。恒阳文近白字实测
+     15.53 / 8.21 / 8.21:1，三项全优。
+   mask 与 clip-path 都是 CSS 属性，可被主题选择器覆盖 SVG 呈现属性
+   ============================================================ */
+[data-theme="dark"] .relief { clip-path: none !important; }   /* 阳文不再限于墨面之上 */
+[data-theme="dark"] .inkbody { mask: none; }                   /* 不再挖空（无阴文） */
+[data-theme="dark"] .relief .t-time,
+[data-theme="dark"] .relief .t-mode { fill: var(--color-text-primary) !important; }
+[data-theme="dark"] .relief .t-sub { fill: var(--color-text-secondary) !important; }
+
+/* 墨堂：凹面池体（Q10 = inset shadow + 上缘高光弧，排除真透视） */
+.well {
+  position: relative; border-radius: 50%;
+  background: var(--color-glass-bg-strong);
+  border: 1px solid var(--color-glass-border);
+  box-shadow:
+    var(--shadow-glass-md),
+    inset 0 10px 26px rgba(16,24,40,.13),
+    inset 0 -4px 14px rgba(255,255,255,.30);
+  backdrop-filter: blur(20px);
+}
+[data-theme="dark"] .well {
+  box-shadow:
+    0 8px 32px rgba(0,0,0,.4),
+    inset 0 10px 30px rgba(0,0,0,.5),
+    inset 0 -3px 12px rgba(255,255,255,.05);
+}
+.well--full { width: 400px; height: 400px; }
+.well--mini { width: 120px; height: 120px; }
+.well svg { display: block; width: 100%; height: 100%; }
+
+/* 墨体：深色主题内发光 */
+.inkbody { opacity: var(--ink-opacity); }
+.ink-glow-layer { display: none; }
+[data-theme="dark"] .ink-glow-layer { display: block; filter: blur(9px); opacity: .5; }
+
+/* 波纹：纯 CSS 无限动画（Q16 —— 与逐帧 rAF 解耦，rAF 只写液面 y） */
+@keyframes waveA { to { transform: translateX(-260px); } }
+@keyframes waveB { to { transform: translateX(180px); } }
+.waveA { animation: waveA 11s linear infinite; }
+.waveB { animation: waveB 7s linear infinite; }
+.lowtime .waveA { animation-duration: 5s; }
+.lowtime .waveB { animation-duration: 3.2s; }
+.well--mini .waveA, .well--mini .waveB { animation: none; }      /* Q18 */
+.static .waveA, .static .waveB { animation: none; }              /* Q5 降级 */
+
+/* 休息态：反光带更亮（Q7 清水/淡茶更活泼；波幅由路径变体承担） */
+.breakmode .hl { stroke: var(--color-ink-highlight-break); }
+
+/* 涟漪（澄清专用） */
+@keyframes rippleOut {
+  from { r: 6px; opacity: .85; stroke-width: 7; }
+  to   { r: 158px; opacity: 0; stroke-width: 1; }
+}
+.ripple { display: none; }
+.ripple.play { display: block; animation: rippleOut .4s cubic-bezier(.22,1,.36,1) .12s both; }
+
+/* 水痕刻入（Q19：420–700ms） */
+@keyframes markCarve { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
+.mark--new { transform-box: fill-box; transform-origin: center;
+  animation: markCarve .28s cubic-bezier(.34,1.56,.64,1) .42s both; }
+
+/* 池壁内缘低时泛金 */
+.lowring { opacity: 0; transition: opacity .4s; }
+.lowtime .lowring { opacity: 1; }
+
+.readout { margin-top: 26px; display: flex; gap: 10px; flex-wrap: wrap; }
+.pill { font-family: var(--font-mono); font-size: 11.5px; padding: 6px 11px;
+  border-radius: var(--radius-full); background: var(--color-glass-bg);
+  border: 1px solid var(--color-border); color: var(--color-text-secondary); }
+.pill b { color: var(--color-text-primary); }
+
+table.cmp { border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+table.cmp td, table.cmp th { border: 1px solid var(--color-border); padding: 5px 10px; text-align: right; }
+table.cmp th { color: var(--color-text-muted); font-weight: 600; }
+table.cmp td:first-child, table.cmp th:first-child { text-align: left; }
+table.cmp tr.hit td { background: var(--color-glass-bg); font-weight: 700; }
+
+@media (prefers-reduced-motion: reduce) {
+  .waveA, .waveB, .ripple.play, .mark--new { animation: none !important; }
+}
+</style>
+</head>
+<body>
+
+<h1>砚池 Inkstone Well · 视觉 Spike</h1>
+<p class="sub">阶段二「有条件通过」条件二的验证载体。令牌取自 <code>client/src/styles/tokens.css</code>，墨色为新增 <code>--color-ink-*</code> 提案值。此文件仅供设计验证，非生产代码。</p>
+
+<div class="layout">
+
+  <!-- ======================= 控制面板 ======================= -->
+  <div class="panel">
+    <h2>主题 / 模式</h2>
+    <div class="row"><div class="seg" id="themeSeg">
+      <button data-v="light" aria-pressed="true">浅色</button>
+      <button data-v="dark" aria-pressed="false">深色 midnight</button>
+    </div></div>
+    <div class="row"><div class="seg" id="modeSeg">
+      <button data-v="math" aria-pressed="true">数学</button>
+      <button data-v="english" aria-pressed="false">英语</button>
+      <button data-v="408" aria-pressed="false">408</button>
+    </div></div>
+    <div class="row"><div class="seg" id="modeSeg2">
+      <button data-v="free" aria-pressed="false">漫游</button>
+      <button data-v="break" aria-pressed="false">休息(清水)</button>
+    </div></div>
+
+    <div class="hr"></div>
+    <h2>墨面</h2>
+    <div class="row">
+      <label>剩余比例 <b id="pctOut">100%</b></label>
+      <input type="range" id="pct" min="0" max="100" step="0.5" value="100">
+    </div>
+    <div class="row">
+      <label>今日轮次（水痕）<b id="roundsOut">6</b></label>
+      <input type="range" id="rounds" min="0" max="34" step="1" value="6">
+    </div>
+    <label class="chk"><input type="checkbox" id="equalArea" checked> 等面积映射（Q2）</label>
+    <label class="chk"><input type="checkbox" id="lowtime"> 低时警示 ≤5min（Q12）</label>
+    <label class="chk"><input type="checkbox" id="staticMode"> reduced-motion 降级（Q5）</label>
+    <label class="chk"><input type="checkbox" id="showStone" checked> 砚石纹池底（A/B 对比）</label>
+
+    <div class="hr"></div>
+    <h2>动效</h2>
+    <button class="btn" id="btnInk">▶ 注墨 Inking · 520ms</button>
+    <button class="btn" id="btnClarify">▶ 澄清 Clarify · 700ms</button>
+    <button class="btn" id="btnRun">▶ 模拟一轮（12 秒压缩）</button>
+
+    <div class="hr"></div>
+    <p class="note"><b>验收看四点：</b><br>
+    ① 400 与 120 两档观感<br>
+    ② 双主题墨色（深色是否隐形）<br>
+    ③ 阴阳文过渡是否连续无抖动 —— 拖「剩余比例」让墨面穿过数字<br>
+    ④ 末段三效叠加是否过载 —— 勾低时 + 拖到 5% 以下</p>
+  </div>
+
+  <!-- ======================= 舞台 ======================= -->
+  <div class="stage">
+    <div class="wells">
+      <div class="wellbox">
+        <div class="well well--full" id="wellFull"></div>
+        <div class="wellcap">full · 400px · 番茄钟页</div>
+      </div>
+      <div class="wellbox">
+        <div class="well well--mini" id="wellMini"></div>
+        <div class="wellcap">mini · 120px · 首页</div>
+      </div>
+    </div>
+
+    <div class="readout">
+      <span class="pill">剩余面积 <b id="roA">100.0%</b></span>
+      <span class="pill">墨面高度 <b id="roH">100.0%</b></span>
+      <span class="pill">末段放大 <b id="roK">1.00×</b></span>
+      <span class="pill">LUT <b>101 点线性插值</b></span>
+    </div>
+
+    <table class="cmp" id="cmpTable">
+      <tr><th>剩余面积</th><th>等面积→高度</th><th>线性→高度</th><th>放大</th></tr>
+    </table>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   1. 等面积映射 LUT（阶段二条件一：算法在设计阶段定死，不留给实施）
+   圆内弓形：面积占比 f = (θ - sinθ)/2π ，高度占比 h = (1 - cos(θ/2))/2
+   f→h 无闭式解 → 模块加载时预生成 101 点 LUT + 每帧线性插值
+   （排除每帧牛顿迭代：引入收敛风险，换取毫无意义的精度）
+   ============================================================ */
+const LUT_N = 101;
+const LUT = (() => {
+  // 以 θ 为参数均匀采样，得到 (f,h) 单调序列
+  const S = 4096, fs = [], hs = [];
+  for (let i = 0; i <= S; i++) {
+    const t = (i / S) * 2 * Math.PI;
+    fs.push((t - Math.sin(t)) / (2 * Math.PI));
+    hs.push((1 - Math.cos(t / 2)) / 2);
+  }
+  // 重采样成按 f 等距的 101 点表
+  const tbl = new Float64Array(LUT_N);
+  let j = 0;
+  for (let k = 0; k < LUT_N; k++) {
+    const f = k / (LUT_N - 1);
+    while (j < S && fs[j + 1] < f) j++;
+    const f0 = fs[j], f1 = fs[j + 1] ?? 1, t = f1 > f0 ? (f - f0) / (f1 - f0) : 0;
+    tbl[k] = hs[j] + ((hs[j + 1] ?? 1) - hs[j]) * t;
+  }
+  tbl[0] = 0; tbl[LUT_N - 1] = 1;
+  return tbl;
+})();
+
+/** 剩余面积占比 → 墨面高度占比 */
+function areaToHeight(f) {
+  f = Math.min(1, Math.max(0, f));
+  const x = f * (LUT_N - 1), i = Math.floor(x), frac = x - i;
+  if (i >= LUT_N - 1) return LUT[LUT_N - 1];
+  return LUT[i] + (LUT[i + 1] - LUT[i]) * frac;
+}
+
+/* ============================================================
+   2. 几何常量（沿用现有 RingCountdown：viewBox 360，池壁 r=160）
+   ============================================================ */
+const VB = 360, C = 180, R_WALL = 160, R_MARK_IN = 168, R_MARK_OUT = 176;
+const WAVE = {
+  A: { amp: 5.8, period: 260, cls: 'waveA' },   // Q14 主波 ±1.6% 池径 / 11s
+  B: { amp: 3.6, period: 180, cls: 'waveB' },   // Q14 副波 ±1.0% / 7s（互质）
+};
+
+/** 生成一条正弦上边缘的 d 片段（x 从 x0 到 x1） */
+function waveEdge(amp, period, x0, x1, phase = 0) {
+  const step = 6, pts = [];
+  for (let x = x0; x <= x1; x += step) {
+    const y = -amp * Math.sin(((x - x0) / period) * Math.PI * 2 + phase);
+    pts.push(`${x.toFixed(1)} ${y.toFixed(2)}`);
+  }
+  return pts;
+}
+/* 波幅变体（spec §4.2）：波幅写在 d 里，无法用 CSS 缩放（scaleY 会连带拉伸墨体），
+   故模块加载时预生成 3 套 × 3 条 = 9 条静态路径，状态跨越时切 d，每帧零成本。
+   低时与休息互斥（低时判定限定专注态），无需组合变体。 */
+const AMP = { normal: 1, lowtime: 1.6, break: 1.25 };
+
+/** 墨体路径：波边缘 + 向下闭合（填充下方） */
+function inkPath(amp, period) {
+  const x0 = -2 * period, x1 = VB + 2 * period;
+  const p = waveEdge(amp, period, x0, x1);
+  return `M ${x0} ${VB * 2} L ${p.join(' L ')} L ${x1} ${VB * 2} Z`;
+}
+/** 阳文裁剪路径：同一条波边缘 + 向上闭合（填充上方，与墨体严格互补） */
+function reliefPath(amp, period) {
+  const x0 = -2 * period, x1 = VB + 2 * period;
+  const p = waveEdge(amp, period, x0, x1);
+  return `M ${x0} ${-VB * 2} L ${p.join(' L ')} L ${x1} ${-VB * 2} Z`;
+}
+
+/* 9 条静态路径：inkA / inkB / reliefA × 常态 / 低时 / 休息
+   reliefA 必须与 inkA 同幅，否则阴阳互补失效 */
+const PATHS = Object.fromEntries(Object.entries(AMP).map(([k, m]) => [k, {
+  inkA:    inkPath(WAVE.A.amp * m, WAVE.A.period),
+  inkB:    inkPath(WAVE.B.amp * m, WAVE.B.period),
+  reliefA: reliefPath(WAVE.A.amp * m, WAVE.A.period),
+}]));
+
+/** 砚石纹：确定性 seed 斑点（Q17 —— 排除 feTurbulence，与项目 gradient 手法一致）
+ *  ⚠ spike 修订 1：斑点须避开中心文字安全区，且透明度大幅下调。
+ *  首轮 spike 用 opacity .25–.65 且铺满全盘，深斑点压在阳文数字下把字糊成一团 ——
+ *  砚石纹是材质点缀，不能与唯一的核心信息（剩余时间）争夺同一块像素。 */
+const R_SAFE = 104;                    // 中心文字安全区半径（含 25:00 + 模式 + 副标题）
+function stoneSpots() {
+  let s = 20260821, out = '';
+  const rnd = () => (s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  for (let i = 0; i < 22; i++) {
+    const a = rnd() * Math.PI * 2;
+    const rr = R_SAFE + rnd() * (R_WALL - 16 - R_SAFE);   // 仅环带内布点，中心留白
+    const cx = (C + Math.cos(a) * rr).toFixed(1), cy = (C + Math.sin(a) * rr).toFixed(1);
+    out += `<ellipse cx="${cx}" cy="${cy}"
+      rx="${(3 + rnd() * 8).toFixed(1)}" ry="${(2 + rnd() * 5).toFixed(1)}"
+      transform="rotate(${(rnd() * 180).toFixed(0)} ${cx} ${cy})"
+      fill="var(--color-ink-stone-deep)" opacity="${(0.10 + rnd() * 0.12).toFixed(2)}"/>`;
+  }
+  return out;
+}
+
+/* ============================================================
+   3. 砚池 SVG 结构
+   层序（底→顶）：砚石池底 → 墨体(mask 挖字=阴文) → 反光带 → 阳文(裁剪到墨面之上)
+   → 池壁内缘低时泛金 → 涟漪 → 水痕
+   关键：墨体只存在于墨面之下，故「墨的存在范围」天然完成阴阳互补，无需第二个裁剪
+   ============================================================ */
+const SUBJ_ORDER = ['math', 'english', '408', 'free'];
+
+function buildSVG(uid, mini) {
+  const stone = mini ? '' : stoneSpots();
+  return `
+<svg viewBox="0 0 ${VB} ${VB}" role="timer" aria-live="polite" aria-label="专注中 剩余 25 分 0 秒">
+ <defs>
+  <clipPath id="disc-${uid}"><circle cx="${C}" cy="${C}" r="${R_WALL}"/></clipPath>
+
+  <!-- 阴文：以文字为 mask 从墨中挖空，透出砚石池底 -->
+  <mask id="inkMask-${uid}">
+    <rect x="0" y="0" width="${VB}" height="${VB}" fill="#fff"/>
+    <text class="t-time" x="${C}" y="${C}" text-anchor="middle" dominant-baseline="central"
+      fill="#000" font-family="${'ui-monospace,SF Mono,JetBrains Mono,Menlo,monospace'}"
+      font-size="${mini ? 46 : 62}" font-weight="700" letter-spacing="1">25:00</text>
+    ${mini ? '' : `
+    <text class="t-mode" x="${C}" y="${C + 52}" text-anchor="middle" fill="#000"
+      font-size="15" font-weight="500">专注中</text>
+    <text class="t-sub" x="${C}" y="${C + 76}" text-anchor="middle" fill="#000"
+      font-size="13">高数强化 · 数学</text>`}
+  </mask>
+
+  <!-- 阳文裁剪：墨面之上（与墨体共用同一条波边缘，故严格互补）
+       ⚠ spike 修订 2：<clipPath> 的合法子元素只有 shape / text / use，
+       曾在此套一层 <g> 承载竖向平移 → 整个裁剪区为空，阳文被全部裁掉（且 getBBox
+       不受裁剪影响，读数正常极易误判）。改为：竖向平移放到 <clipPath> 自身的
+       transform（clipPath 支持 transform），横向波动仍由 path 上的 CSS 动画负责。 -->
+  <clipPath id="reliefClip-${uid}" class="surf-clip">
+    <path class="relief-edge ${WAVE.A.cls}" d="${PATHS.normal.reliefA}"/>
+  </clipPath>
+
+  <radialGradient id="stoneGrad-${uid}" cx="42%" cy="34%" r="78%">
+    <stop offset="0%" stop-color="var(--color-ink-stone)"/>
+    <stop offset="100%" stop-color="var(--color-ink-stone-deep)"/>
+  </radialGradient>
+  <radialGradient id="concave-${uid}" cx="50%" cy="50%" r="50%">
+    <stop offset="72%" stop-color="rgba(0,0,0,0)"/>
+    <stop offset="100%" stop-color="rgba(16,24,40,.16)"/>
+  </radialGradient>
+ </defs>
+
+ <g clip-path="url(#disc-${uid})">
+   <!-- 砚石池底 -->
+   <circle cx="${C}" cy="${C}" r="${R_WALL}" fill="url(#stoneGrad-${uid})"/>
+   ${stone}
+
+   <!-- 墨体（含深色主题内发光层）
+        ⚠ spike 修订 3：mask 必须挂在「未被平移」的外层组上。曾把 mask 挂在
+        translate(0,surfY) 之内 → mask 内容坐标随之整体下移，挖空落到池外，阴文失效。
+        正确嵌套：外层 g 承载 mask（不平移）→ 内层 .surf-g 承载竖向平移。 -->
+   <g class="inkbody" mask="url(#inkMask-${uid})">
+     <g class="surf-g">
+       <g class="ink-glow-layer">
+         <path class="ink-a ${WAVE.A.cls}" d="${PATHS.normal.inkA}" fill="var(--_ink)"/>
+       </g>
+       <path class="ink-b ${WAVE.B.cls}" d="${PATHS.normal.inkB}" fill="var(--_ink)" opacity=".45"/>
+       <path class="ink-a ${WAVE.A.cls}" d="${PATHS.normal.inkA}" fill="var(--_ink)"/>
+     </g>
+   </g>
+   <!-- 反光带：静态高光线，随墨面同降（Q14：不游走） -->
+   <g class="surf-g">
+     <line class="hl" x1="${C - R_WALL}" y1="0" x2="${C + R_WALL}" y2="0"
+       stroke="var(--color-ink-highlight)" stroke-width="1.5"/>
+   </g>
+
+   <!-- 阳文：实体字，裁剪到墨面之上 -->
+   <g clip-path="url(#reliefClip-${uid})" class="relief">
+     <text class="t-time" x="${C}" y="${C}" text-anchor="middle" dominant-baseline="central"
+       fill="var(--_relief)" font-family="ui-monospace,SF Mono,JetBrains Mono,Menlo,monospace"
+       font-size="${mini ? 46 : 62}" font-weight="700" letter-spacing="1">25:00</text>
+     ${mini ? '' : `
+     <text class="t-mode" x="${C}" y="${C + 52}" text-anchor="middle" fill="var(--_relief)"
+       opacity=".75" font-size="15" font-weight="500">专注中</text>
+     <text class="t-sub" x="${C}" y="${C + 76}" text-anchor="middle" fill="var(--color-text-muted)"
+       font-size="13">高数强化 · 数学</text>`}
+   </g>
+
+   <!-- 凹面暗角 -->
+   <circle cx="${C}" cy="${C}" r="${R_WALL}" fill="url(#concave-${uid})" pointer-events="none"/>
+
+   <!-- 池壁内缘低时泛金 -->
+   <circle class="lowring" cx="${C}" cy="${C}" r="${R_WALL - 4}" fill="none"
+     stroke="var(--color-timer-low)" stroke-width="8" opacity="0"/>
+
+   <!-- 涟漪（澄清） -->
+   <circle class="ripple" cx="${C}" cy="${C}" r="6" fill="none" stroke="var(--color-ink-highlight)"/>
+ </g>
+
+ <!-- 水痕：池壁外沿，固定 6° 间隔自 12 点顺时针累积（Q9） -->
+ <g class="marks"></g>
+</svg>`;
+}
+
+/* ============================================================
+   4. 状态与渲染
+   ============================================================ */
+const INK_VAR = { math:'--color-ink-math', english:'--color-ink-english',
+  '408':'--color-ink-408', free:'--color-ink-free', break:'--color-ink-break' };
+const MODE_LABEL = { math:'专注中', english:'专注中', '408':'专注中', free:'专注中', break:'短休息' };
+const SUB_LABEL = { math:'高数强化 · 数学', english:'长难句 · 英语', '408':'数据结构 · 408',
+  free:'漫游专注', break:'——' };
+
+const S = { theme:'light', mode:'math', pct:100, rounds:6,
+  equalArea:true, lowtime:false, static:false, showStone:true };
+
+const wells = [
+  { el: document.getElementById('wellFull'), uid:'f', mini:false },
+  { el: document.getElementById('wellMini'), uid:'m', mini:true },
+];
+wells.forEach(w => { w.el.innerHTML = buildSVG(w.uid, w.mini); });
+
+function fmt(sec) {
+  const m = Math.floor(sec/60), s = Math.floor(sec%60);
+  return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+
+function render() {
+  const f = S.pct / 100;
+  const h = S.equalArea ? areaToHeight(f) : f;          // 核心：面积→高度
+  // 墨面在 viewBox 中的 y（h=1 → 池顶；h=0 → 池底）
+  const surfY = C + R_WALL - h * (2 * R_WALL);
+  const totalSec = S.mode === 'break' ? 300 : 1500;
+
+  document.documentElement.dataset.theme = S.theme;
+
+  wells.forEach(w => {
+    const svg = w.el.querySelector('svg');
+    // 墨色 / 阳文色
+    svg.style.setProperty('--_ink', `var(${INK_VAR[S.mode]})`);
+    svg.style.setProperty('--_relief',
+      S.lowtime ? 'var(--color-timer-low)' : `var(${INK_VAR[S.mode]})`);
+
+    // 墨面高度：每帧只写这一个值到 2 个 .surf-g + 1 个 clipPath（Q16 零重渲染路径）
+    const tf = `translate(0 ${surfY.toFixed(2)})`;
+    svg.querySelectorAll('.surf-g, .surf-clip').forEach(g => g.setAttribute('transform', tf));
+
+    // 状态类
+    w.el.classList.toggle('lowtime', S.lowtime);
+    w.el.classList.toggle('static', S.static);
+    w.el.classList.toggle('breakmode', S.mode === 'break');
+
+    // 波幅变体切换（spec §4.2）：常态 / 低时 ×1.6 / 休息 ×1.25
+    // 只在状态跨越时写 d，不进每帧路径；reliefA 与 inkA 必须同幅否则阴阳互补失效
+    const variant = S.lowtime ? 'lowtime' : (S.mode === 'break' ? 'break' : 'normal');
+    if (w.el.dataset.variant !== variant) {
+      w.el.dataset.variant = variant;
+      const P = PATHS[variant];
+      svg.querySelectorAll('.ink-a').forEach(n => n.setAttribute('d', P.inkA));
+      svg.querySelectorAll('.ink-b').forEach(n => n.setAttribute('d', P.inkB));
+      svg.querySelectorAll('.relief-edge').forEach(n => n.setAttribute('d', P.reliefA));
+    }
+
+    // 文案（阴影两份文字须同步）
+    const t = fmt(totalSec * f);
+    svg.querySelectorAll('.t-time').forEach(n => n.textContent = t);
+    svg.querySelectorAll('.t-mode').forEach(n => n.textContent = MODE_LABEL[S.mode]);
+    svg.querySelectorAll('.t-sub').forEach(n => n.textContent = SUB_LABEL[S.mode]);
+
+    // 砚石纹可见性（默认常驻——池底材质应恒定；复选框用于 A/B 对比）
+    // ⚠ 首轮 spike 此处三元两个分支都写成 ''，导致永远显示且无法关闭，是数字糊掉的根因
+    svg.querySelectorAll('ellipse').forEach(n =>
+      n.style.display = S.showStone ? '' : 'none');
+
+    // 水痕（路线 C：统一中性色，不按科目区分）
+    // 依据：按科目着色需要「今日每轮的科目有序序列」，而 today-summary 只有轮数与
+    // 每科目秒数；轮数与秒数不成正比（45min 一轮与 5min 一轮各算一轮），按秒数
+    // 推算出的颜色是错误信息，比不上色更糟。分科目分布交由统计页承担。
+    if (!w.mini) {
+      const g = svg.querySelector('.marks');
+      let out = '';
+      for (let i = 0; i < S.rounds; i++) {
+        const ring = Math.floor(i / 60);              // 满 60 道外扩第二圈
+        const deg = -90 + (i % 60) * 6, rad = deg * Math.PI / 180;
+        const ri = R_MARK_IN + ring * 12, ro = R_MARK_OUT + ring * 12;
+        out += `<line x1="${(C+Math.cos(rad)*ri).toFixed(1)}"
+          y1="${(C+Math.sin(rad)*ri).toFixed(1)}"
+          x2="${(C+Math.cos(rad)*ro).toFixed(1)}"
+          y2="${(C+Math.sin(rad)*ro).toFixed(1)}"
+          stroke="var(--color-ink-mark)" stroke-width="1.5" stroke-linecap="round" opacity=".62"/>`;
+      }
+      g.innerHTML = out;
+    } else {
+      svg.querySelector('.marks').innerHTML = '';
+    }
+  });
+
+  // 读数
+  const hh = S.equalArea ? areaToHeight(f) : f;
+  document.getElementById('roA').textContent = (f*100).toFixed(1) + '%';
+  document.getElementById('roH').textContent = (hh*100).toFixed(1) + '%';
+  document.getElementById('roK').textContent = (f > 0 ? (hh/f) : 1).toFixed(2) + '×';
+  document.getElementById('pctOut').textContent = S.pct + '%';
+  document.getElementById('roundsOut').textContent = S.rounds;
+  buildTable(f);
+}
+
+function buildTable(cur) {
+  const rows = [0.01,0.02,0.05,0.10,0.25,0.50,0.75,1.00];
+  let html = '<tr><th>剩余面积</th><th>等面积→高度</th><th>线性→高度</th><th>放大</th></tr>';
+  for (const f of rows) {
+    const h = areaToHeight(f);
+    const hit = Math.abs(f - cur) < 0.005 ? ' class="hit"' : '';
+    html += `<tr${hit}><td>${(f*100).toFixed(0)}%</td><td>${(h*100).toFixed(1)}%</td>
+      <td>${(f*100).toFixed(1)}%</td><td>${(h/f).toFixed(2)}×</td></tr>`;
+  }
+  document.getElementById('cmpTable').innerHTML = html;
+}
+
+/* ============================================================
+   5. 交互
+   ============================================================ */
+function seg(id, key, onSet) {
+  const box = document.getElementById(id);
+  box.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    ['modeSeg','modeSeg2'].includes(id)
+      ? document.querySelectorAll('#modeSeg button,#modeSeg2 button')
+          .forEach(x => x.setAttribute('aria-pressed', String(x === b)))
+      : box.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    S[key] = b.dataset.v; (onSet||render)();
+  });
+}
+seg('themeSeg','theme'); seg('modeSeg','mode'); seg('modeSeg2','mode');
+
+document.getElementById('pct').oninput = e => { S.pct = +e.target.value; render(); };
+document.getElementById('rounds').oninput = e => { S.rounds = +e.target.value; render(); };
+['equalArea','lowtime','staticMode','showStone'].forEach(id => {
+  document.getElementById(id).onchange = e => {
+    S[id === 'staticMode' ? 'static' : id] = e.target.checked; render();
+  };
+});
+
+/* 注墨 Inking · 520ms（Q11：底部上升，不设停顿） */
+const easeOut = t => 1 - Math.pow(1 - t, 3);
+function animate(from, to, ms, done) {
+  const t0 = performance.now();
+  (function step(now) {
+    const k = Math.min(1, (now - t0) / ms);
+    S.pct = from + (to - from) * easeOut(k);
+    document.getElementById('pct').value = S.pct;
+    render();
+    k < 1 ? requestAnimationFrame(step) : done && done();
+  })(t0);
+}
+document.getElementById('btnInk').onclick = () => animate(0, 100, 520);
+
+/* 澄清 Clarify · 700ms（Q19 重叠编排） */
+document.getElementById('btnClarify').onclick = () => {
+  S.pct = 3; document.getElementById('pct').value = 3; render();
+  wells.forEach(w => {
+    const ink = w.el.querySelector('.inkbody');
+    ink.style.transition = 'filter .28s linear, opacity .28s linear';
+    ink.style.filter = 'saturate(.12) brightness(1.25)';       // 0–280ms 转清
+    const rip = w.el.querySelector('.ripple');
+    rip.classList.remove('play'); void rip.offsetWidth; rip.classList.add('play'); // 120–520ms
+  });
+  S.rounds = Math.min(34, S.rounds + 1);
+  document.getElementById('rounds').value = S.rounds;
+  render();
+  wells.forEach(w => {                                          // 420–700ms 水痕刻入
+    const ms = w.el.querySelectorAll('.marks line');
+    if (ms.length) ms[ms.length-1].classList.add('mark--new');
+  });
+  setTimeout(() => wells.forEach(w => {
+    const ink = w.el.querySelector('.inkbody');
+    ink.style.filter = ''; ink.style.transition = '';
+  }), 760);
+};
+
+/* 模拟一轮：注墨 → 消减 → 低时 → 澄清 */
+document.getElementById('btnRun').onclick = () => {
+  S.lowtime = false; document.getElementById('lowtime').checked = false;
+  animate(0, 100, 520, () => {
+    animate(100, 20, 6000, () => {
+      S.lowtime = true; document.getElementById('lowtime').checked = true;
+      animate(20, 2, 3500, () => {
+        document.getElementById('btnClarify').click();
+        setTimeout(() => { S.lowtime = false;
+          document.getElementById('lowtime').checked = false; render(); }, 900);
+      });
+    });
+  });
+};
+
+render();
+</script>
+</body>
+</html>
