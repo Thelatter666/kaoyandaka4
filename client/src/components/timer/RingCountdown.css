@@ -1,226 +1,130 @@
 /* ============================================================
-   番茄钟「光晕核心」（设计文档 5.1 / 5.2 / 4.4）
-   模式色经 --_rc-c1（主色）/ --_rc-c2（数字渐变提亮端）两个私有
-   自定义属性分发；辉光统一 drop-shadow + currentColor，避免动画
-   模糊半径；低时警示仅切换令牌引用，reduced-motion 下静止。
+   砚池 Inkstone Well（spec §3）
+   墨色经 --_ink 下发（由组件按科目/休息态设置）；双主题差异与降级全部由
+   CSS 承担，组件内无 JS 分支。
    ============================================================ */
 
-.ring-countdown {
-  /* 模式色：专注 accent-primary（默认）；--_rc-c1-text 为 14px 模式文字的 AA 达标变体 */
-  --_rc-c1: var(--color-accent-primary);
-  --_rc-c1-text: var(--color-accent-primary-strong);
-  --_rc-c2: var(--color-timer-focus-light);
-
-  /* 桌面 400px / 移动 min(88vw, 400px)，正圆 */
+.inkwell {
   width: min(88vw, 400px);
   aspect-ratio: 1 / 1;
   position: relative;
   flex-shrink: 0;
 }
 
-.ring-countdown--short_break {
-  --_rc-c1: var(--color-accent-success);
-  --_rc-c1-text: var(--color-accent-success-strong);
-  --_rc-c2: var(--color-timer-success-light);
-}
+.inkwell--mini { width: 120px; }
 
-.ring-countdown--long_break {
-  --_rc-c1: var(--color-accent-deep-green);
-  --_rc-c1-text: var(--color-accent-deep-green);
-  --_rc-c2: var(--color-timer-deep-green-light);
-}
-
-/* 低时警示：数字渐变提亮端切换为金红（--color-timer-low），
-   进度环渐变由 SVG linearGradient 承担，辉光同步转为金色 */
-.ring-countdown--lowtime {
-  --_rc-c2: var(--color-timer-low);
-}
-
-/* ---- 玻璃圆盘容器：glass-2 材质 + 正圆 ---- */
-.ring-countdown__disc {
+/* ---- 墨堂：凹面池体（glass-2 提供底色/模糊/描边，此处叠加凹面内阴影） ---- */
+.inkwell__hall {
   position: relative;
   width: 100%;
   height: 100%;
   border-radius: 50%;
+  box-shadow:
+    var(--shadow-glass-md),
+    inset 0 10px 26px var(--color-ink-concave),
+    inset 0 -4px 14px var(--color-ink-hall-rim);
 }
 
-/* ---- SVG 层：颜色经 color 下发，供 currentColor 辉光使用 ---- */
-.ring-countdown__svg {
+.inkwell__svg { display: block; width: 100%; height: 100%; }
+
+/* ---- 墨体 ---- */
+.inkwell__body { opacity: var(--ink-opacity); }
+.inkwell__glow { display: none; }
+[data-theme="dark"] .inkwell__glow { display: block; filter: blur(9px); opacity: 0.5; }
+
+/* 波纹：纯 CSS 无限动画，与逐帧墨面平移完全解耦（spec §6.2）
+   位移量 = 空间周期，保证无缝循环 */
+@keyframes inkwell-wave-a { to { transform: translateX(-260px); } }
+@keyframes inkwell-wave-b { to { transform: translateX(180px); } }
+.inkwell__wave-a { animation: inkwell-wave-a 11s linear infinite; }
+.inkwell__wave-b { animation: inkwell-wave-b 7s linear infinite; }
+.inkwell--lowtime .inkwell__wave-a { animation-duration: 5s; }
+.inkwell--lowtime .inkwell__wave-b { animation-duration: 3.2s; }
+/* mini 无波纹（波幅缩放后低于感知阈，spec §3.2） */
+.inkwell--mini .inkwell__wave-a,
+.inkwell--mini .inkwell__wave-b { animation: none; }
+
+/* ---- 反光带 ---- */
+.inkwell__highlight { stroke: var(--color-ink-highlight); }
+.inkwell--break .inkwell__highlight { stroke: var(--color-ink-highlight-break); }
+
+/* ---- 文字 ----
+   字体度量规则**必须**同时命中 mask 内文字与阳文层文字：两者字形须逐像素一致，
+   否则阴文挖空与阳文实体会错位。 */
+.inkwell__t-time {
+  font-family: var(--font-mono);
+  font-weight: var(--font-bold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+}
+.inkwell__t-mode { font-weight: var(--font-medium); }
+
+/* ⚠ 结构禁忌 4：fill 规则**只能**限定在 .inkwell__relief 之内。
+   mask 内的文字依靠 fill="#000" 呈现属性完成挖空，而 CSS 优先级高于呈现属性 ——
+   若写成无限定的 `.inkwell__t-time { fill: ... }`，会把 mask 里的黑字染成墨色，
+   挖空当场失效、阴文彻底消失（且不会有任何报错）。 */
+.inkwell__relief .inkwell__t-time { fill: var(--_ink); }
+.inkwell__relief .inkwell__t-mode { fill: var(--_ink); opacity: 0.75; }
+.inkwell__relief .inkwell__t-sub { fill: var(--color-text-muted); }
+.inkwell--lowtime .inkwell__relief .inkwell__t-time,
+.inkwell--lowtime .inkwell__relief .inkwell__t-mode { fill: var(--color-timer-low); }
+
+/* 深色主题：不做阴文，文字恒为阳文近白字（ADR-0004）
+   依据：深色半透荧光墨挖空仅 1.96:1，低于大字号 3:1 下限；恒阳文实测 15.53:1 */
+[data-theme="dark"] .inkwell__relief { clip-path: none; }
+[data-theme="dark"] .inkwell__body { mask: none; }
+[data-theme="dark"] .inkwell__relief .inkwell__t-time,
+[data-theme="dark"] .inkwell__relief .inkwell__t-mode { fill: var(--color-text-primary); }
+[data-theme="dark"] .inkwell__relief .inkwell__t-sub { fill: var(--color-text-secondary); }
+[data-theme="dark"] .inkwell--lowtime .inkwell__relief .inkwell__t-time { fill: var(--color-timer-low); }
+
+/* ---- 池壁内缘低时泛金 ---- */
+.inkwell__lowring {
+  stroke: var(--color-timer-low);
+  opacity: 0;
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+.inkwell--lowtime .inkwell__lowring { opacity: 1; }
+
+/* ---- 水痕 ---- */
+.inkwell__mark { stroke: var(--color-ink-mark); opacity: 0.62; }
+
+/* ---- 涟漪（澄清期间由 .inkwell--clarify 触发） ---- */
+@keyframes inkwell-ripple {
+  from { r: 6px; opacity: 0.85; stroke-width: 7; }
+  to   { r: 158px; opacity: 0; stroke-width: 1; }
+}
+.inkwell__ripple { stroke: var(--color-ink-highlight); display: none; }
+.inkwell--clarify .inkwell__ripple {
   display: block;
-  width: 100%;
-  height: 100%;
-  color: var(--_rc-c1);
+  animation: inkwell-ripple 400ms var(--ease-out) 120ms both;
 }
-
-.ring-countdown--lowtime .ring-countdown__svg {
-  color: var(--color-timer-low);
+/* 澄清：墨面去饱和转清（0–280ms） */
+.inkwell--clarify .inkwell__body {
+  filter: saturate(0.12) brightness(1.25);
+  transition: filter 280ms linear;
 }
-
-/* 外环·底环：同色 8% 透明 */
-.ring-countdown__base {
-  stroke: var(--_rc-c1);
-  opacity: 0.08;
+/* 澄清：新水痕自内向外刻入（420–700ms） */
+@keyframes inkwell-mark-carve {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 0.62; transform: scale(1); }
 }
-
-/* 外环·进度环：模式色 + 同色辉光；逐秒平滑推进 */
-.ring-countdown__progress {
-  filter: drop-shadow(0 0 10px currentColor);
-  transition:
-    stroke-dashoffset var(--dur-ring) linear,
-    stroke var(--dur-med) var(--ease-out);
-}
-
-/* 无极平滑（smooth）：dashoffset 由 rAF 逐帧直驱，取消其过渡避免滞后；
-   仅保留模式色切换过渡（JS 写 SVG 几何属性，非 CSS 布局属性动画） */
-.ring-countdown--smooth .ring-countdown__progress {
-  transition: stroke var(--dur-med) var(--ease-out);
-}
-
-/* 低时警示：环呼吸脉动（opacity 0.7 ↔ 1，2s infinite） */
-@keyframes ring-breathe {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-.ring-countdown--lowtime .ring-countdown__progress {
-  animation: ring-breathe 2s var(--ease-in-out) infinite;
-}
-
-/* 低时数字脉动（与环呼吸同 2s 周期，50% 相位对齐） */
-@keyframes time-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.75;
-  }
-}
-
-.ring-countdown--lowtime .ring-countdown__time {
-  animation: time-pulse 2s var(--ease-in-out) infinite;
-}
-
-/* 中环·轮次刻度珠：未点亮 --color-border；点亮模式色 + 同模式辉光；
-   点亮交互使用弹性曲线 --ease-spring（设计文档 13.4 弹性强调） */
-.ring-countdown__bead {
-  fill: var(--color-border);
-  transition: fill var(--dur-med) var(--ease-spring);
-}
-
-@keyframes ring-bead-pop {
-  from {
-    transform: scale(0.5);
-  }
-  to {
-    transform: scale(1);
-  }
-}
-
-.ring-countdown__bead--lit {
-  fill: var(--_rc-c1);
-  filter: drop-shadow(0 0 6px currentColor);
+.inkwell--clarify .inkwell__mark:last-of-type {
   transform-box: fill-box;
   transform-origin: center;
-  animation: ring-bead-pop var(--dur-med) var(--ease-spring);
+  animation: inkwell-mark-carve 280ms var(--ease-spring) 420ms both;
 }
 
-/* 内环·装饰细环 */
-.ring-countdown__inner {
-  stroke: var(--color-border);
-}
+/* 注墨不使用 CSS 过渡：墨面 transform 由 rAF 每帧直写，CSS 过渡会与逐帧写入
+   互相打架（每次写入都重启过渡，产生阻尼拖尾而非干净的 520ms 上升）。
+   注墨改由 SmoothRing 在 rAF 内插值实现（Task 5），此处不留过渡规则。 */
 
-/* ---- 中心 HTML 覆盖层 ---- */
-.ring-countdown__center {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-xs);
-  padding: 0 20%;
-  text-align: center;
-  pointer-events: none;
-}
-
-/* 剩余时间：JetBrains Mono 64px（移动 52px）700，
-   浅色主题 135deg 模式色 → 提亮色渐变填充；深色主题纯色保对比度
-   浅色渐变填充 background 不可过渡，低时切色为快切（深色纯色有 240ms 过渡） */
-.ring-countdown__time {
-  font-family: var(--font-mono);
-  font-size: var(--text-timer);
-  font-weight: var(--font-bold);
-  line-height: 1.05;
-  font-variant-numeric: tabular-nums;
-  background: linear-gradient(135deg, var(--_rc-c1), var(--_rc-c2));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-}
-
-[data-theme="dark"] .ring-countdown__time {
-  background: none;
-  -webkit-background-clip: border-box;
-  background-clip: border-box;
-  color: var(--_rc-c1);
-  -webkit-text-fill-color: var(--_rc-c1);
-  transition: color var(--dur-med) var(--ease-out);
-}
-
-/* 模式文字：14px 500，跟随模式色的文字变体（图形色对白不足 4.5:1） */
-.ring-countdown__mode {
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--_rc-c1-text);
-}
-
-/* 预设名 + 科目：12px muted，一行省略 */
-.ring-countdown__subtitle {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ---- mini：120px 简化版（供首页迷你进度环），数字 20px ---- */
-.ring-countdown--mini {
-  width: 120px;
-}
-
-.ring-countdown--mini .ring-countdown__time {
-  font-size: var(--text-xl);
-}
-
-/* ---- 移动端：数字 52px ---- */
-@media (max-width: 767px) {
-  .ring-countdown__time {
-    font-size: var(--text-timer-mobile);
-  }
-
-  .ring-countdown--mini .ring-countdown__time {
-    font-size: var(--text-xl);
-  }
-}
-
-/* ---- reduced-motion：脉动取消，仅保留变色（全局 0.01ms 规则之外的显式降级） ---- */
+/* ---- reduced-motion：关闭全部动效，墨面直接就位（spec §5.4） ---- */
 @media (prefers-reduced-motion: reduce) {
-  .ring-countdown--lowtime .ring-countdown__progress,
-  .ring-countdown--lowtime .ring-countdown__time,
-  .ring-countdown__bead--lit {
-    animation: none;
-  }
-
-  .ring-countdown__progress,
-  .ring-countdown__bead {
-    transition: none;
-  }
+  .inkwell__wave-a,
+  .inkwell__wave-b,
+  .inkwell--clarify .inkwell__ripple,
+  .inkwell--clarify .inkwell__mark:last-of-type { animation: none; }
+  .inkwell--clarify .inkwell__body { transition: none; }
+  .inkwell__lowring { transition: none; }
 }

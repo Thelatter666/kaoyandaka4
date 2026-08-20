@@ -109,6 +109,7 @@
   --color-ink-highlight-break: rgba(255, 255, 255, 0.78); /* 休息态反光带更亮 */
   --color-ink-mark: #8C8578;             /* 水痕（统一中性色，不分科目，见 spec §4.3） */
   --color-ink-concave: rgba(16, 24, 40, 0.16);            /* 凹面暗角 */
+  --color-ink-hall-rim: rgba(255, 255, 255, 0.30);        /* 墨堂底缘高光（内阴影） */
   --ink-opacity: 1;                      /* 墨体不透明度（深色主题为半透荧光墨） */
 
   /* 学习森林「玻璃花房」（设计文档 6.1/6.2）：场景插画专用色，双主题同值 */
@@ -269,6 +270,7 @@
   --color-ink-highlight-break: rgba(255, 255, 255, 0.46);
   --color-ink-mark: #7C8796;
   --color-ink-concave: rgba(0, 0, 0, 0.34);
+  --color-ink-hall-rim: rgba(255, 255, 255, 0.05);
   --ink-opacity: 0.38;
 
   /* 玻璃材质 */
