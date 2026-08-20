@@ -81,9 +81,9 @@ kaoyandaily/
 │   ├── styles/           #   CSS 主题 Token + 全局样式
 │   └── utils/            #   日期 / 时长 / 无障碍 / 本地统计·导入
 ├── server/src/           # Express 后端
-│   ├── routes/           #   9 个路由（完整 CRUD）
-│   ├── db/               #   连接池 + 建表 SQL
-│   └── middleware/        #   CORS / 校验 / 错误处理
+│   ├── routes/           #   10 个路由（完整 CRUD + 导出/导入）
+│   ├── db/               #   连接池 + 事务包装 + 建表 SQL
+│   └── middleware/        #   CORS / 校验 / 鉴权 / 错误处理
 ├── shared/src/           # 前后端共享
 │   ├── schemas/          #   Zod 校验 Schema（含备份格式 v1）
 │   └── types/            #   TypeScript 类型

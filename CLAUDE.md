@@ -22,15 +22,18 @@ npm run db:init        # 初始化/重置数据库（会自动跑 migrate）
 ```
 client/src/   React SPA（hash 路由，无 React Router；React.lazy 代码分割 + hover 预取）
   pages/     页面组件 + 同名 co-located CSS；components/ui/ 通用组件
-server/src/  Express 路由（8 个 route 文件）；middleware/auth.js = requireAuth 会话鉴权
+  api/       9 个资源封装模块 + client.ts（统一 fetch/401 登出）；每方法内 isLocalMode() 分支到本地层
+  local/     P3 本地模式数据层（IndexedDB：db/localStore/mode/accounts/storage）
+server/src/  Express 路由（10 个 route 文件）；middleware/auth.ts = requireAuth 会话鉴权
 shared/src/  Zod schema + 推断类型（@shared alias 前端引用；服务端相对路径导入）
 plans/       编号实现计划 md（先写计划再实现）；docs/ 交接文档/ = 设计文档
 deploy/      nginx.conf + deploy.sh（生产：nginx 反代 → 3001）
 ```
 
-## 增量修正（AGENT.md 已过时处）
+## 增量修正
 
-- **单元测试已存在**：`client/src/utils/sound.test.ts`（番茄钟提示音引擎），并非"尚无单元测试文件"。新增逻辑请按 `**/*.test.ts(x)` 惯例补测，Vitest 配置在根目录 `vitest.config.ts`（排除 e2e/）。
+- **测试现状（2026-08-21 核对）**：`npx vitest run` = **10 文件 / 97 tests 全绿**，分布于 server 纯函数（backup/import/import-mapping/export）、shared schema（backup/import）、client（sound/localStore/localStatistics/localImport）。新增逻辑按 `**/*.test.ts(x)` 惯例补测，Vitest 配置在根目录 `vitest.config.ts`（排除 e2e/）。
+- **本地模式单测**：文件头部必须 `import 'fake-indexeddb/auto'`（vitest 环境为 node，无原生 IndexedDB）。
 
 ## 开发工作流（AGENT.md 2026-08-12 修订，硬性约束）
 

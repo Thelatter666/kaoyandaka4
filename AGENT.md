@@ -26,9 +26,9 @@ client/src/          → React SPA (hash-router, lazy-loaded pages)
   styles/            → CSS tokens (tokens.css), global styles, utilities
 
 server/src/          → Express REST API
-  routes/            → 9 route files: auth, presets, tasks, reviews, focus, courses, statistics, settings, import(P2: /api/v1/import 与 /import/preview)
+  routes/            → 10 route files: auth, presets, tasks, reviews, focus, courses, statistics, settings, export(P2: /api/v1/export 全量备份下载), import(P2: /api/v1/import 与 /import/preview)
   middleware/         → cors, auth (session), validate (Zod), errorHandler (AppError)
-  db/                → connection.ts (pool), schema.sql, init.ts, migrate.ts
+  db/                → connection.ts (pool), transaction.ts (withTransaction 事务包装：tasks/courses/focus/export/import 多写路由必用), schema.sql, init.ts, migrate.ts, rollback-users.sql
   utils/             → date.ts, uuid.ts, backup.ts (导出组装), import.ts / import-mapping.ts (导入纯函数)
   types/             → express-mysql-session 类型扩展
 
@@ -51,6 +51,13 @@ docs/ 交接文档/        → 设计文档、需求文档、组件集成报告�
 
 ## Architecture Patterns
 
+### 服务端总装（`server/src/index.ts`）
+- **鉴权在挂载层统一施加**：`app.use('/api/v1/xxx', requireAuth, router)` — 集中一处可审计、无遗漏风险；仅 `/api/v1/auth` 与 `/api/v1/health` 公开
+- `app.set('trust proxy', 1)` — 只信任 nginx 首跳，使限流按真实客户端 IP、secure cookie 正确判定
+- `compression({ threshold: 1024 })` gzip（统计/森林聚合接口收益最大）；`express.json({ limit: '20mb' })`（备份导入需要）
+- 会话 7 天**固定不滚动续期**（`rolling: false`）：避免每请求 UPDATE sessions 表的写放大，到期重新登录
+- `SESSION_SECRET` 缺失时**直接抛错拒绝启动**，不留弱默认值
+
 ### Request Lifecycle (every route follows this pattern)
 1. `requireAuth` middleware → session check → injects `req.userId`
 2. `validate(Schema)` middleware → Zod parse on `req.body`
@@ -68,6 +75,7 @@ docs/ 交接文档/        → 设计文档、需求文档、组件集成报告�
 - `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me`
 - 401 from non-auth routes triggers global logout in front-end (`unauthorizedHandler`)
 - All business routes are guarded by `requireAuth` mounted at `server/src/index.ts`
+- **限流**：敏感端点用 `express-rate-limit` 在路由文件内就地声明 — `auth.ts` 的 `loginLimiter` / `registerLimiter`、`import.ts` 的 `importLimiter`；新增登录类或重写入端点须跟上
 
 ### Front-end Routing
 - Hash-based SPA (no React Router) — custom router in `App.tsx`
@@ -100,7 +108,7 @@ docs/ 交接文档/        → 设计文档、需求文档、组件集成报告�
 
 ## Testing
 
-- **Unit/Integration**: `npx vitest run` (files matching `**/*.test.ts`, `**/*.test.tsx`) — 当前 **97 tests**
+- **Unit/Integration**: `npx vitest run` (files matching `**/*.test.ts`, `**/*.test.tsx`) — 当前 **10 文件 / 97 tests**（2026-08-21 核对全绿）
 - **E2E**: `npm run test:e2e` (Playwright, config at `e2e/playwright.config.ts`) — 需 dev server，真实会话
 - **本地模式单测**: 依赖 fake-indexeddb，测试文件头部 `import 'fake-indexeddb/auto'`（vitest 环境为 node）
 - **测试分布**: server 纯函数（backup/import/import-mapping/export…）+ shared schema + client（sound/localStore/localStatistics/localImport）；新增逻辑按 `**/*.test.ts(x)` 惯例补测
@@ -134,8 +142,8 @@ npm run db:migrate   # Run migrations
 
 ## UI 组件库与动效
 
-- **通用组件**: `client/src/components/ui/` — Button, Card, Modal(portal 到 body), Toast, ConfirmDialog, ProgressBar, EmptyState/ErrorState/LoadingState, SkipLink, SubjectBadge, Dropdown, Calendar, ImportBackupModal(导入向导), ProfileDropdown(顶栏账户菜单: 导出/导入/登出), SoundToggle
-- **动效组件** (framer-motion): `AnimatedThemeToggle` (主题切换动画), `Magnetic` (磁性吸引), `GlowCard` (辉光边框), `Card3D` (3D 透视), `FileUpload` (拖放上传)
+- **通用组件**: `client/src/components/ui/` — Button, Card, Modal(portal 到 body), Toast, ConfirmDialog, ProgressBar, EmptyState/ErrorState/LoadingState, SkipLink, SubjectBadge, Dropdown, Calendar, ImportBackupModal(导入向导), ProfileDropdown(顶栏账户菜单: 导出/导入/登出), SoundToggle, ThemeToggle(基础主题切换)
+- **动效组件** (framer-motion): `AnimatedThemeToggle` (主题切换动画), `Magnetic` (磁性吸引), `GlowCard` (辉光边框), `Card3D` (3D 透视), `FileUpload` (拖放上传), `GradientCard` (渐变卡片), `InteractiveHoverButton` (悬停展开按钮)
 - **新组件加入 `components/ui/`**, co-located CSS + `var(--color-xxx)` token, 动画统一用 framer-motion
 - **构建分包**: `client/vite.config.ts` 的 `manualChunks` 将 react / lucide / framer-motion 拆为独立 vendor chunk（性能优化，勿破坏）
 
