@@ -20,7 +20,8 @@ import { SubjectBadge } from '../components/ui/SubjectBadge';
 import { Magnetic } from '../components/ui/Magnetic';
 import { DurationSelector } from '../components/presets/DurationSelector';
 import { PresetCard } from '../components/presets/PresetCard';
-import { RingCountdown, PROGRESS_CIRCUMFERENCE } from '../components/timer/RingCountdown';
+import { RingCountdown, type InkSubject } from '../components/timer/RingCountdown';
+import { surfaceY } from '../components/timer/inkSurface';
 import { BurstParticles } from '../components/timer/BurstParticles';
 import { useFocusSession } from '../hooks/useFocusSession';
 import type { FocusMode } from '../hooks/useFocusSession';
@@ -35,17 +36,17 @@ import type { Subject, SubSubject, SessionSubject } from '@shared/types';
 import './PomodoroPage.css';
 
 /**
- * 番茄钟页「光晕核心」（设计文档 5.3 / v2 12.4 / 13.4）
+ * 番茄钟页砚池（spec docs/superpowers/specs/2026-08-21-pomodoro-inkwell-design.md）
  *
- * v3 布局：圆盘常驻页面中央（不再经「选预设 → 调时长」两步跳转）——
- * 空闲态圆盘满环预览目标时长，下方控制卡内联 DurationSelector 与
+ * v3 布局：砚池常驻页面中央（不再经「选预设 → 调时长」两步跳转）——
+ * 空闲态砚池满池预览目标时长，下方控制卡内联 DurationSelector 与
  * 「开始专注」大按钮；底部 dock 横排预设紧凑卡（含首张「漫游专注」卡），
  * 点击预设即选中并同步时长，再次点击取消回到漫游。
  *
  * 漫游专注：未选预设直接开始，会话快照记为「漫游专注 / free」，
  * 计入总时长与完成次数并参与学习森林种树，不归属任何科目。
  *
- * 无极平滑：进行中/休息中以 rAF 逐帧刷新剩余毫秒，圆环匀速连续消减；
+ * 无极平滑：进行中/休息中以 rAF 逐帧刷新剩余毫秒，墨面连续下降（等面积映射）；
  * 业务规则保持不变（时长 5–120/5 分钟倍数、短休 5 / 长休 15 固定、
  * 会话恢复、完成/取消/休息记录规则、重复完成保护）。
  */
@@ -62,6 +63,20 @@ const SUBJECT_LABELS: Record<Subject, string> = {
 
 /** 预设 dock 的铺平顺序：沿用既有科目分组顺序（数学 → 英语 → 408） */
 const SUBJECT_ORDER: Subject[] = ['math', 'english', '408'];
+
+/** 注墨时长（ms），与 tokens.css 的 --dur-inking 保持一致（rAF 内插值，非 CSS 过渡） */
+const INKING_MS = 520;
+/** 澄清时长（ms），与 tokens.css 的 --dur-clarify 保持一致；播完才切完成态 */
+const CLARIFY_MS = 700;
+
+/** 专注中砚池副标题：漫游固定文案；预设会话为「预设名 · 科目」 */
+const focusSubtitle = (session: {
+  subjectSnapshot: string;
+  presetNameSnapshot: string;
+}): string =>
+  session.subjectSnapshot === 'free'
+    ? '漫游专注'
+    : `${session.presetNameSnapshot} · ${SUBJECT_LABELS[session.subjectSnapshot as Subject]}`;
 
 export function PomodoroPage() {
   const {
@@ -84,7 +99,7 @@ export function PomodoroPage() {
   const [durationMinutes, setDurationMinutes] = useState(45);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // 光晕核心：完成粒子爆散 / 今日已完成轮次（逐帧刷新已下沉至 SmoothRing 内部）
+  // 砚池：完成粒子爆散 / 今日已完成轮次（逐帧刷新已下沉至 SmoothRing 内部）
   const [burstKey, setBurstKey] = useState(0);
   const [statsRounds, setStatsRounds] = useState(0);
   /** 今日每科目累计秒数（来自 today-summary，供「距下一棵树」提示） */
@@ -101,6 +116,19 @@ export function PomodoroPage() {
   const armedTagRef = useRef<string | null>(null);
   /** 开始专注瞬间的点火动画：一次 240ms scale 沉降 + 聚光灯涌起 */
   const [igniting, setIgniting] = useState(false);
+  /** 澄清阶段：完成后先播砚池澄清 700ms 再切完成态——完成卡会 display:none 掉砚池，
+   *  立即切换会使澄清连一帧播放窗口都没有（spec §7.2） */
+  const [clarifying, setClarifying] = useState(false);
+  const clarifyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** 最近一次专注会话的钟参数：澄清窗口内会话已结束、完成态未切换，砚池以这份
+   *  冻结参数渲染，墨面停在结束瞬间的高度完成转清（spec §5.3，不落入空闲满池） */
+  const lastTimedRingRef = useRef<{
+    mode: RingMode;
+    totalSeconds: number;
+    endsAtMs: number;
+    subject: InkSubject;
+    subtitle?: string;
+  } | null>(null);
 
   const fetchPresets = useCallback(async () => {
     setPresetsLoading(true);
@@ -177,8 +205,26 @@ export function PomodoroPage() {
     }
   }, [activeSession]);
 
+  // 记录最近一次专注会话的钟参数（供澄清窗口冻结渲染，见 lastTimedRingRef 注释）
+  useEffect(() => {
+    if (activeSession) {
+      lastTimedRingRef.current = {
+        mode: 'focus',
+        totalSeconds: activeSession.plannedDurationSeconds,
+        endsAtMs: new Date(activeSession.plannedEndAt).getTime(),
+        subject: activeSession.subjectSnapshot as InkSubject,
+        subtitle: focusSubtitle(activeSession),
+      };
+    }
+  }, [activeSession]);
+
+  // 卸载清理：澄清定时器不得在组件卸载后仍触发完成态切换
+  useEffect(() => () => {
+    if (clarifyTimerRef.current) clearTimeout(clarifyTimerRef.current);
+  }, []);
+
   // 会话自然结束检测：activeSession 由有变无且非完成/取消按钮触发
-  // （后端对到期会话自动完成并记录），触发粒子爆散并进入完成页
+  // （后端对到期会话自动完成并记录），先播砚池澄清再进完成页
   useEffect(() => {
     const prevId = prevSessionIdRef.current;
     prevSessionIdRef.current = activeSession?.id ?? null;
@@ -192,9 +238,14 @@ export function PomodoroPage() {
         armedTagRef.current = null;
         void playEndSound();
       }
-      setBurstKey((k) => k + 1);
+      // 自然结束的墨面已见底，澄清以涟漪为主（spec §5.3）
       setNaturalRounds((n) => n + 1);
-      setStep('completed');
+      setClarifying(true);
+      clarifyTimerRef.current = setTimeout(() => {
+        setClarifying(false);
+        setBurstKey((k) => k + 1);
+        setStep('completed');
+      }, CLARIFY_MS);
     }
   }, [activeSession]);
 
@@ -291,8 +342,13 @@ export function PomodoroPage() {
     selfEndedRef.current = true;
     try {
       await completeFocus();
-      setBurstKey((k) => k + 1);
-      setStep('completed');
+      // 提前完成：墨面尚有高度，澄清的转清明显，读作「还剩这么多但我收工了」（spec §5.3）
+      setClarifying(true);
+      clarifyTimerRef.current = setTimeout(() => {
+        setClarifying(false);
+        setBurstKey((k) => k + 1);
+        setStep('completed');
+      }, CLARIFY_MS);
     } catch {
       selfEndedRef.current = false;
       // Error handled by hook
@@ -350,10 +406,8 @@ export function PomodoroPage() {
         totalSeconds: totalPlannedSeconds,
         endsAtMs: new Date(activeSession.plannedEndAt).getTime(),
         fallbackRemainingSeconds: 0,
-        subtitle:
-          activeSession.subjectSnapshot === 'free'
-            ? '漫游专注'
-            : `${activeSession.presetNameSnapshot} · ${SUBJECT_LABELS[activeSession.subjectSnapshot as Subject]}`,
+        subject: activeSession.subjectSnapshot as InkSubject,
+        subtitle: focusSubtitle(activeSession),
       };
     }
     if (breakMode) {
@@ -364,12 +418,28 @@ export function PomodoroPage() {
         fallbackRemainingSeconds: breakRemainingSeconds,
       };
     }
+    // 澄清窗口：会话已结束、完成态未切换（step 仍为 active）。以冻结参数渲染，
+    // 墨面停在结束瞬间的高度（自然结束 ≈ 0 / 提前完成 = 剩余高度），不启 rAF。
+    // 若落入空闲满池预览，墨面回涨会被读作「重新开始」（spec §5.3 明确排除）
+    if ((step === 'active' || clarifying) && lastTimedRingRef.current) {
+      const last = lastTimedRingRef.current;
+      return {
+        mode: last.mode,
+        totalSeconds: last.totalSeconds,
+        endsAtMs: null,
+        fallbackRemainingSeconds: Math.max(0, Math.ceil((last.endsAtMs - Date.now()) / 1000)),
+        subject: last.subject,
+        subtitle: last.subtitle,
+      };
+    }
     return {
       mode: 'focus' as RingMode,
       totalSeconds: durationMinutes * 60,
       endsAtMs: null,
       fallbackRemainingSeconds: durationMinutes * 60,
       modeLabel: '准备开始',
+      emptyPool: true,
+      subject: (selectedPreset?.subject as InkSubject | undefined) ?? 'free',
       subtitle: selectedPreset
         ? `${selectedPreset.name} · ${SUBJECT_LABELS[selectedPreset.subject as Subject]}`
         : '漫游专注',
@@ -465,10 +535,12 @@ export function PomodoroPage() {
           <div
             className={`pomodoro-hero__stage pomodoro-hero__stage--${ringProps.mode}${
               step === 'completed' ? ' pomodoro-hero__stage--hidden' : ''
-            }${igniting ? ' pomodoro-hero__stage--ignite' : ''}`}
+            }${igniting ? ' pomodoro-hero__stage--ignite' : ''}${
+              clarifying ? ' pomodoro-hero__stage--clarify' : ''
+            }`}
           >
             <span className="pomodoro-stage__glow" aria-hidden="true" />
-            <SmoothRing {...ringProps} completedRoundsToday={completedRoundsToday} />
+            <SmoothRing {...ringProps} clarifying={clarifying} completedRoundsToday={completedRoundsToday} />
           </div>
 
           {step === 'idle' && !breakMode && (
@@ -629,15 +701,21 @@ interface SmoothRingProps {
   endsAtMs: number | null;
   fallbackRemainingSeconds?: number;
   completedRoundsToday: number;
+  /** 决定墨色；休息态由 mode 覆盖为清水色 */
+  subject?: InkSubject;
+  /** 空池预览（未开始）：墨面 h=0，目标时长以阳文呈现（spec §4.1） */
+  emptyPool?: boolean;
   subtitle?: string;
   modeLabel?: string;
+  /** 澄清阶段：给砚池根注入 inkwell--clarify，触发转清/涟漪/水痕刻入 */
+  clarifying?: boolean;
 }
 
 /**
- * 无极平滑圆环：rAF 每帧不再 setState，而是通过 ref 直写进度环 circle 的
- * stroke-dashoffset（每帧零重渲染）；中心倒计时数字仍按整数秒跳字，
- * 仅在秒数变化时 setState（每秒至多一次重渲染）。视觉与旧实现一致：
- * 平滑圆环 + 每秒跳字；页面级组件树与本组件均不随 60fps 逐帧重渲染。
+ * 砚池平滑驱动：rAF 每帧不再 setState，而是把墨面 y 直写为 2 个 .surf-g 与
+ * 1 个 .surf-clip 的 transform（每帧零重渲染）；中心倒计时数字仍按整数秒跳字，
+ * 仅在秒数变化时 setState（每秒至多一次重渲染）。注墨（520ms）在同一 rAF 内
+ * 插值实现——CSS 过渡会被逐帧写入反复重启，产生阻尼拖尾而非干净的上升。
  */
 const SmoothRing = React.memo(function SmoothRing({
   mode,
@@ -645,8 +723,11 @@ const SmoothRing = React.memo(function SmoothRing({
   endsAtMs,
   fallbackRemainingSeconds = 0,
   completedRoundsToday,
+  subject,
+  emptyPool = false,
   subtitle,
   modeLabel,
+  clarifying = false,
 }: SmoothRingProps) {
   // 仅整数秒入 state：驱动中心数字每秒跳字与低时警示态切换
   const [displaySeconds, setDisplaySeconds] = useState(() =>
@@ -654,21 +735,48 @@ const SmoothRing = React.memo(function SmoothRing({
       ? Math.ceil(Math.max(0, (endsAtMs - Date.now()) / 1000))
       : fallbackRemainingSeconds
   );
-  // 进度环 circle 的 DOM 引用：rAF 中绕过 React 直写 stroke-dashoffset
-  const progressCircleRef = useRef<SVGCircleElement | null>(null);
+
+  // 砚池根元素 + 需逐帧平移的元素集合（墨体 .inkwell__surf-g ×2 与
+  // 阳文裁剪 .inkwell__surf-clip ×1）。不用回调 ref 收集数组：React 18 卸载时
+  // 回调只收到 null，无法精确移除对应元素，数组会留悬垂引用
+  const rootRef = useRef<HTMLDivElement>(null);
+  const surfEls = useRef<SVGElement[]>([]);
+  /** 注墨窗口结束时刻（ms）；null = 不在注墨中 */
+  const inkingUntilRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    surfEls.current = root
+      ? Array.from(root.querySelectorAll<SVGElement>('.inkwell__surf-g, .inkwell__surf-clip'))
+      : [];
+  }, [mode, totalSeconds]);
 
   useEffect(() => {
     if (endsAtMs == null) return;
     let rafId = 0;
     let lastSeconds = -1;
+    const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
     const tick = () => {
-      const remaining = Math.max(0, (endsAtMs - Date.now()) / 1000);
-      // 圆环平滑推进：直写 SVG 属性，不触发 React 重渲染
-      const circle = progressCircleRef.current;
-      if (circle) {
-        const progress = totalSeconds > 0 ? Math.min(1, Math.max(0, remaining / totalSeconds)) : 0;
-        circle.setAttribute('stroke-dashoffset', String(PROGRESS_CIRCUMFERENCE * (1 - progress)));
+      const now = Date.now();
+      const remaining = Math.max(0, (endsAtMs - now) / 1000);
+      const live = totalSeconds > 0 ? Math.min(1, Math.max(0, remaining / totalSeconds)) : 0;
+
+      // 注墨（spec §5.1）：520ms 内墨面自池底升至当前应有高度，之后交回实时值
+      let fraction = live;
+      const until = inkingUntilRef.current;
+      if (until !== null) {
+        if (now >= until) {
+          inkingUntilRef.current = null;
+        } else {
+          const k = 1 - (until - now) / INKING_MS;
+          fraction = easeOut(Math.min(1, Math.max(0, k))) * live;
+        }
       }
+
+      // 墨面平滑推进：直写 SVG transform，不触发 React 重渲染
+      const tf = `translate(0 ${surfaceY(fraction).toFixed(2)})`;
+      for (const el of surfEls.current) el.setAttribute('transform', tf);
+
       // 中心倒计时文字：整数秒变化时才 setState
       const secs = Math.ceil(remaining);
       if (secs !== lastSeconds) {
@@ -681,6 +789,16 @@ const SmoothRing = React.memo(function SmoothRing({
     return () => cancelAnimationFrame(rafId);
   }, [endsAtMs, totalSeconds]);
 
+  // 会话切换即触发一次注墨（endsAtMs 变化 = 新会话开始或恢复）
+  useEffect(() => {
+    if (endsAtMs == null) return;
+    // 会话恢复（刷新后墨面本就该在中途）不播注墨：仅当剩余接近计划时长才视为新开始
+    const remaining = (endsAtMs - Date.now()) / 1000;
+    if (totalSeconds > 0 && remaining > totalSeconds - 2) {
+      inkingUntilRef.current = Date.now() + INKING_MS;
+    }
+  }, [endsAtMs, totalSeconds]);
+
   const remainingSeconds = endsAtMs != null ? displaySeconds : fallbackRemainingSeconds;
 
   return (
@@ -688,11 +806,13 @@ const SmoothRing = React.memo(function SmoothRing({
       totalSeconds={totalSeconds}
       remainingSeconds={remainingSeconds}
       mode={mode}
-      smooth
+      subject={subject}
+      emptyPool={emptyPool}
       completedRoundsToday={completedRoundsToday}
       subtitle={subtitle}
       modeLabel={modeLabel}
-      progressCircleRef={progressCircleRef}
+      rootRef={rootRef}
+      extraClassName={clarifying ? 'inkwell--clarify' : undefined}
     />
   );
 });

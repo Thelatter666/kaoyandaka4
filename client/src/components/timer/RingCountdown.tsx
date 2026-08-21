@@ -45,6 +45,9 @@ interface RingCountdownProps {
   modeLabel?: string;
   /** full＝400px 完整砚池；mini＝120px（仅池底/墨面/阳文数字/凹陷/低时变色） */
   variant?: 'full' | 'mini';
+  /** 空池预览（未开始，spec §4.1）：墨面 h=0 露出砚石池底，目标时长以阳文呈现。
+   *  若空闲态按满池渲染，开始专注的注墨会先从满池跳到 0 再升回满池，观感为故障 */
+  emptyPool?: boolean;
   /** 根元素 ref：供 SmoothRing 查出需逐帧平移的元素（.surf-g 与 .surf-clip） */
   rootRef?: React.Ref<HTMLDivElement>;
   /** 追加到根元素 class（PomodoroPage 用它注入 inkwell--clarify 触发澄清） */
@@ -133,6 +136,7 @@ export function RingCountdown({
   subtitle,
   modeLabel,
   variant = 'full',
+  emptyPool = false,
   rootRef,
   extraClassName,
 }: RingCountdownProps) {
@@ -141,8 +145,11 @@ export function RingCountdown({
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const spots = useMemo(() => (isMini ? [] : buildStoneSpots()), [isMini]);
 
-  const fraction =
-    totalSeconds > 0 ? Math.min(1, Math.max(0, remainingSeconds / totalSeconds)) : 0;
+  const fraction = emptyPool
+    ? 0
+    : totalSeconds > 0
+      ? Math.min(1, Math.max(0, remainingSeconds / totalSeconds))
+      : 0;
   const isLowTime = mode === 'focus' && remainingSeconds <= LOW_TIME_THRESHOLD_SECONDS;
   const isBreak = mode !== 'focus';
 
