@@ -11,7 +11,7 @@ import { m, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 
 const SHOTS = [
   { src: '/screenshots/home.webp', alt: '砚台考研打卡首页：考试倒计时与今日专注摘要', caption: '首页 · 今日概览' },
-  { src: '/screenshots/pomodoro.webp', alt: '番茄钟页面：光晕核心环形倒计时', caption: '番茄钟 · 光晕核心' },
+  { src: '/screenshots/pomodoro.webp', alt: '番茄钟页面：砚池墨面倒计时', caption: '番茄钟 · 砚池' },
   { src: '/screenshots/statistics.webp', alt: '统计页面：学习森林玻璃花房', caption: '统计 · 学习森林' },
 ] as const;
 

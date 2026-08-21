@@ -27,7 +27,7 @@ import { Button } from '../components/ui/Button';
 import { InteractiveHoverButton } from '../components/ui/InteractiveHoverButton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { SubjectBadge } from '../components/ui/SubjectBadge';
-import { RingCountdown } from '../components/timer/RingCountdown';
+import { RingCountdown, type InkSubject } from '../components/timer/RingCountdown';
 import { tasksApi, Task } from '../api/tasks';
 import { presetsApi, Preset } from '../api/presets';
 import { focusApi, ActiveSession } from '../api/focus';
@@ -133,6 +133,7 @@ export function HomePage({ navigate }: HomePageProps) {
               <MiniSessionRing
                 plannedEndAt={activeSession.plannedEndAt}
                 totalSeconds={activeSession.plannedDurationSeconds}
+                subject={activeSession.subjectSnapshot as InkSubject}
               />
               <div className="home-focus__meta">
                 <p className="home-focus__preset truncate" title={activeSession.presetNameSnapshot}>
@@ -339,13 +340,15 @@ export function HomePage({ navigate }: HomePageProps) {
   );
 }
 
-/** 进行中会话迷你环：每秒刷新收敛在本组件内部，首页整体不再随秒整页重渲染 */
+/** 进行中会话迷你砚池：每秒刷新收敛在本组件内部，首页整体不再随秒整页重渲染 */
 const MiniSessionRing = React.memo(function MiniSessionRing({
   plannedEndAt,
   totalSeconds,
+  subject,
 }: {
   plannedEndAt: string;
   totalSeconds: number;
+  subject: InkSubject;
 }) {
   const [nowMs, setNowMs] = useState(() => Date.now());
 
@@ -365,6 +368,7 @@ const MiniSessionRing = React.memo(function MiniSessionRing({
       totalSeconds={totalSeconds}
       remainingSeconds={remainingSeconds}
       mode="focus"
+      subject={subject}
     />
   );
 });

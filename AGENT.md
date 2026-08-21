@@ -144,6 +144,7 @@ npm run db:migrate   # Run migrations
 
 - **通用组件**: `client/src/components/ui/` — Button, Card, Modal(portal 到 body), Toast, ConfirmDialog, ProgressBar, EmptyState/ErrorState/LoadingState, SkipLink, SubjectBadge, Dropdown, Calendar, ImportBackupModal(导入向导), ProfileDropdown(顶栏账户菜单: 导出/导入/登出), SoundToggle, ThemeToggle(基础主题切换)
 - **动效组件** (framer-motion): `AnimatedThemeToggle` (主题切换动画), `Magnetic` (磁性吸引), `GlowCard` (辉光边框), `Card3D` (3D 透视), `FileUpload` (拖放上传), `GradientCard` (渐变卡片), `InteractiveHoverButton` (悬停展开按钮)
+- **砚池计时器**: `client/src/components/timer/` — `RingCountdown`(砚池主体) + `inkSurface.ts`(等面积映射 LUT) + `inkWavePaths.ts`(三变体波形)；设计见 `docs/superpowers/specs/2026-08-21-pomodoro-inkwell-design.md` 与 `docs/adr/0001`–`0004`；术语见 `CONTEXT.md`。**旧环形设计的称谓已全部废弃，一律以 CONTEXT.md 为准**
 - **新组件加入 `components/ui/`**, co-located CSS + `var(--color-xxx)` token, 动画统一用 framer-motion
 - **构建分包**: `client/vite.config.ts` 的 `manualChunks` 将 react / lucide / framer-motion 拆为独立 vendor chunk（性能优化，勿破坏）
 
