@@ -5,7 +5,7 @@ export type { CreateTaskInput, UpdateTaskInput, ReorderItemsInput } from '../sch
 export type { StartFocusInput, FocusSource, BreakType, FocusStatus } from '../schemas/focus.js';
 export type { EpisodeInput, ParseImportInput, CreateCourseInput } from '../schemas/course.js';
 export type { StatisticsQuery, ForestResponse, HeatmapResponse } from '../schemas/statistics.js';
-export type { UpsertReviewInput } from '../schemas/review.js';
+export type { UpsertReviewInput, SetReviewLockInput, VerifyReviewLockInput } from '../schemas/review.js';
 export type { UpdateSettingsInput } from '../schemas/settings.js';
 export type { BackupFile, BackupAccount, BackupSetting } from '../schemas/backup.js';
 export type { ImportMode, DiffItem, DiffSummary, ImportPreviewResponse, ImportRequest } from '../schemas/import.js';

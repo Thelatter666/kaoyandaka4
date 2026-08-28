@@ -22,6 +22,8 @@ import type {
   CreateCourseInput,
   UpsertReviewInput,
   UpdateSettingsInput,
+  SetReviewLockInput,
+  VerifyReviewLockInput,
   BackupFile,
   ImportMode,
   ImportPreviewResponse,
@@ -36,6 +38,7 @@ import type { Review } from '../api/reviews';
 import type { Settings } from '../api/settings';
 import type { TodaySummary } from '../api/statistics';
 import { FOCUS_PAUSE_MAX_SECONDS } from '@shared/constants';
+import { hashReviewPassword, verifyReviewPassword } from '../utils/reviewLockHash';
 import type {
   LocalAccount,
   LocalCourse,
@@ -663,6 +666,44 @@ const settings = {
   },
 };
 
+/* ---- reviewLock（复盘锁，ADR-0005：哈希入 settings 键值） ---- */
+
+const REVIEW_LOCK_KEY = 'review_lock_hash';
+
+async function getSettingValue(key: string): Promise<string | null> {
+  const accountId = requireAccountId();
+  const rows = await rowsByAccount<LocalSetting>('settings', accountId);
+  return rows.find((r) => r.key === key)?.value ?? null;
+}
+
+const reviewLock = {
+  async getStatus(): Promise<{ hasLock: boolean }> {
+    return { hasLock: (await getSettingValue(REVIEW_LOCK_KEY)) !== null };
+  },
+
+  async set(data: SetReviewLockInput): Promise<void> {
+    const accountId = requireAccountId();
+    const stored = await getSettingValue(REVIEW_LOCK_KEY);
+    if (stored && !(await verifyReviewPassword(data.currentPassword ?? '', stored))) {
+      throw new Error('当前复盘锁密码不正确');
+    }
+    const value = await hashReviewPassword(data.newPassword);
+    const rows = await rowsByAccount<LocalSetting>('settings', accountId);
+    const existing = rows.find((r) => r.key === REVIEW_LOCK_KEY);
+    await tx('settings', 'readwrite', (t) =>
+      idbPut(t, 'settings', existing ? { ...existing, value } : { accountId, key: REVIEW_LOCK_KEY, value })
+    );
+  },
+
+  async verify(data: VerifyReviewLockInput): Promise<void> {
+    const stored = await getSettingValue(REVIEW_LOCK_KEY);
+    if (!stored) throw new Error('尚未设置复盘锁');
+    if (!(await verifyReviewPassword(data.password, stored))) {
+      throw new Error('复盘锁密码不正确');
+    }
+  },
+};
+
 /* ---- 备份导出 / 导入（P3-D） ---- */
 
 /** 本地导出账户的密码哈希占位（本地账户无密码，文件仅用于本地迁移） */
@@ -865,5 +906,6 @@ export const localStore = {
   focus,
   statistics,
   settings,
+  reviewLock,
   backup,
 };
