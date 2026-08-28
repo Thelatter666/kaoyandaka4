@@ -301,10 +301,11 @@ export function PomodoroPage() {
       });
       soundWorkerRef.current.onmessage = (e: MessageEvent<{ type: 'end'; tag: string }>) => {
         const { type, tag: firedTag } = e.data;
-        // 仅当 tag 与当前武装一致且非手动结束（提前完成/取消）才播放
+        // 仅当 tag 与当前武装一致且非手动结束（提前完成/取消）才播放；
+        // 休息 tag（break:*）播休息提示音，专注会话播结束钟声
         if (type === 'end' && firedTag === armedTagRef.current && !selfEndedRef.current) {
           armedTagRef.current = null;
-          void playEndSound();
+          void playEndSound(firedTag.startsWith('break:') ? 'break' : 'focus');
         }
       };
     }
@@ -312,16 +313,16 @@ export function PomodoroPage() {
     soundWorkerRef.current.postMessage({ type: 'arm', endMs, tag });
   }, [activeSession, breakMode, breakEndsAt, paused]);
 
-  // 休息自然结束兜底：worker 未响时，页面检测 breakMode 消失 + natural 标记补响
-  const prevBreakModeRef = useRef<FocusMode | null>(null);
-  useEffect(() => {
-    const prev = prevBreakModeRef.current;
-    prevBreakModeRef.current = breakMode;
-    if (prev && !breakMode && breakEndMode === 'natural' && armedTagRef.current !== null) {
-      armedTagRef.current = null;
-      void playEndSound();
-    }
-  }, [breakMode, breakEndMode]);
+    // 休息自然结束兜底：worker 未响时，页面检测 breakMode 消失 + natural 标记补响
+    const prevBreakModeRef = useRef<FocusMode | null>(null);
+    useEffect(() => {
+      const prev = prevBreakModeRef.current;
+      prevBreakModeRef.current = breakMode;
+      if (prev && !breakMode && breakEndMode === 'natural' && armedTagRef.current !== null) {
+        armedTagRef.current = null;
+        void playEndSound('break');
+      }
+    }, [breakMode, breakEndMode]);
 
   const handleSelectPreset = (preset: Preset) => {
     // 进行中/休息中其余内容保持可交互，但不允许切入新的专注流程
