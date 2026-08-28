@@ -148,6 +148,9 @@ const mapFocusSession = (e: Row, p: string): Omit<LocalFocusSession, 'accountId'
   plannedEndAt: strRequired(e.plannedEndAt, `${p}.plannedEndAt`),
   completedAt: strNullable(e.completedAt, `${p}.completedAt`),
   status: enumStrict(FOCUS_STATUSES)(e.status, `${p}.status`) as LocalFocusSession['status'],
+  // 旧版备份文件无暂停字段：导入会话按未暂停归零（schemaVersion 1 兼容）
+  pausedAt: strNullable(e.pausedAt, `${p}.pausedAt`),
+  pausedTotalSeconds: typeof e.pausedTotalSeconds === 'number' ? e.pausedTotalSeconds : 0,
   source: enumStrict(FOCUS_SOURCES)(e.source, `${p}.source`) as LocalFocusSession['source'],
   courseEpisodeId: strNullable(e.courseEpisodeId, `${p}.courseEpisodeId`),
   taskId: strNullable(e.taskId, `${p}.taskId`),

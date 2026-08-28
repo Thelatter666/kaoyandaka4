@@ -23,6 +23,8 @@ import { PresetCard } from '../components/presets/PresetCard';
 import { RingCountdown, type InkSubject } from '../components/timer/RingCountdown';
 import { surfaceY } from '../components/timer/inkSurface';
 import { BurstParticles } from '../components/timer/BurstParticles';
+import { pauseRemainingSeconds, sessionRemainingSeconds } from '../utils/focusPause';
+import { formatSeconds } from '../utils/duration';
 import { useFocusSession } from '../hooks/useFocusSession';
 import type { FocusMode } from '../hooks/useFocusSession';
 import { SoundToggle } from '../components/ui/SoundToggle';
@@ -82,9 +84,12 @@ export function PomodoroPage() {
   const {
     activeSession,
     breakMode, breakRemainingSeconds, breakEndsAt, breakEndMode, roundCount,
-    startFocus, completeFocus, cancelFocus,
+    startFocus, completeFocus, cancelFocus, pauseFocus, resumeFocus,
     startBreak, completeBreak,
   } = useFocusSession();
+
+  /** 判断暂停一律看 pausedAt（ADR-0006）；页面多处使用，置于最前 */
+  const paused = !!activeSession?.pausedAt;
 
   // 番茄钟进行中（专注或休息）保持屏幕点亮，不进入睡眠/休眠
   useScreenWakeLock(!!activeSession || !!breakMode);
@@ -98,6 +103,8 @@ export function PomodoroPage() {
   const [selectedPreset, setSelectedPreset] = useState<Preset | null>(null);
   const [durationMinutes, setDurationMinutes] = useState(45);
   const [actionLoading, setActionLoading] = useState(false);
+  /** 暂停剩余秒数（1s 递减；0 = 已到点自动恢复） */
+  const [pauseLeftSec, setPauseLeftSec] = useState(0);
 
   // 砚池：完成粒子爆散 / 今日已完成轮次（逐帧刷新已下沉至 SmoothRing 内部）
   const [burstKey, setBurstKey] = useState(0);
@@ -254,7 +261,9 @@ export function PomodoroPage() {
   useEffect(() => {
     let endMs: number | null = null;
     let tag: string | null = null;
-    if (activeSession) {
+    // 暂停中解除武装：plannedEndAt 将被顺延，旧武装到点会误响；恢复后本 effect
+    // 重跑按新结束时间重新武装
+    if (activeSession && !paused) {
       endMs = new Date(activeSession.plannedEndAt).getTime();
       tag = activeSession.id;
     } else if (breakMode && breakEndsAt) {
@@ -287,7 +296,7 @@ export function PomodoroPage() {
     }
     armedTagRef.current = tag;
     soundWorkerRef.current.postMessage({ type: 'arm', endMs, tag });
-  }, [activeSession, breakMode, breakEndsAt]);
+  }, [activeSession, breakMode, breakEndsAt, paused]);
 
   // 休息自然结束兜底：worker 未响时，页面检测 breakMode 消失 + natural 标记补响
   const prevBreakModeRef = useRef<FocusMode | null>(null);
@@ -372,6 +381,17 @@ export function PomodoroPage() {
     }
   };
 
+  const handlePause = async () => {
+    setActionLoading(true);
+    try {
+      await pauseFocus();
+    } catch {
+      // Error handled by hook
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleStartBreak = (mode: 'short' | 'long') => {
     startBreak(mode);
     setStep('idle');
@@ -390,6 +410,29 @@ export function PomodoroPage() {
 
   const totalPlannedSeconds = activeSession?.plannedDurationSeconds || 0;
 
+  // 暂停倒计时：自 pausedAt 起算（上限 5 分钟），到点自动恢复。后台标签页 interval
+  // 被节流时，回前台由 getActive 惰性恢复链兜底（spec §2，ADR-0006）
+  useEffect(() => {
+    if (!paused || !activeSession?.pausedAt) {
+      setPauseLeftSec(0);
+      return;
+    }
+    const pausedAtMs = new Date(activeSession.pausedAt).getTime();
+    const update = () => {
+      const left = pauseRemainingSeconds(pausedAtMs, Date.now());
+      setPauseLeftSec(left);
+      return left;
+    };
+    if (update() <= 0) return;
+    const timer = setInterval(() => {
+      if (update() <= 0) {
+        clearInterval(timer);
+        void resumeFocus();
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [paused, activeSession?.pausedAt, resumeFocus]);
+
   // Determine if we should show long break option（沿用既有规则）
   const showLongBreak = roundCount % LONG_BREAK_AFTER_ROUNDS === 0 && roundCount > 0;
 
@@ -401,6 +444,22 @@ export function PomodoroPage() {
   // 钟的 props 由 step 派生：单一常驻 SmoothRing，永不重挂
   const ringProps = (() => {
     if (step === 'active' && activeSession) {
+      if (paused) {
+        // 暂停：砚池冻结在暂停时刻的墨面高度，不启 rAF（endsAtMs=null 走 fallback）
+        return {
+          mode: 'focus' as RingMode,
+          totalSeconds: totalPlannedSeconds,
+          endsAtMs: null,
+          fallbackRemainingSeconds: sessionRemainingSeconds(
+            new Date(activeSession.plannedEndAt).getTime(),
+            activeSession.pausedAt ? new Date(activeSession.pausedAt).getTime() : null,
+            Date.now()
+          ),
+          subject: activeSession.subjectSnapshot as InkSubject,
+          subtitle: focusSubtitle(activeSession),
+          modeLabel: '暂停中',
+        };
+      }
       return {
         mode: 'focus' as RingMode,
         totalSeconds: totalPlannedSeconds,
@@ -576,16 +635,40 @@ export function PomodoroPage() {
             </div>
           )}
 
-          {step === 'active' && activeSession && (
+          {step === 'active' && activeSession && !paused && (
             /* 操作区：圆盘正下方一排（移动端纵向堆叠） */
             <div className="pomodoro-ops reveal" style={{ '--i': 1 } as React.CSSProperties}>
               <Button variant="primary" size="lg" onClick={handleComplete} loading={actionLoading}>
                 <Check size={18} strokeWidth={1.75} aria-hidden="true" />
                 提前完成
               </Button>
+              <Button variant="glass" onClick={handlePause} disabled={actionLoading}>
+                暂停
+              </Button>
               <Button variant="danger" onClick={handleCancel} disabled={actionLoading}>
                 <X size={16} strokeWidth={1.75} aria-hidden="true" />
                 取消
+              </Button>
+            </div>
+          )}
+
+          {step === 'active' && activeSession && paused && (
+            /* 暂停态：倒计时 + 继续专注（主）/取消；「提前完成」隐藏（W4） */
+            <div className="pomodoro-ops reveal" style={{ '--i': 1 } as React.CSSProperties}>
+              <p
+                className="pomodoro-pause-timer"
+                role="timer"
+                aria-label={`暂停剩余 ${Math.ceil(pauseLeftSec / 60)} 分钟`}
+              >
+                {formatSeconds(pauseLeftSec)}
+              </p>
+              <Button variant="primary" size="lg" onClick={() => void resumeFocus()} loading={actionLoading}>
+                <Play size={18} strokeWidth={1.75} aria-hidden="true" />
+                继续专注
+              </Button>
+              <Button variant="danger" onClick={handleCancel} disabled={actionLoading}>
+                <X size={16} strokeWidth={1.75} aria-hidden="true" />
+                取消专注
               </Button>
             </div>
           )}

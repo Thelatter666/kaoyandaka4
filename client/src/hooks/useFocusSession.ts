@@ -13,6 +13,9 @@ export interface ActiveSession {
   plannedEndAt: string;
   status: 'in_progress';
   source: 'pomodoro' | 'plan' | 'course';
+  /** 非空 = 暂停中（ISO 时间戳）；判断暂停一律看本字段，勿发明 status 判断（ADR-0006） */
+  pausedAt: string | null;
+  pausedTotalSeconds: number;
 }
 
 export type FocusMode = 'focus' | 'short_break' | 'long_break';
@@ -31,6 +34,8 @@ interface UseFocusSessionReturn {
   startFocus: (presetId: string | null, minutes: number, source: string) => Promise<void>;
   completeFocus: () => Promise<void>;
   cancelFocus: () => Promise<void>;
+  pauseFocus: () => Promise<void>;
+  resumeFocus: () => Promise<void>;
   startBreak: (mode: 'short' | 'long') => void;
   completeBreak: () => void;
   checkActive: () => Promise<void>;
@@ -154,6 +159,34 @@ const startFocus = useCallback(async (presetId: string | null, minutes: number, 
     }
   }, [activeSession]);
 
+  const pauseFocus = useCallback(async () => {
+    if (!activeSession) return;
+    setLoading(true);
+    try {
+      await focusApi.pause(activeSession.id);
+      await checkActive();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '暂停失败');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [activeSession, checkActive]);
+
+  const resumeFocus = useCallback(async () => {
+    if (!activeSession) return;
+    setLoading(true);
+    try {
+      await focusApi.resume(activeSession.id);
+      await checkActive();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '恢复失败');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [activeSession, checkActive]);
+
   const startBreak = useCallback((mode: 'short' | 'long') => {
     const seconds = mode === 'short' ? 300 : 900; // 5 or 15 minutes
     setBreakMode(mode === 'short' ? 'short_break' : 'long_break');
@@ -203,6 +236,8 @@ const startFocus = useCallback(async (presetId: string | null, minutes: number, 
     startFocus,
     completeFocus,
     cancelFocus,
+    pauseFocus,
+    resumeFocus,
     startBreak,
     completeBreak,
     checkActive,
