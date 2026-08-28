@@ -309,6 +309,24 @@ export async function migrateUsers(conn: mysql.Connection, dbName: string): Prom
       console.log(`  [${spec.table}] foreign key ${spec.fkName} already exists, skip`);
     }
   }
+
+  // 4. focus_sessions 暂停两列（专注暂停功能，ADR-0006：加列而非新增 status 值）
+  if (!(await columnExists(conn, dbName, 'focus_sessions', 'paused_at'))) {
+    await conn.query(
+      'ALTER TABLE `focus_sessions` ADD COLUMN `paused_at` DATETIME NULL AFTER `status`'
+    );
+    console.log('  [focus_sessions] added column paused_at');
+  } else {
+    console.log('  [focus_sessions] column paused_at already exists, skip');
+  }
+  if (!(await columnExists(conn, dbName, 'focus_sessions', 'paused_total_seconds'))) {
+    await conn.query(
+      'ALTER TABLE `focus_sessions` ADD COLUMN `paused_total_seconds` INT NOT NULL DEFAULT 0 AFTER `paused_at`'
+    );
+    console.log('  [focus_sessions] added column paused_total_seconds');
+  } else {
+    console.log('  [focus_sessions] column paused_total_seconds already exists, skip');
+  }
 }
 
 // 独立运行入口（被 init.ts import 时不触发）
