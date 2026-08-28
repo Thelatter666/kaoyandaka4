@@ -5,7 +5,7 @@
 
 ## 核心假设
 
-- **A1**「每次启动系统」= 浏览器标签页会话:解锁标记存 `sessionStorage`,关闭标签页/重启浏览器后需重输;同会话内刷新页面不重输。用户已确认此口径。
+- **A1**「每次启动系统」= 浏览器级会话:解锁标记存**会话 cookie**(不设 Max-Age,跨标签页共享,关闭浏览器即失效)——sessionStorage 是每标签页隔离的,新开标签页就要重输,违背需求语义。Grilling Q1 已确认。
 - **A2** 复盘门禁是会话/UI 层防护:复盘内容本身不加密,持有有效会话的客户端仍可通过 API 直读 `GET /reviews`。威胁模型 = 防他人随手打开页面翻看,不防技术性绕过(个人站,单用户)。
 - **A3** 暂停期间学习时钟停走:服务端以「顺延 `planned_end_at` + 累计 `paused_total_seconds` 扣除」保证学习时长统计准确;统计端点全部读 `study_records.actual_duration_seconds`(已核实 `statistics.ts`),因此只要 complete 写记录时扣除,统计零改动。
 - **A4** 暂停超时(5 分钟)的自动恢复是**惰性**的:由读路径(`GET /active`)触发就地 resume,与现有「过期自动完成惰性触发」模式同构;不引入服务端定时器。
@@ -20,7 +20,7 @@
 
 ## 边界外声明
 
-- 不做二重密码找回/重置流程(忘密码 = 手动清 `user_settings` 的 `review_lock_hash` 键)
+- 不做二重密码应用内重置/找回(会削弱防护——任何拿到登录会话者无需旧密码即可重置;Grilling Q2 已确认。忘密码 = 服务器手动清 `user_settings` 的 `review_lock_hash` 键)
 - 不做输错密码次数锁定(`verifyLimiter` 限流已防爆破)
 - 不做复盘内容加密存储
 - 不做暂停次数限制(用户确认:不限次数,每次上限 5 分钟)
@@ -51,7 +51,7 @@
   1. `hasLock === false` → 引导设置页(新密码 + 确认,两次一致才可提交;成功即解锁本会话)
   2. `hasLock && !unlocked` → 验证页(密码输入,`POST /verify`;401 显示错误)
   3. `unlocked` → `<ReviewPage />`
-- 解锁标记:`sessionStorage` key `kaoyandaily_review_unlocked`,值为当前身份 id(server 模式 = user_id,本地模式 = accountId);读取时校验与当前身份匹配,否则视为未解锁(换账号自动失效)
+- 解锁标记:**会话 cookie**(ADR-0005)`kaoyandaily_review_unlocked`,值 = 当前身份 id(server 模式 = user_id,本地模式 = accountId),前端 `document.cookie` 写入、无 Max-Age;读取时校验与当前身份匹配,否则视为未解锁(换账号自动失效);跨标签页共享,关浏览器失效
 - 修改入口:`ProfileDropdown` 加「复盘密码…」菜单项 → Modal(`POST /`,带 currentPassword)
 - API 封装:`client/src/api/reviews.ts` 增加 `reviewLockApi`(get/set/verify,内含 `isLocalMode()` 分支)
 
@@ -92,6 +92,8 @@ paused_total_seconds   INT NOT NULL DEFAULT 0  -- 累计暂停秒数(complete �
   - active ops 加「暂停」按钮(进行中、未暂停时显示)
   - 暂停态 UI:砚池冻结(`endsAtMs → null` + 会话剩余快照作 `fallbackRemainingSeconds`,`SmoothRing` 零改动);暂停倒计时 5:00 递减(interval 秒级,到点自动 `resumeFocus`);主按钮「继续专注」,副按钮「取消专注」;「提前完成」隐藏
   - 恢复后 `endsAtMs` 回到顺延后的 `plannedEndAt`,rAF 平滑继续;响铃 worker 按新结束时间重新武装
+- 首页 mini 砚池暂停感知(Grilling Q3 已确认):HomePage 消费 `getActive` 渲染 mini 池,暂停期间 `planned_end_at` 未顺延、按其计算会继续走字——暂停中冻结剩余时间(按 `pausedAt` 时刻计算)并标注「暂停中」
+- 暂停跨天挂起为合法状态(Grilling Q4 已确认,ADR-0006):惰性 resume 后剩余时间保留,会话可跨天 in_progress,不做到期作废
 - 本地模式:`localStore.focus` 同构 pause/resume/getActive 惰性链(纯 IndexedDB 时间计算,`localStore.test.ts` 扩展覆盖)
 
 ### 统计口径
@@ -127,12 +129,12 @@ complete 写 `study_records` 时 `actual_duration_seconds` 已扣除累计暂停
 | 路由层 | focus/reviewLock 无 DB 测试基建(与全库现状一致),以手动验收 + `e2e` 冒烟回归 |
 | 手动验收 | 四项需求逐条 + 双模式(服务器/本地)+ reduced-motion 回归 |
 
-## 候选术语表(阶段二 domain-modeling 定稿)
+## 术语表(Grilling 阶段定稿,已入 CONTEXT.md)
 
-| 术语 | 暂定含义 |
+| 术语 | 定稿含义 |
 |---|---|
 | 复盘锁 Review Lock | 进入复盘页的二重密码机制,含设置与验证 |
-| 解锁会话 Unlock Session | 一次「启动系统」内验证通过后的免输状态(sessionStorage) |
-| 暂停 Pause | 专注会话的临时挂起,学习时钟停走,每次上限 5 分钟 |
-| 暂停总量 Paused Total | 会话累计暂停秒数,完成时从实际时长中扣除 |
-| 休息提示音 Break Chime | 休息结束的独立提示音,与专注结束钟声区分 |
+| 解锁标记 Unlock Marker | 一次启动内验证通过的免输凭证(会话 cookie),跨标签页共享,浏览器关闭失效 |
+| 暂停 Pause | 专注会话的临时挂起,学习时钟停走,每次上限 5 分钟,不限次数 |
+| 暂停总量 Paused Total | 会话累计暂停时长,完成时从实际时长扣除 |
+| 休息提示音 Break Chime | 休息结束的轻快提示音,与专注结束钟声区分 |
