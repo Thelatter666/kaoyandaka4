@@ -225,6 +225,20 @@ export function PomodoroPage() {
     }
   }, [activeSession]);
 
+  // 会话恢复（刷新后）按快照名匹配预设恢复选中态；匹配不到（预设已删/漫游）退回漫游。
+  // 仅在 activeSession 首次出现时执行一次（presetRestoreRef），不干扰用户手动取消选中
+  const presetRestoreRef = useRef(false);
+  useEffect(() => {
+    if (!activeSession || presets.length === 0 || presetRestoreRef.current) return;
+    presetRestoreRef.current = true;
+    if (activeSession.subjectSnapshot === 'free') return;
+    const match = presets.find((p) => p.name === activeSession.presetNameSnapshot);
+    if (match) {
+      setSelectedPreset(match);
+      setDurationMinutes(match.durationMinutes);
+    }
+  }, [activeSession, presets]);
+
   // 卸载清理：澄清定时器不得在组件卸载后仍触发完成态切换
   useEffect(() => () => {
     if (clarifyTimerRef.current) clearTimeout(clarifyTimerRef.current);
@@ -399,8 +413,9 @@ export function PomodoroPage() {
   };
 
   const handleContinue = () => {
+    // 保留 selectedPreset 与 durationMinutes：完成态返回后砚池/控制卡
+    // 仍呈现刚才的预设（需求 2）；取消/休息入口才清空
     setStep('idle');
-    setSelectedPreset(null);
   };
 
   const handleNoBreak = () => {
