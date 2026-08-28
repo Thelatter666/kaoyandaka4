@@ -81,6 +81,8 @@ export interface LocalFocusSession {
   plannedEndAt: string;
   completedAt: string | null;
   status: 'in_progress' | 'completed' | 'cancelled';
+  pausedAt: string | null;
+  pausedTotalSeconds: number;
   source: 'pomodoro' | 'plan' | 'course';
   courseEpisodeId: string | null;
   taskId: string | null;

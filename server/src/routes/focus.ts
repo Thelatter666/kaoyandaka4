@@ -200,10 +200,12 @@ router.post('/:id/resume', async (req: Request, res: Response, next: NextFunctio
     if (rows.length === 0) {
       throw new AppError(409, 'CONFLICT', '当前没有暂停中的专注会话');
     }
-    const pausedSeconds = Math.max(
+    // 单次暂停最多抵 5 分钟学习时间：即使挂起超时（如页面休眠后手动恢复），超挂部分不补
+    const pausedElapsed = Math.max(
       0,
       Math.round((Date.now() - new Date(rows[0].paused_at as string).getTime()) / 1000)
     );
+    const pausedSeconds = Math.min(pausedElapsed, FOCUS_PAUSE_MAX_SECONDS);
     await pool.query<ResultSetHeader>(
       `UPDATE focus_sessions
        SET planned_end_at = DATE_ADD(planned_end_at, INTERVAL ? SECOND),
@@ -257,8 +259,8 @@ router.get('/active', async (req: Request, res: Response, next: NextFunction) =>
         // 暂停中且未超时：原样返回，不做过期自动完成（学习时钟停走，ADR-0006）
         return res.json(transformSession(session));
       }
-      // 暂停超时：惰性恢复（顺延 + 累计），与「过期自动完成惰性触发」同构；无服务端定时器
-      const pausedSeconds = Math.round((now.getTime() - new Date(session.paused_at).getTime()) / 1000);
+      // 暂停超时：惰性恢复（单次暂停最多抵 5 分钟学习时间，超挂部分不补），随后继续既有过期判断
+      const pausedSeconds = Math.min(pausedElapsed, FOCUS_PAUSE_MAX_SECONDS);
       await pool.query<ResultSetHeader>(
         `UPDATE focus_sessions
          SET planned_end_at = DATE_ADD(planned_end_at, INTERVAL ? SECOND),

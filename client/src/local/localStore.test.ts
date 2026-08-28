@@ -515,3 +515,78 @@ describe('backup 导出 / 导入', () => {
     expect((await localStore.settings.get()).pomodoroSoundEnabled).toBe(true);
   });
 });
+describe('focus 暂停（ADR-0006）', () => {
+  beforeEach(async () => {
+    await resetDb();
+    setLocalContext(false);
+    setActiveLocalAccount(null);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('pause/resume：顺延结束时间并累计暂停总量', async () => {
+    await activate();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 7, 28, 10, 0, 0));
+    const s = await localStore.focus.start({ plannedDurationMinutes: 25, source: 'pomodoro' });
+
+    vi.setSystemTime(new Date(2026, 7, 28, 10, 5, 0));
+    await localStore.focus.pause(s.id);
+
+    vi.setSystemTime(new Date(2026, 7, 28, 10, 8, 0));
+    await localStore.focus.resume(s.id);
+
+    const active = await localStore.focus.getActive();
+    expect(active).not.toBeNull();
+    expect(active!.pausedAt).toBeNull();
+    expect(active!.pausedTotalSeconds).toBe(180);
+    // 25 分钟会话自 10:00 起、暂停 3 分钟顺延 → 结束 10:28
+    expect(active!.plannedEndAt).toBe('2026-08-28 10:28:00');
+  });
+
+  it('getActive：暂停未超时返回暂停态；超时惰性恢复（顺延 300 秒）', async () => {
+    await activate();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 7, 28, 10, 0, 0));
+    const s = await localStore.focus.start({ plannedDurationMinutes: 25, source: 'pomodoro' });
+
+    vi.setSystemTime(new Date(2026, 7, 28, 10, 2, 0));
+    await localStore.focus.pause(s.id);
+    vi.setSystemTime(new Date(2026, 7, 28, 10, 3, 0));
+    const paused = await localStore.focus.getActive();
+    expect(paused).not.toBeNull();
+    expect(paused!.pausedAt).not.toBeNull();
+
+    vi.setSystemTime(new Date(2026, 7, 28, 10, 10, 0));
+    const resumed = await localStore.focus.getActive();
+    expect(resumed).not.toBeNull();
+    expect(resumed!.pausedAt).toBeNull();
+    expect(resumed!.pausedTotalSeconds).toBe(300);
+    // 10:25 结束点 + 300 秒顺延 → 10:30
+    expect(resumed!.plannedEndAt).toBe('2026-08-28 10:30:00');
+    void s;
+  });
+
+  it('complete：实际时长扣除暂停总量；暂停中完成被拒', async () => {
+    await activate();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 7, 28, 10, 0, 0));
+    const s = await localStore.focus.start({ plannedDurationMinutes: 25, source: 'pomodoro' });
+
+    vi.setSystemTime(new Date(2026, 7, 28, 10, 5, 0));
+    await localStore.focus.pause(s.id);
+    vi.setSystemTime(new Date(2026, 7, 28, 10, 6, 0));
+    await expect(localStore.focus.complete(s.id)).rejects.toThrow('暂停中');
+
+    vi.setSystemTime(new Date(2026, 7, 28, 10, 8, 0));
+    await localStore.focus.resume(s.id);
+    vi.setSystemTime(new Date(2026, 7, 28, 10, 20, 0));
+    await localStore.focus.complete(s.id);
+
+    const records = await localStore.statistics.getTodaySummary();
+    // 挂钟 20 分钟 - 3 分钟暂停 = 17 分钟 = 1020 秒
+    expect(records.totalSeconds).toBe(1020);
+  });
+});
