@@ -16,6 +16,7 @@ import focusRouter from './routes/focus.js';
 import coursesRouter from './routes/courses.js';
 import statisticsRouter from './routes/statistics.js';
 import settingsRouter from './routes/settings.js';
+import reviewLockRouter from './routes/reviewLock.js';
 import exportRouter from './routes/export.js';
 import importRouter from './routes/import.js';
 
@@ -82,6 +83,7 @@ app.use('/api/v1/focus', requireAuth, focusRouter);
 app.use('/api/v1/courses', requireAuth, coursesRouter);
 app.use('/api/v1/statistics', requireAuth, statisticsRouter);
 app.use('/api/v1/settings', requireAuth, settingsRouter);
+app.use('/api/v1/review-lock', requireAuth, reviewLockRouter);
 app.use('/api/v1/export', requireAuth, exportRouter);
 app.use('/api/v1/import', importRouter);
 
