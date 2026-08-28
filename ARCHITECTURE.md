@@ -21,7 +21,7 @@
 client/src/          → React SPA (hash-router, lazy-loaded pages)
   api/               → Per-resource API wrappers (auth, tasks, presets, focus, courses, reviews, statistics, settings, backup) + client.ts (统一 fetch + 401 全局登出；各方法内按 isLocalMode()/isLocalApp() 分支到本地)
   local/             → 本地模式数据层 (IndexedDB): db.ts, localStore.ts, mode.ts, storage.ts, accounts.ts, types.ts
-  components/        → UI primitives + feature components (layout/, tasks/, timer/, courses/, presets/, forest/, heatmap/, landing/, ui/)
+  components/        → UI primitives + feature components (layout/, tasks/, timer/, courses/, presets/, forest/, heatmap/, review/, landing/, ui/)
   pages/             → Page components with co-located CSS (HomePage, PlanPage, PomodoroPage, ReviewPage, LoginPage/RegisterPage, LocalModePage, CourseDetailPage, CoursesPage, PresetsPage, StatisticsPage, AuthPage.css 遗留)
   hooks/             → useApi, useAuth, useCountdown, useFocusSession, useKeyboardSort, useScreenWakeLock, useTheme
   utils/             → date/duration/sound/accessibility + localStatistics + localImport + parseCourseText + uuid
@@ -29,14 +29,14 @@ client/src/          → React SPA (hash-router, lazy-loaded pages)
   styles/            → tokens.css, global.css, utilities.css
 
 server/src/          → Express REST API
-  routes/            → 10 个路由文件: auth, presets, tasks, reviews, focus, courses, statistics, settings, export, import（另有 export.test.ts 测试）
+  routes/            → 11 个路由文件: auth, presets, tasks, reviews, focus, courses, statistics, settings, reviewLock, export, import（另有 export.test.ts 测试）
   middleware/        → cors, auth (requireAuth), validate (Zod), errorHandler (AppError)
   db/                → connection.ts (pool), transaction.ts (withTransaction), schema.sql, init.ts, migrate.ts, rollback-users.sql
   utils/             → date.ts, uuid.ts, backup.ts (导出组装), import.ts / import-mapping.ts (导入纯函数)
   types/             → express-mysql-session 类型扩展
 
 shared/src/          → Shared between front-end and back-end
-  constants.ts       → 共享常量（科目分组、专注时长档位等）
+  constants.ts       → 共享常量（科目分组、专注时长档位、休息时长、暂停上限 FOCUS_PAUSE_MAX_SECONDS 等）
   schemas/           → Zod validation schemas per resource（auth/common/course/focus/preset/review/settings/statistics/task + backup 导出格式 v1 + import 导入模式/差异摘要）
   types/index.ts     → Re-exported TS types inferred from schemas
 
@@ -51,7 +51,7 @@ e2e/                 → playwright.config.ts + tests/smoke.spec.ts + 工具脚�
 
 | 模块 | 本地开关函数 | 分支方法数 |
 |---|---|---|
-| tasks / presets / focus / courses / reviews / statistics / settings | `isLocalMode()` | 8 / 4 / 4 / 5 / 3 / 3 / 2 |
+| tasks / presets / focus / courses / reviews / statistics / settings | `isLocalMode()` | 8 / 4 / 6 / 5 / 6 / 3 / 2 |
 | backup | `isLocalApp()` | 3 |
 | auth | 无分支（本地模式无服务器会话，设计如此） | 0 |
 
@@ -63,7 +63,8 @@ e2e/                 → playwright.config.ts + tests/smoke.spec.ts + 工具脚�
 | presets | `GET /`、`POST /`、`PUT /:id`、`DELETE /:id` |
 | tasks | `GET /?date=`、`GET /unfinished?from=`、`POST /`、`PUT /:id`、`PATCH /:id/toggle`、`PATCH /:id/pin`、`PATCH /reorder`、`DELETE /:id` |
 | reviews | `GET /?date=`、`GET /history`、`PUT /` |
-| focus | `POST /start`、`POST /:id/complete`、`POST /:id/cancel`、`GET /active` |
+| reviewLock | `GET /`、`POST /`、`POST /verify`（verifyLimiter 限流；哈希存 user_settings 键 `review_lock_hash`） |
+| focus | `POST /start`、`POST /:id/complete`、`POST /:id/cancel`、`POST /:id/pause`、`POST /:id/resume`、`GET /active` |
 | courses | `GET /`、`GET /:id`、`POST /parse`、`POST /`、`DELETE /:id`、`PATCH /:id/episodes/:eid/toggle` |
 | statistics | `GET /forest`、`GET /today-summary`、`GET /heatmap`（`/forest` 是唯一用 `validate(schema, 'query')` 的端点） |
 | settings | `GET /`、`PUT /` |
@@ -83,7 +84,8 @@ e2e/                 → playwright.config.ts + tests/smoke.spec.ts + 工具脚�
 
 ## UI 组件清单
 
-- **通用组件**（`client/src/components/ui/`）：Button, Card, Modal(portal 到 body), Toast, ConfirmDialog, ProgressBar, EmptyState/ErrorState/LoadingState, SkipLink, SubjectBadge, Dropdown, Calendar, ImportBackupModal(导入向导), ProfileDropdown(顶栏账户菜单: 导出/导入/登出), SoundToggle, ThemeToggle
+- **通用组件**（`client/src/components/ui/`）：Button, Card, Modal(portal 到 body), Toast, ConfirmDialog, ProgressBar, EmptyState/ErrorState/LoadingState, SkipLink, SubjectBadge, Dropdown, Calendar, ImportBackupModal(导入向导), ProfileDropdown(顶栏账户菜单: 导出/导入/复盘锁/登出), SoundToggle, ThemeToggle
+- **复盘门禁**（`client/src/components/review/`）：ReviewGate(三态门禁,包裹 ReviewPage 保持 lazy) + ReviewLockModal(设置/修改弹窗)
 - **动效组件**（framer-motion）：AnimatedThemeToggle, Magnetic, GlowCard, Card3D, FileUpload, GradientCard, InteractiveHoverButton
 - **砚池计时器**（`client/src/components/timer/`）：RingCountdown.tsx + RingCountdown.css + inkSurface.ts(等面积 LUT) + inkWavePaths.ts(三变体波形) + BurstParticles.tsx；设计见 `docs/adr/0001`-`0004` 与 `docs/superpowers/specs/2026-08-21-pomodoro-inkwell-design.md`；术语见 `CONTEXT.md`
 - **功能子目录**：courses/ forest/ heatmap/ landing/ layout/ presets/ tasks/
