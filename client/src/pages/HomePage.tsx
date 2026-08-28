@@ -134,11 +134,13 @@ export function HomePage({ navigate }: HomePageProps) {
                 plannedEndAt={activeSession.plannedEndAt}
                 totalSeconds={activeSession.plannedDurationSeconds}
                 subject={activeSession.subjectSnapshot as InkSubject}
+                pausedAt={activeSession.pausedAt}
               />
               <div className="home-focus__meta">
                 <p className="home-focus__preset truncate" title={activeSession.presetNameSnapshot}>
                   {activeSession.presetNameSnapshot}
                 </p>
+                {activeSession.pausedAt && <p className="home-focus__paused">暂停中</p>}
                 <SubjectBadge
                   subject={activeSession.subjectSnapshot as SessionSubject}
                   subSubject={activeSession.subSubjectSnapshot as SubSubject | null}
@@ -345,22 +347,25 @@ const MiniSessionRing = React.memo(function MiniSessionRing({
   plannedEndAt,
   totalSeconds,
   subject,
+  pausedAt,
 }: {
   plannedEndAt: string;
   totalSeconds: number;
   subject: InkSubject;
+  pausedAt: string | null;
 }) {
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
+    if (pausedAt) return; // 暂停中学习时钟停走，剩余冻结，无需每秒刷新（ADR-0006）
     const id = setInterval(() => setNowMs(Date.now()), 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [pausedAt]);
 
-  const remainingSeconds = Math.max(
-    0,
-    Math.round((new Date(plannedEndAt).getTime() - nowMs) / 1000)
-  );
+  // 暂停中冻结在暂停时刻的剩余（学习时钟停走），否则按当前时刻实时递减
+  const remainingSeconds = pausedAt
+    ? Math.max(0, Math.round((new Date(plannedEndAt).getTime() - new Date(pausedAt).getTime()) / 1000))
+    : Math.max(0, Math.round((new Date(plannedEndAt).getTime() - nowMs) / 1000));
 
   return (
     <RingCountdown
