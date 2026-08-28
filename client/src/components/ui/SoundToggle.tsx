@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Volume2, VolumeX } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { settingsApi } from '../../api/settings';
+import { setSoundEnabled } from '../../utils/sound';
 import { showToast } from './Toast';
 import './SoundToggle.css';
 
@@ -19,7 +20,10 @@ export function SoundToggle() {
     settingsApi
       .get()
       .then((s) => {
-        if (!cancelled) setEnabled(s.pomodoroSoundEnabled);
+        if (!cancelled) {
+          setEnabled(s.pomodoroSoundEnabled);
+          setSoundEnabled(s.pomodoroSoundEnabled);
+        }
       })
       .catch(() => {
         /* 拉取失败：静默回退默认开启，按钮仍可交互 */
@@ -38,6 +42,7 @@ export function SoundToggle() {
     try {
       const s = await settingsApi.update({ pomodoroSoundEnabled: next });
       setEnabled(s.pomodoroSoundEnabled);
+      setSoundEnabled(s.pomodoroSoundEnabled);
     } catch {
       setEnabled(!next); // 回滚
       showToast('error', '提示音设置保存失败');

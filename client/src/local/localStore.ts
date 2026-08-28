@@ -22,6 +22,8 @@ import type {
   CreateCourseInput,
   UpsertReviewInput,
   UpdateSettingsInput,
+  SetReviewLockInput,
+  VerifyReviewLockInput,
   BackupFile,
   ImportMode,
   ImportPreviewResponse,
@@ -35,6 +37,8 @@ import type { Course, CourseDetail, Episode, ParseResult } from '../api/courses'
 import type { Review } from '../api/reviews';
 import type { Settings } from '../api/settings';
 import type { TodaySummary } from '../api/statistics';
+import { FOCUS_PAUSE_MAX_SECONDS } from '@shared/constants';
+import { hashReviewPassword, verifyReviewPassword } from '../utils/reviewLockHash';
 import type {
   LocalAccount,
   LocalCourse,
@@ -399,6 +403,9 @@ function transformSession(row: LocalFocusSession): ActiveSession {
     plannedEndAt: row.plannedEndAt,
     status: row.status as 'in_progress',
     source: row.source,
+    // 非空 = 暂停中；判断暂停一律看本字段，勿发明 status 判断（ADR-0006）
+    pausedAt: row.pausedAt,
+    pausedTotalSeconds: row.pausedTotalSeconds ?? 0,
   };
 }
 
@@ -464,6 +471,8 @@ const focus = {
       plannedEndAt: formatDateTime(new Date(startedAtDate.getTime() + plannedDurationSeconds * 1000)),
       completedAt: null,
       status: 'in_progress',
+      pausedAt: null,
+      pausedTotalSeconds: 0,
       source: data.source,
       courseEpisodeId: data.courseEpisodeId ?? null,
       taskId: data.taskId ?? null,
@@ -483,12 +492,14 @@ const focus = {
       const session = (await idbGetByKey(t, 'focusSessions', id)) as LocalFocusSession | undefined;
       if (!session || session.accountId !== accountId) throw new Error('专注会话不存在');
       if (session.status !== 'in_progress') throw new Error('该专注会话已结束');
+      if (session.pausedAt) throw new Error('暂停中,请先继续专注');
 
       const completedAtDate = new Date();
       const time = formatDateTime(completedAtDate);
       const actualDurationSeconds = Math.max(
         0,
-        Math.round((completedAtDate.getTime() - parseDateTime(session.startedAt).getTime()) / 1000)
+        Math.round((completedAtDate.getTime() - parseDateTime(session.startedAt).getTime()) / 1000) -
+          (session.pausedTotalSeconds ?? 0)
       );
       const completed: LocalFocusSession = {
         ...session,
@@ -514,17 +525,81 @@ const focus = {
     });
   },
 
+  async pause(id: string): Promise<void> {
+    const accountId = requireAccountId();
+    await tx('focusSessions', 'readwrite', async (t) => {
+      const session = (await idbGetByKey(t, 'focusSessions', id)) as LocalFocusSession | undefined;
+      if (
+        !session ||
+        session.accountId !== accountId ||
+        session.status !== 'in_progress' ||
+        session.pausedAt
+      ) {
+        throw new Error('当前不可暂停');
+      }
+      await idbPut(t, 'focusSessions', { ...session, pausedAt: now(), updatedAt: now() });
+    });
+  },
+
+  async resume(id: string): Promise<void> {
+    const accountId = requireAccountId();
+    await tx('focusSessions', 'readwrite', async (t) => {
+      const session = (await idbGetByKey(t, 'focusSessions', id)) as LocalFocusSession | undefined;
+      if (!session || session.accountId !== accountId || !session.pausedAt) {
+        throw new Error('当前没有暂停中的专注会话');
+      }
+      // 单次暂停最多抵 5 分钟学习时间：即使挂起超时，超挂部分不补（与服务器语义一致）
+      const pausedElapsed = Math.max(
+        0,
+        Math.round((Date.now() - parseDateTime(session.pausedAt).getTime()) / 1000)
+      );
+      const pausedSeconds = Math.min(pausedElapsed, FOCUS_PAUSE_MAX_SECONDS);
+      await idbPut(t, 'focusSessions', {
+        ...session,
+        plannedEndAt: formatDateTime(
+          new Date(parseDateTime(session.plannedEndAt).getTime() + pausedSeconds * 1000)
+        ),
+        pausedTotalSeconds: (session.pausedTotalSeconds ?? 0) + pausedSeconds,
+        pausedAt: null,
+        updatedAt: now(),
+      });
+    });
+  },
+
   async getActive(): Promise<ActiveSession | null> {
     const accountId = requireAccountId();
     // 单 readwrite 事务：查询 + 过期自动完成原子化（并发 getActive 不会重复写学习记录）
     return tx(['focusSessions', 'studyRecords'], 'readwrite', async (t) => {
       const rows = (await idbGetAllByIndex(t, 'focusSessions', 'accountId', accountId)) as LocalFocusSession[];
-      const active = rows
+      let active = rows
         .filter((r) => r.status === 'in_progress')
         .sort((a, b) => (a.startedAt < b.startedAt ? 1 : -1))[0];
       if (!active) return null;
 
       const nowDate = new Date();
+
+      if (active.pausedAt) {
+        // 暂停中且未超时：原样返回，不做过期自动完成（学习时钟停走，ADR-0006）
+        const pausedElapsed = Math.round(
+          (nowDate.getTime() - parseDateTime(active.pausedAt).getTime()) / 1000
+        );
+        if (pausedElapsed < FOCUS_PAUSE_MAX_SECONDS) {
+          return transformSession(active);
+        }
+        // 暂停超时：惰性恢复（顺延 5 分钟上限并累计），随后继续既有过期判断
+        const resumed: LocalFocusSession = {
+          ...active,
+          plannedEndAt: formatDateTime(
+            new Date(parseDateTime(active.plannedEndAt).getTime() + FOCUS_PAUSE_MAX_SECONDS * 1000)
+          ),
+          pausedTotalSeconds: (active.pausedTotalSeconds ?? 0) + FOCUS_PAUSE_MAX_SECONDS,
+          pausedAt: null,
+          updatedAt: now(),
+        };
+        await idbPut(t, 'focusSessions', resumed);
+        active = resumed;
+      }
+
       if (parseDateTime(active.plannedEndAt) <= nowDate) {
         // 过期自动完成：完成会话 + 写学习记录（语义与服务器 getActive 一致）
         const time = formatDateTime(nowDate);
@@ -588,6 +663,44 @@ const settings = {
       idbPut(t, 'settings', existing ? { ...existing, value } : { accountId, key: SOUND_KEY, value })
     );
     return { pomodoroSoundEnabled: data.pomodoroSoundEnabled };
+  },
+};
+
+/* ---- reviewLock（复盘锁，ADR-0005：哈希入 settings 键值） ---- */
+
+const REVIEW_LOCK_KEY = 'review_lock_hash';
+
+async function getSettingValue(key: string): Promise<string | null> {
+  const accountId = requireAccountId();
+  const rows = await rowsByAccount<LocalSetting>('settings', accountId);
+  return rows.find((r) => r.key === key)?.value ?? null;
+}
+
+const reviewLock = {
+  async getStatus(): Promise<{ hasLock: boolean }> {
+    return { hasLock: (await getSettingValue(REVIEW_LOCK_KEY)) !== null };
+  },
+
+  async set(data: SetReviewLockInput): Promise<void> {
+    const accountId = requireAccountId();
+    const stored = await getSettingValue(REVIEW_LOCK_KEY);
+    if (stored && !(await verifyReviewPassword(data.currentPassword ?? '', stored))) {
+      throw new Error('当前复盘锁密码不正确');
+    }
+    const value = await hashReviewPassword(data.newPassword);
+    const rows = await rowsByAccount<LocalSetting>('settings', accountId);
+    const existing = rows.find((r) => r.key === REVIEW_LOCK_KEY);
+    await tx('settings', 'readwrite', (t) =>
+      idbPut(t, 'settings', existing ? { ...existing, value } : { accountId, key: REVIEW_LOCK_KEY, value })
+    );
+  },
+
+  async verify(data: VerifyReviewLockInput): Promise<void> {
+    const stored = await getSettingValue(REVIEW_LOCK_KEY);
+    if (!stored) throw new Error('尚未设置复盘锁');
+    if (!(await verifyReviewPassword(data.password, stored))) {
+      throw new Error('复盘锁密码不正确');
+    }
   },
 };
 
@@ -793,5 +906,6 @@ export const localStore = {
   focus,
   statistics,
   settings,
+  reviewLock,
   backup,
 };

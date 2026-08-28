@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { Download, LogOut, Upload } from 'lucide-react';
+import { Download, KeyRound, LogOut, Upload } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { backupApi } from '../../api/backup';
 import { showToast } from './Toast';
 import { ImportBackupModal } from './ImportBackupModal';
+import { ReviewLockModal } from '../review/ReviewLockModal';
 import './ProfileDropdown.css';
 
 interface ProfileMenuItem {
@@ -22,6 +23,7 @@ export function ProfileDropdown() {
   const [exporting, setExporting] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [lockModalOpen, setLockModalOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
 
@@ -81,6 +83,12 @@ export function ProfileDropdown() {
       label: '导入数据',
       icon: <Upload size={16} strokeWidth={1.75} aria-hidden="true" />,
       action: () => setImportOpen(true),
+    },
+    {
+      key: 'review-lock',
+      label: '复盘锁密码…',
+      icon: <KeyRound size={16} strokeWidth={1.75} aria-hidden="true" />,
+      action: () => setLockModalOpen(true),
     },
     {
       key: 'logout',
@@ -148,6 +156,8 @@ export function ProfileDropdown() {
           window.location.reload();
         }}
       />
+
+      <ReviewLockModal isOpen={lockModalOpen} onClose={() => setLockModalOpen(false)} />
     </div>
   );
 }

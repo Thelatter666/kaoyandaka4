@@ -399,3 +399,14 @@
     transition: none;
   }
 }
+
+/* 暂停倒计时（暂停态操作区内，居中大字） */
+.pomodoro-pause-timer {
+  width: 100%;
+  margin: 0 0 var(--space-sm);
+  text-align: center;
+  font-family: var(--font-heading);
+  font-size: var(--text-2xl);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}

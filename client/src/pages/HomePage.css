@@ -378,3 +378,10 @@
     transform: none;
   }
 }
+
+/* 进行中会话暂停态标注（mini 砚池旁 meta 区） */
+.home-focus__paused {
+  margin: 0;
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--color-text-secondary);
+}

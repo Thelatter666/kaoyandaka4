@@ -4,6 +4,7 @@ import { TopNav } from './components/layout/TopNav';
 import { SkipLink } from './components/ui/SkipLink';
 import { ToastContainer } from './components/ui/Toast';
 import { LoadingState } from './components/ui/LoadingState';
+import { ReviewGate } from './components/review/ReviewGate';
 import { useAuth } from './hooks/useAuth';
 import './styles/global.css';
 import './styles/utilities.css';
@@ -233,7 +234,11 @@ export default function App() {
       case '/statistics':
         return <StatisticsPage />;
       case '/review':
-        return <ReviewPage />;
+        return (
+          <ReviewGate>
+            <ReviewPage />
+          </ReviewGate>
+        );
       default:
         return <HomePage navigate={navigate} />;
     }

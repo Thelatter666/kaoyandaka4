@@ -18,6 +18,7 @@
 | 动导入/导出 | `docs/superpowers/specs/2026-08-16-data-{export,import}-design.md` + `server/src/routes/import.ts` |
 | 动本地模式 | `交接文档/03-P3本地模式交接.md` + `client/src/local/` |
 | 动砚池计时器 | `CONTEXT.md` + `docs/adr/0001`–`0004` + `交接文档/05-砚池计时器实施交接.md` |
+| 动复盘锁 / 专注暂停 | spec `docs/superpowers/specs/2026-08-28-review-lock-and-focus-updates-design.md` + `docs/adr/0005`/`0006` |
 | 部署/服务器 | `deploy/nginx.conf` + `.claude/skills/manage-server/` |
 | 查当前测试/lint 状态 | 跑 `npx vitest run` / `npx eslint .`（勿依赖本文快照） |
 
@@ -84,6 +85,8 @@
 ## Key Conventions
 
 - **Validation**：所有输入用 `shared/src/schemas/` 的 Zod schema，新路由 MUST 用 `validate()` 中间件
+- **暂停判断**：专注会话「暂停中」一律看 `paused_at` 非空（status 无 paused 值，ADR-0006）；单次暂停最多抵 `FOCUS_PAUSE_MAX_SECONDS`（300s）学习时间，超挂部分不补
+- **复盘锁**：哈希存 `user_settings` 键 `review_lock_hash`（服务器 bcrypt / 本地 SHA-256+salt，ADR-0005）；解锁标记为**会话 cookie** `kaoyandaily_review_unlocked`（值 = 身份 id，跨标签页共享、浏览器关闭失效）
 - **IDs**：UUID v4（DB `CHAR(36)`），服务器端 `generateUUID()` 生成
 - **Dates**：日期字段用 `YYYY-MM-DD` 字符串；DB 存 `DATETIME`
 - **204 响应**：DELETE 与部分 PATCH 返回 204 无 body → client 用 `undefined as T` 处理
@@ -105,7 +108,7 @@
 
 ## Testing
 
-- **单测/集成**：`npx vitest run`（匹配 `**/*.test.ts(x)`，与被测文件同目录共存）。基线：2026-08 为 **12 文件 / 112 tests 全绿**（以实跑为准）
+- **单测/集成**：`npx vitest run`（匹配 `**/*.test.ts(x)`，与被测文件同目录共存）。基线：2026-08 为 **15 文件 / 126 tests 全绿**（以实跑为准；根 `vitest.config.ts` 已配 `@shared` 别名）
 - **环境为 `node` 而非 jsdom**：写不了依赖 DOM 的组件测试 → 需要浏览器行为时拆成纯函数（如 `inkSurface.ts`/`inkWavePaths.ts`/`sound.ts`）或把断言下沉到数据层
 - **E2E**：`npm run test:e2e` 仅 `e2e/tests/smoke.spec.ts` 一个用例（真实会话认证）；`e2e/` 的工具脚本见 `ARCHITECTURE.md`，`playwright-report/`、`test-results/` 是产物目录
 - **已知缺口**：全库**无全局 ErrorBoundary** — 页面靠各自 `ErrorState` + `App.tsx` 的 Suspense `pageFallback` 兜底，勿假设有全局兜底

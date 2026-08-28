@@ -131,6 +131,8 @@ CREATE TABLE IF NOT EXISTS focus_sessions (
     planned_end_at          DATETIME NOT NULL,
     completed_at            DATETIME NULL,
     status                  ENUM('in_progress','completed','cancelled') NOT NULL DEFAULT 'in_progress',
+    paused_at               DATETIME NULL,
+    paused_total_seconds    INT NOT NULL DEFAULT 0,
     source                  ENUM('pomodoro','plan','course') NOT NULL,
     course_episode_id       CHAR(36) NULL,
     task_id                 CHAR(36) NULL,

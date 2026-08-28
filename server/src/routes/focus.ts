@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { validate } from '../middleware/validate.js';
 import { StartFocusSchema } from '../../../shared/src/schemas/focus.js';
+import { FOCUS_PAUSE_MAX_SECONDS } from '../../../shared/src/constants.js';
 import pool from '../db/connection.js';
 import { withTransaction } from '../db/transaction.js';
 import { generateUUID } from '../utils/uuid.js';
@@ -30,6 +31,8 @@ interface FocusRow extends RowDataPacket {
   completed_at: string | null;
   status: string;
   source: string;
+  paused_at: string | null;
+  paused_total_seconds: number;
   course_episode_id: string | null;
   task_id: string | null;
 }
@@ -45,6 +48,9 @@ function transformSession(row: FocusRow) {
     plannedEndAt: row.planned_end_at,
     status: row.status,
     source: row.source,
+    // 非空 = 暂停中；判断暂停一律看本字段，勿发明 status 判断（ADR-0006）
+    pausedAt: row.paused_at,
+    pausedTotalSeconds: row.paused_total_seconds ?? 0,
   };
 }
 
@@ -123,17 +129,23 @@ router.post('/:id/complete', async (req: Request, res: Response, next: NextFunct
     if (session.status !== 'in_progress') {
       throw new AppError(409, 'CONFLICT', '该专注会话已结束');
     }
+    if (session.paused_at) {
+      throw new AppError(409, 'CONFLICT', '暂停中,请先继续专注再完成');
+    }
 
     const startedAt = new Date(session.started_at);
-    const actualDurationSeconds = Math.round((now.getTime() - startedAt.getTime()) / 1000);
+    const actualDurationSeconds = Math.max(
+      0,
+      Math.round((now.getTime() - startedAt.getTime()) / 1000) - (session.paused_total_seconds ?? 0)
+    );
 
     // 事务包裹「完成会话 + 写学习记录」两步写入，保证原子性；任一失败整体回滚
     await withTransaction(async (connection) => {
-      // 乐观锁：仅当仍为 in_progress 时更新，命中 0 行说明已被并发处理（409 抛出后事务回滚）
+      // 乐观锁：仅当仍为 in_progress 且未暂停时更新，命中 0 行说明已被并发处理（409 抛出后事务回滚）
       const [result] = await connection.query<ResultSetHeader>(
         `UPDATE focus_sessions
          SET status = 'completed', actual_duration_seconds = ?, completed_at = NOW()
-         WHERE id = ? AND user_id = ? AND status = 'in_progress'`,
+         WHERE id = ? AND user_id = ? AND status = 'in_progress' AND paused_at IS NULL`,
         [actualDurationSeconds, id, req.userId]
       );
 
@@ -160,7 +172,55 @@ router.post('/:id/complete', async (req: Request, res: Response, next: NextFunct
   }
 });
 
-// POST /api/v1/focus/:id/cancel
+// POST /api/v1/focus/:id/pause — 暂停：写 paused_at，学习时钟停走（ADR-0006）
+router.post('/:id/pause', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const [result] = await pool.query<ResultSetHeader>(
+      "UPDATE focus_sessions SET paused_at = NOW() WHERE id = ? AND user_id = ? AND status = 'in_progress' AND paused_at IS NULL",
+      [id, req.userId]
+    );
+    if (result.affectedRows === 0) {
+      throw new AppError(409, 'CONFLICT', '当前不可暂停（会话不存在、已结束或已在暂停中）');
+    }
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/v1/focus/:id/resume — 恢复：顺延 planned_end_at 并累计暂停总量
+router.post('/:id/resume', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await pool.query<FocusRow[]>(
+      "SELECT * FROM focus_sessions WHERE id = ? AND user_id = ? AND status = 'in_progress' AND paused_at IS NOT NULL",
+      [id, req.userId]
+    );
+    if (rows.length === 0) {
+      throw new AppError(409, 'CONFLICT', '当前没有暂停中的专注会话');
+    }
+    // 单次暂停最多抵 5 分钟学习时间：即使挂起超时（如页面休眠后手动恢复），超挂部分不补
+    const pausedElapsed = Math.max(
+      0,
+      Math.round((Date.now() - new Date(rows[0].paused_at as string).getTime()) / 1000)
+    );
+    const pausedSeconds = Math.min(pausedElapsed, FOCUS_PAUSE_MAX_SECONDS);
+    await pool.query<ResultSetHeader>(
+      `UPDATE focus_sessions
+       SET planned_end_at = DATE_ADD(planned_end_at, INTERVAL ? SECOND),
+           paused_total_seconds = paused_total_seconds + ?,
+           paused_at = NULL
+       WHERE id = ? AND user_id = ? AND status = 'in_progress' AND paused_at IS NOT NULL`,
+      [pausedSeconds, pausedSeconds, id, req.userId]
+    );
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/v1/focus/:id/cancel — 暂停中 status 仍为 in_progress，天然可取消（W4，零特判）
 router.post('/:id/cancel', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
@@ -190,16 +250,41 @@ router.get('/active', async (req: Request, res: Response, next: NextFunction) =>
     }
 
     const session = rows[0];
-    const plannedEndAt = new Date(session.planned_end_at);
+    let effective = session;
     const now = new Date();
+
+    if (session.paused_at) {
+      const pausedElapsed = Math.round((now.getTime() - new Date(session.paused_at).getTime()) / 1000);
+      if (pausedElapsed < FOCUS_PAUSE_MAX_SECONDS) {
+        // 暂停中且未超时：原样返回，不做过期自动完成（学习时钟停走，ADR-0006）
+        return res.json(transformSession(session));
+      }
+      // 暂停超时：惰性恢复（单次暂停最多抵 5 分钟学习时间，超挂部分不补），随后继续既有过期判断
+      const pausedSeconds = Math.min(pausedElapsed, FOCUS_PAUSE_MAX_SECONDS);
+      await pool.query<ResultSetHeader>(
+        `UPDATE focus_sessions
+         SET planned_end_at = DATE_ADD(planned_end_at, INTERVAL ? SECOND),
+             paused_total_seconds = paused_total_seconds + ?,
+             paused_at = NULL
+         WHERE id = ? AND user_id = ? AND status = 'in_progress' AND paused_at IS NOT NULL`,
+        [pausedSeconds, pausedSeconds, session.id, req.userId]
+      );
+      const [refreshed] = await pool.query<FocusRow[]>(
+        'SELECT * FROM focus_sessions WHERE id = ? AND user_id = ?',
+        [session.id, req.userId]
+      );
+      effective = refreshed[0];
+    }
+
+    const plannedEndAt = new Date(effective.planned_end_at);
 
     if (plannedEndAt <= now) {
       // 过期自动完成：事务包裹「完成会话 + 写学习记录」，保证原子性
-      const actualDurationSeconds = session.planned_duration_seconds;
+      const actualDurationSeconds = effective.planned_duration_seconds;
       await withTransaction(async (connection) => {
         await connection.query(
           "UPDATE focus_sessions SET status = 'completed', actual_duration_seconds = ?, completed_at = NOW() WHERE id = ? AND user_id = ?",
-          [actualDurationSeconds, session.id, req.userId]
+          [actualDurationSeconds, effective.id, req.userId]
         );
         // Create study record
         const recordId = generateUUID();
@@ -208,14 +293,14 @@ router.get('/active', async (req: Request, res: Response, next: NextFunction) =>
            (id, user_id, preset_name_snapshot, subject_snapshot, sub_subject_snapshot,
             actual_duration_seconds, focus_session_id, task_id, course_episode_id, source)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'focus_session')`,
-          [recordId, req.userId, session.preset_name_snapshot, session.subject_snapshot, session.sub_subject_snapshot,
-            actualDurationSeconds, session.id, session.task_id, session.course_episode_id]
+          [recordId, req.userId, effective.preset_name_snapshot, effective.subject_snapshot, effective.sub_subject_snapshot,
+            actualDurationSeconds, effective.id, effective.task_id, effective.course_episode_id]
         );
       });
       return res.json(null);
     }
 
-    res.json(transformSession(session));
+    res.json(transformSession(effective));
   } catch (err) {
     next(err);
   }
