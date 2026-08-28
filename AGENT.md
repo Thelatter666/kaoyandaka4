@@ -1,199 +1,132 @@
-# Project Instructions
+# Project Instructions — 砚台考研打卡
 
-## Tech Stack
+> 面向 AI 代理的**驾驶手册**：只记录「读代码读不出来的」决策、陷阱、红线与工作流。
+> 枚举型参考（目录树/组件/端点/部署）见 `ARCHITECTURE.md`；领域术语见 `CONTEXT.md`；仓库根其余历史 md（`项目设计文档.md`、`需求文档.md`、`前端重设计文档.md`、`前端实施建议.md`、`组件集成报告-*.md`、`2026-07-22-性能优化方案-第一版.md`）仅供参考，可能与现状不符。
+> **维护规则**：任何改动本文列举的事实（路由数、模块数、端点、目录结构、开关函数、文档清单）必须同步本文件；提交前缀 `docs(agent):`。
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 18 + TypeScript + Vite 6 |
-| Backend | Express 4 + TypeScript |
-| Database | MySQL 8 (mysql2/promise) |
-| Validation | Zod (shared schemas) |
-| Auth | Session-based (express-session + MySQL store) |
-| Testing | Vitest + Playwright + fake-indexeddb（本地模式单测） |
-| Lint | ESLint 9 (flat config) |
+## 一句话
 
-## Project Structure
+个人考研学习管理网站（React SPA + Express API + MySQL），目标用户 1 人，考试日期 2026-12-20。
 
-```
-client/src/          → React SPA (hash-router, lazy-loaded pages)
-  api/               → Per-resource API wrappers (auth, tasks, presets, focus, courses, reviews, statistics, settings, backup) + client.ts (统一 fetch + 401 全局登出；P3 各方法内按 isLocalMode() 分支到本地)
-  local/             → **P3 本地模式数据层** (IndexedDB): db.ts, localStore.ts (LocalDataStore), mode.ts (isLocalMode/isLocalApp), storage.ts, accounts.ts, types.ts
-  components/        → UI primitives + feature components (layout/, tasks/, timer/, courses/, presets/, forest/, heatmap/, landing/, ui/)
-  pages/             → Page components with co-located CSS (HomePage, PlanPage, PomodoroPage, ReviewPage, LoginPage/RegisterPage, LocalModePage, etc.)
-  hooks/             → useApi, useAuth(双源: 服务器会话 | 本地账户), useCountdown, useFocusSession, useKeyboardSort, useScreenWakeLock, useTheme
-  utils/             → date/duration/sound/accessibility + localStatistics(统计前端复刻) + localImport(导入映射/去重) + parseCourseText + uuid
-  workers/           → Web Workers (countdown-title.ts: 标签页标题倒计时; end-sound.ts: 番茄钟准点响铃)
-  styles/            → CSS tokens (tokens.css), global styles, utilities
+## 文档地图（做 X 先读 Y）
 
-server/src/          → Express REST API
-  routes/            → 10 route files: auth, presets, tasks, reviews, focus, courses, statistics, settings, export(P2: /api/v1/export 全量备份下载), import(P2: /api/v1/import 与 /import/preview)
-  middleware/         → cors, auth (session), validate (Zod), errorHandler (AppError)
-  db/                → connection.ts (pool), transaction.ts (withTransaction 事务包装：tasks/courses/focus/export/import 多写路由必用), schema.sql, init.ts, migrate.ts, rollback-users.sql
-  utils/             → date.ts, uuid.ts, backup.ts (导出组装), import.ts / import-mapping.ts (导入纯函数)
-  types/             → express-mysql-session 类型扩展
+| 我要做什么 | 先读 |
+|---|---|
+| 加一个页面 | 本文「Front-end Routing」+ `client/src/App.tsx:13-55` |
+| 加一个 API | 本文「Request Lifecycle」+ `server/src/routes/` + `shared/src/schemas/` |
+| 改动效 | `CONTEXT.md`（术语）→ `plans/README.md`（是否已排期，当前 18 条：DONE 12 / TODO 6）→ `docs/adr/`（砚池决策） |
+| 动导入/导出 | `docs/superpowers/specs/2026-08-16-data-{export,import}-design.md` + `server/src/routes/import.ts` |
+| 动本地模式 | `交接文档/03-P3本地模式交接.md` + `client/src/local/` |
+| 动砚池计时器 | `CONTEXT.md` + `docs/adr/0001`–`0004` + `交接文档/05-砚池计时器实施交接.md` |
+| 部署/服务器 | `deploy/nginx.conf` + `.claude/skills/manage-server/` |
+| 查当前测试/lint 状态 | 跑 `npx vitest run` / `npx eslint .`（勿依赖本文快照） |
 
-shared/src/          → Shared between front-end and back-end
-  constants.ts       → 共享常量（科目分组、专注时长档位等）
-  schemas/           → Zod validation schemas per resource（含 backup.ts 导出格式 v1、import.ts 导入模式/差异摘要）
-  types/             → Re-exported TS types inferred from schemas
+## 命令（根目录执行）
 
-plans/               → 单文件实现计划（编号 md，多为动画/动效类任务，先写计划再实现）
-docs/ 交接文档/        → 设计文档、需求文档、组件集成报告、交接文档（01-04：进度/后续任务/P3交接/P3完成报告）
-```
+| 命令 | 说明 |
+|---|---|
+| `npm run dev` | 前后端同启（client 5173 / server 3001，vite proxy /api） |
+| `npm run dev:client` / `npm run dev:server` | 单独起前端 / 后端（tsx watch） |
+| `npm run build` | 生产构建（vite + tsc） |
+| `npm run lint` | ESLint 9 flat config |
+| `npm run test` | Vitest（`**/*.test.ts(x)`，环境为 **node**） |
+| `npm run test:e2e` | Playwright 冒烟（需 dev server，真实会话） |
+| `npm run db:init` / `npm run db:migrate` | 初始化/重置 / 迁移数据库 |
 
-## Code Style
+## 服务端总装（`server/src/index.ts`）
 
-- **File naming**: PascalCase for components/pages, camelCase for hooks/utils/api modules
-- **DB columns**: snake_case → transformed to camelCase in route handlers via `transformXxx()` functions
-- **Route paths**: kebab-case (`/api/v1/study_presets` → `/presets` in route file)
-- **API client modules**: named `{resource}Api` object with methods (`tasksApi.getByDate()`, `presetsApi.getAll()`)
-- **Comments**: Chinese throughout business logic; English in structural/setup code
-
-## Architecture Patterns
-
-### 服务端总装（`server/src/index.ts`）
 - **鉴权在挂载层统一施加**：`app.use('/api/v1/xxx', requireAuth, router)` — 集中一处可审计、无遗漏风险；仅 `/api/v1/auth` 与 `/api/v1/health` 公开
+- **⚠️ 唯一例外：`/api/v1/import` 不经挂载层 `requireAuth`**（`index.ts:86`）。它必须在会话内自行解析 `req.session.userId`，并在「导入到指定账户」分支里改写会话归属（`req.session.userId = targetUserId`，仅 `kind==='create'` 时），故鉴权/归属判定下沉到 handler 内逐处做。**新增此类「会话重指向」端点前，先读 `routes/import.ts` 的 `sessionUserId` 用法，切勿顺手给它补挂载层 `requireAuth`**
 - `app.set('trust proxy', 1)` — 只信任 nginx 首跳，使限流按真实客户端 IP、secure cookie 正确判定
 - `compression({ threshold: 1024 })` gzip（统计/森林聚合接口收益最大）；`express.json({ limit: '20mb' })`（备份导入需要）
 - 会话 7 天**固定不滚动续期**（`rolling: false`）：避免每请求 UPDATE sessions 表的写放大，到期重新登录
 - `SESSION_SECRET` 缺失时**直接抛错拒绝启动**，不留弱默认值
 
-### Request Lifecycle (every route follows this pattern)
+## Request Lifecycle（每个路由的固定模式）
+
 1. `requireAuth` middleware → session check → injects `req.userId`
 2. `validate(Schema)` middleware → Zod parse on `req.body`
-3. Route handler → raw SQL via `pool.query()`, all queries filtered by `req.userId`
-4. `transformXxx(row)` → snake_case DB columns to camelCase response
-5. Errors → `throw new AppError(status, code, message)` → caught by `errorHandler`
+3. Route handler → raw SQL via `pool.query()`，所有查询按 `req.userId` 过滤
+4. `transformXxx(row)` → snake_case DB 列转 camelCase 响应
+5. Errors → `throw new AppError(status, code, message)` → 由 `errorHandler` 统一捕获
 
-### Error Shape (consistent across all endpoints)
+## Error Shape（全端点一致）
+
 ```json
 { "error": { "code": "VALIDATION_ERROR", "message": "...", "details": [...] } }
 ```
 
-### Auth Model
-- Session stored in MySQL (`sessions` table via express-mysql-session)
-- `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me`
-- 401 from non-auth routes triggers global logout in front-end (`unauthorizedHandler`)
-- All business routes are guarded by `requireAuth` mounted at `server/src/index.ts`
-- **限流**：敏感端点用 `express-rate-limit` 在路由文件内就地声明 — `auth.ts` 的 `loginLimiter` / `registerLimiter`、`import.ts` 的 `importLimiter`；新增登录类或重写入端点须跟上
+## Auth Model
 
-### Front-end Routing
-- Hash-based SPA (no React Router) — custom router in `App.tsx`
-- `parseHashRoute()` extracts page + params (e.g., `#/courses/abc123` → `course-detail` page)
-- Route-level code splitting via `React.lazy()` + hover prefetch
-- Page transitions: CSS `page-enter`/`page-exit` with 140ms exit phase
+- Session 存 MySQL（`sessions` 表，express-mysql-session 独立连接池）；401 触发前端全局登出（`unauthorizedHandler`）
+- **限流**：`express-rate-limit` 在路由文件内就地声明 — `auth.ts` 的 `loginLimiter`/`registerLimiter`、`import.ts` 的 `importLimiter`；新增登录类或重写入端点须跟上
 
-### Data Isolation
-- `user_id` is NEVER accepted from client — always from `req.session.userId`
-- All queries use `WHERE user_id = ?` pattern; 404 for another user's resource (no enumeration)
+## Front-end Routing（`client/src/App.tsx`）
 
-### 双后端数据模式（P3 本地模式）
-- **服务器模式（默认）**：所有 `xxxApi` → REST → MySQL
-- **本地模式**：登录页「离线使用（本地模式）」→ `#/local` 本地账户页（选/建/导入/删）→ 激活账户存 `localStorage['kaoyandaily_local_activeAccount']`
-- **开关**：`client/src/local/mode.ts` — `isLocalMode()` / `isLocalApp()`（本地账户上下文）；8 个 api 模块 + backup 的每个方法内部 `isLocalMode() ? localStore.xxx() : api.xxx()`
-- **存储**：单 IndexedDB 库 `kaoyandaily_local`，8 数据域 + accounts + meta；记录带 `accountId` 索引（**本地归属用 accountId——UUID，绝不用服务器 user_id**）；settings 主键 `[accountId, key]`；reviews 复合索引 `accountId_reviewDate`
-- **鉴权双源**：`useAuth` 激活本地账户时免 `/auth/me` 探测，直接以本地账户 email 进入应用；登出本地 = 清激活账户
-- **统计/导入复刻**：`client/src/utils/localStatistics.ts` 前端复刻服务器 SQL 口径（`focus_session` 全计、`course_video` 仅计 focusSessionId 为空、树 = floor(秒/3600) 按科目独立）；`localImport.ts` 导入映射/去重/合并覆盖
-- **同构格式**：导出文件 `BackupFile`（shared backup.ts，schemaVersion 1）双模式互通；服务器导入先删后插防跨账号 ID 串号（P2 设计文档）
+- Hash-based SPA（无 React Router）：`parseHashRoute()` 解析，`/courses/:id` → course-detail；`React.lazy()` 代码分割 + `NAV_PREFETCH` hover 预取；过渡 140ms 退场（`page-enter`/`page-exit`）
+- **新增页面必须改的 4 个位点**：① `pageLoaders`（13-26）② `lazy()` const 声明（28-39，漏改则编译失败）③ `NAV_PREFETCH`（42-50，仅当进顶栏）④ 渲染分支 — 受保护页走 `switch`（219-240）、公开/游客页走未登录三元链（275-283）；公开页还需改 `PUBLIC_PAGES`/`GUEST_ONLY_PAGES`。**⚠️ `switch` 的 `default` 会静默渲染 HomePage（237-238），漏改不是白屏而是更难发现的静默首页**
+- **路由守卫双白名单**：`PUBLIC_PAGES`（未登录可访问：`/`、`/login`、`/register`、`/local`）与 `GUEST_ONLY_PAGES`（已登录访问则重定向回 `#/`）。新增公开页只改前者，二者勿混用
+
+## Data Isolation
+
+- `user_id` NEVER accepted from client — always from `req.session.userId`
+- 所有查询用 `WHERE user_id = ?` 模式；他人的资源返回 404（不枚举）
+
+## 双后端数据模式（P3 本地模式）
+
+- **服务器模式（默认）**：所有 `xxxApi` → REST → MySQL；**本地模式**：登录页「离线使用（本地模式）」→ `#/local` → 激活账户存 `localStorage['kaoyandaily_local_activeAccount']`
+- **开关**：`client/src/local/mode.ts` — `isLocalMode()` / `isLocalApp()`（`isLocalApp = isLocalMode() || localContext`，语义更宽）。**7 个业务模块用 `isLocalMode()`**（tasks/presets/focus/courses/reviews/statistics/settings），**backup 用 `isLocalApp()`**，auth 无分支（本地模式无服务器会话，设计如此）
+- **存储**：单 IndexedDB 库 `kaoyandaily_local`；记录带 `accountId` 索引（**本地归属用 accountId——UUID，绝不用服务器 user_id**）；settings 主键 `[accountId, key]`；reviews 复合索引 `accountId_reviewDate`
+- **统计/导入复刻**：`localStatistics.ts` 前端复刻服务器 SQL 口径（`focus_session` 全计、`course_video` 仅计 focusSessionId 为空、树 = floor(秒/3600) 按科目独立）；`localImport.ts` 导入映射/去重/合并覆盖
+- **同构格式**：导出 `BackupFile`（shared backup.ts，schemaVersion 1）双模式互通；服务器导入**先删后插**防跨账号 ID 串号（勿改回 ON DUPLICATE KEY UPDATE）
+- **本地模式规则**：新增本地数据逻辑进 `client/src/local/`；本地归属用 accountId；本地模式单测文件头部须 `import 'fake-indexeddb/auto'`
 
 ## Key Conventions
 
-- **Validation**: All input validated with Zod schemas in `shared/src/schemas/`. New routes MUST use `validate()` middleware.
-- **IDs**: UUID v4 (`CHAR(36)` in DB), generated server-side via `generateUUID()` from `uuid` package
-- **Dates**: `YYYY-MM-DD` strings for date fields; `DATETIME` in DB
-- **204 responses**: DELETE and some PATCH endpoints return 204 with no body → client handles with `undefined as T`
-- **COALESCE updates**: PUT endpoints use `COALESCE(?, column)` for partial updates — omit a field to keep existing value
-- **Toggle pattern**: `PATCH /:id/toggle` uses `SET is_completed = NOT is_completed`
-- **本地模式规则**: 新增本地数据逻辑进 `client/src/local/`；本地归属用 accountId；本地模式单测文件头部须 `import 'fake-indexeddb/auto'`
-
-## Testing
-
-- **Unit/Integration**: `npx vitest run` (files matching `**/*.test.ts`, `**/*.test.tsx`) — 当前 **10 文件 / 97 tests**（2026-08-21 核对全绿）
-- **E2E**: `npm run test:e2e` (Playwright, config at `e2e/playwright.config.ts`) — 需 dev server，真实会话
-- **本地模式单测**: 依赖 fake-indexeddb，测试文件头部 `import 'fake-indexeddb/auto'`（vitest 环境为 node）
-- **测试分布**: server 纯函数（backup/import/import-mapping/export…）+ shared schema + client（sound/localStore/localStatistics/localImport）；新增逻辑按 `**/*.test.ts(x)` 惯例补测
-
-## Build & Run
-
-```bash
-npm run dev          # Start both front-end (5173) and back-end (3001)
-npm run dev:client   # Front-end only
-npm run dev:server   # Back-end only
-npm run build        # Production build (vite + tsc)
-npm run lint         # ESLint
-npm run db:init      # Initialize/reset database
-npm run db:migrate   # Run migrations
-```
+- **Validation**：所有输入用 `shared/src/schemas/` 的 Zod schema，新路由 MUST 用 `validate()` 中间件
+- **IDs**：UUID v4（DB `CHAR(36)`），服务器端 `generateUUID()` 生成
+- **Dates**：日期字段用 `YYYY-MM-DD` 字符串；DB 存 `DATETIME`
+- **204 响应**：DELETE 与部分 PATCH 返回 204 无 body → client 用 `undefined as T` 处理
+- **COALESCE 更新**：PUT 用 `COALESCE(?, column)` 做部分更新 — 省略字段即保留原值
+- **Toggle 模式**：`PATCH /:id/toggle` 用 `SET is_completed = NOT is_completed`
+- **多表写入路由必须用 `withTransaction`**（`server/src/db/transaction.ts`；现 focus/courses/export/tasks/import 已用）
 
 ## Git Conventions
 
-- **Branch naming**: `type/description` (e.g., `redesign/frontend`, `refactor/layout`)
-- **Commit style**: `<type>(<scope>): <Chinese description>` — types: feat, fix, docs, refactor, chore
-- Feature work typically branched from `main`
+- **Branch naming**: `type/description`（如 `feat/xxx`、`docs/xxx`），从 `main` 新建
+- **Commit style**: `<type>(<scope>): <中文描述>` — types: feat, fix, docs, refactor, chore
+- Feature work 通常从 `main` 分支；合并用 `--no-ff`（保留 merge commit）
 
-## CSS & Design Tokens
+## CSS 与 Design Tokens（红线）
 
-- **Design system**: Aurora Glass (极光玻璃) — dual-theme (light default + dark midnight)
-- **Token file**: `client/src/styles/tokens.css` — all colors, radii, shadows, spacing, z-index, fonts
-- **Rule**: Components MUST use CSS variables (`var(--color-xxx)`), NEVER hardcode color values
-- **Theme switch**: `[data-theme="dark"]` selector on `<html>`; toggle via `useTheme` hook
-- **CSS modules**: Co-located `*.css` files per page/component (e.g., `HomePage.css`)
-- **Glass layers**: `--color-glass-bg` (level 1) → `--color-glass-bg-strong` (level 2) → `--color-glass-3-bg` (dark overlay)
+- Aurora Glass（极光玻璃）双主题；token 在 `client/src/styles/tokens.css` — **组件 MUST 用 `var(--color-xxx)`，禁硬编码颜色**；co-located `*.css`；主题切换 `[data-theme="dark"]` + `useTheme`
+- **新动效必须支持 `prefers-reduced-motion`**（全库 34 文件已落地，参考 `plans/014-magnetic-reduced-motion.md`）
+- 动效统一 framer-motion；新组件进 `components/ui/`；勿破坏 `client/vite.config.ts` 的 manualChunks vendor 分包
 
-## UI 组件库与动效
+## Testing
 
-- **通用组件**: `client/src/components/ui/` — Button, Card, Modal(portal 到 body), Toast, ConfirmDialog, ProgressBar, EmptyState/ErrorState/LoadingState, SkipLink, SubjectBadge, Dropdown, Calendar, ImportBackupModal(导入向导), ProfileDropdown(顶栏账户菜单: 导出/导入/登出), SoundToggle, ThemeToggle(基础主题切换)
-- **动效组件** (framer-motion): `AnimatedThemeToggle` (主题切换动画), `Magnetic` (磁性吸引), `GlowCard` (辉光边框), `Card3D` (3D 透视), `FileUpload` (拖放上传), `GradientCard` (渐变卡片), `InteractiveHoverButton` (悬停展开按钮)
-- **砚池计时器**: `client/src/components/timer/` — `RingCountdown`(砚池主体) + `inkSurface.ts`(等面积映射 LUT) + `inkWavePaths.ts`(三变体波形)；设计见 `docs/superpowers/specs/2026-08-21-pomodoro-inkwell-design.md` 与 `docs/adr/0001`–`0004`；术语见 `CONTEXT.md`。**旧环形设计的称谓已全部废弃，一律以 CONTEXT.md 为准**
-- **新组件加入 `components/ui/`**, co-located CSS + `var(--color-xxx)` token, 动画统一用 framer-motion
-- **构建分包**: `client/vite.config.ts` 的 `manualChunks` 将 react / lucide / framer-motion 拆为独立 vendor chunk（性能优化，勿破坏）
+- **单测/集成**：`npx vitest run`（匹配 `**/*.test.ts(x)`，与被测文件同目录共存）。基线：2026-08 为 **12 文件 / 112 tests 全绿**（以实跑为准）
+- **环境为 `node` 而非 jsdom**：写不了依赖 DOM 的组件测试 → 需要浏览器行为时拆成纯函数（如 `inkSurface.ts`/`inkWavePaths.ts`/`sound.ts`）或把断言下沉到数据层
+- **E2E**：`npm run test:e2e` 仅 `e2e/tests/smoke.spec.ts` 一个用例（真实会话认证）；`e2e/` 的工具脚本见 `ARCHITECTURE.md`，`playwright-report/`、`test-results/` 是产物目录
+- **已知缺口**：全库**无全局 ErrorBoundary** — 页面靠各自 `ErrorState` + `App.tsx` 的 Suspense `pageFallback` 兜底，勿假设有全局兜底
+- **lint 长期项**（2026-08）：`client/src/components/ui/Modal.tsx` 使用未加载的 `react-hooks/exhaustive-deps` 规则（1 error + 8 warnings），修 eslint 配置/依赖时一并处理
 
-## Environment
+## 环境
 
-- **Required env vars**: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `SESSION_SECRET`
-- **Config file**: `.env` at project root (see `.env.example`)
-- **`SESSION_SECRET` is mandatory** — server refuses to start without it
-- **`SESSION_COOKIE_SECURE`**: `false` for local dev (HTTP), `true` for production (HTTPS)
-
-## Deployment
-
-- **Production**: nginx reverse proxy → Express on port 3001
-- **Static assets**: `client/dist/` served by nginx with fingerprint caching (`/assets/` → 1y immutable)
-- **SPA fallback**: `try_files $uri $uri/ /index.html`
-- **API proxy**: `/api/` → `http://127.0.0.1:3001`
-- **Body limit**: `location /api/` 已配 `client_max_body_size 20m`（备份导入；Express 侧 `express.json({ limit: '20mb' })`）
-- **Reference config**: `deploy/nginx.conf`, `deploy/deploy.sh`
-
-## Shared Package
-
-`@shared` resolves to `shared/src/` via Vite alias. Import types in client code with:
-```ts
-import type { CreateTaskInput } from '@shared/types';
-```
-Zod schemas on the server with relative imports:
-```ts
-import { CreateTaskSchema } from '../../../shared/src/schemas/task.js';
-```
+- `.env` 在**项目根**（dotenv 从根加载，`index.ts` 里 `path.resolve(__dirname, '../../.env')`，不是 server/.env）
+- 必需：`DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME`/`SESSION_SECRET`（缺失拒绝启动）；可选：`SERVER_PORT`(3001)、`SESSION_COOKIE_SECURE`(false 本地 HTTP / true 生产 HTTPS)
+- **`TEST_DB_NAME` 是遗留项**：`.env.example` 中声明但全库无引用，勿据此以为存在测试库
+- 部署/shared 导入/manualChunks 等详情见 `ARCHITECTURE.md`
 
 ## 项目级 AI 工具与约定
 
-- **操作安全**（根目录 `memory.md` 事故教训, 2026-07-28）: 修改任何已有文件前**先 Read**; 密钥/配置类文件操作前先 `cp file file.bak`; 用户说"写到/放入/添加"一律视为**追加**, 除非明确说"覆盖/替换"
-- **服务器管理**: `.claude/skills/manage-server/` 项目 skill — 腾讯云服务器部署、日志、重启; 部署文件在 `deploy/` (deploy.sh, nginx.conf, nginx.ip.conf, server-management-prompt.txt)
-- **服务器管家**: `server-butler/` (OVERVIEW.md + butler.sh) — 腾讯云实例状态/防火墙/带宽/快照管理，密钥从 `~/.tccli/env.sh` 注入，不出网直连（仅 API）
-- **E2E**: `e2e/tests/smoke.spec.ts` 冒烟测试, 通过真实会话认证（非 mock）
-- **交接文档**: `交接文档/03-P3本地模式交接.md`（P3 完整设计/踩坑/验收）、`04-P3本地模式完成交接报告.md`（P3 实现记录）；P1/P2 设计文档在 `docs/superpowers/specs|plans/2026-08-16-*`
+- **操作安全红线**（`memory.md` 事故教训，2026-07-28）：修改任何已有文件前**先 Read**；密钥/配置类文件操作前先 `cp file file.bak`；用户说「写到/放入/添加」一律视为**追加**，除非明确说「覆盖/替换」
+- **服务器管理**：`.claude/skills/manage-server/` 项目 skill — 部署、日志、重启；配置在 `deploy/`
+- **服务器管家**：`server-butler/` — 腾讯云实例状态/防火墙/带宽/快照，密钥从 `~/.tccli/env.sh` 注入
+- **交接文档**：`交接文档/01-05`（03=P3 本地模式完整设计/踩坑/验收，05=砚池实施交接）；P1/P2 设计在 `docs/superpowers/specs|plans/2026-08-16-*`
 
-## 开发工作流约束（2026-08-12 修订）
+## 开发工作流约束（2026-08-12 修订，硬性）
 
-进行**任何代码修改**（新功能、模块修改、bug 修复、重构等）时，必须按以下流程执行，每个阶段都需要用户确认后才进入下一步：
+进行**任何代码修改**，必须按以下流程执行，每阶段需用户确认后才进入下一步：
 
-1. **提需求**：用户提出需求
-2. **探索理解**：探索代码库、理解需求
-3. **复述对齐**：将理解后的需求用自己的话说一遍，**用户确认对齐**后才动手
-4. **新建分支**：先新开分支，从 `main` 新建（如 `feat/xxx`、`refactor/xxx`），禁止直接改 main
-5. **执行任务**：加载 `mywf` skill（brainstorm → grilling → spec → plan → 实现）
-6. **效果确认**：任务完成后只汇报效果，**用户亲自检查效果**
-7. **commit / merge 指令**：用户检查通过后，才会下达 **commit** 或 **commit + merge** 指令；在用户明确下令前，绝不 commit、绝不 merge、绝不 push
-8. **合并 main**：合并回 `main`
-9. **同步远端**：push 到远端仓库（**github 与 gitee 双远端均需推送**：`git push github main` + `git push origin main`）
-10. **同步服务器**：按 `manage-server` skill 部署到服务器
+1. **提需求** → 2. **探索理解** → 3. **复述对齐**（用户确认后才动手）→ 4. **新建分支**（从 `main`，如 `feat/xxx`、`docs/xxx`，禁止直接改 main）→ 5. **执行任务**（加载 `mywf` skill：brainstorm → grilling → spec → plan → 实现）→ 6. **效果确认**（只汇报效果，用户亲自检查）→ 7. **commit / merge 指令**（用户明确下令前，绝不 commit / merge / push）→ 8. **合并 main** → 9. **同步远端**（**github 与 gitee 双远端均需推送**：`git push github main` + `git push origin main`）→ 10. **同步服务器**（按 `manage-server` skill 部署）
