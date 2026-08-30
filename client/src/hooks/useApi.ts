@@ -35,7 +35,7 @@ export function useApi<T>(
         setState({ data: null, loading: false, error: message });
       }
     }
-  }, deps);
+  }, deps); // eslint-disable-line react-hooks/exhaustive-deps -- 泛型 hook:deps 由调用方传入,fetcher 身份的稳定性由调用方 deps 保证
 
   useEffect(() => {
     mountedRef.current = true;

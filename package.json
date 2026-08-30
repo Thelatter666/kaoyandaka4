@@ -2,6 +2,7 @@
   "name": "kaoyandaily",
   "private": true,
   "version": "1.0.0",
+  "type": "module",
   "description": "砚台考研打卡 — 个人本地使用的考研学习管理网站",
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
@@ -23,6 +24,7 @@
     "@types/node": "^22.0.0",
     "concurrently": "^9.0.0",
     "eslint": "^9.0.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "fake-indexeddb": "^6.2.5",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.0.0",

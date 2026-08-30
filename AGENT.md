@@ -12,7 +12,7 @@
 
 | 我要做什么 | 先读 |
 |---|---|
-| 加一个页面 | 本文「Front-end Routing」+ `client/src/App.tsx:13-55` |
+| 加一个页面 | 本文「Front-end Routing」+ `client/src/App.tsx:12-58` |
 | 加一个 API | 本文「Request Lifecycle」+ `server/src/routes/` + `shared/src/schemas/` |
 | 改动效 | `CONTEXT.md`（术语）→ `plans/README.md`（是否已排期，当前 18 条：DONE 12 / TODO 6）→ `docs/adr/`（砚池决策） |
 | 动导入/导出 | `docs/superpowers/specs/2026-08-16-data-{export,import}-design.md` + `server/src/routes/import.ts` |
@@ -64,8 +64,8 @@
 
 ## Front-end Routing（`client/src/App.tsx`）
 
-- Hash-based SPA（无 React Router）：`parseHashRoute()` 解析，`/courses/:id` → course-detail；`React.lazy()` 代码分割 + `NAV_PREFETCH` hover 预取；过渡 140ms 退场（`page-enter`/`page-exit`）
-- **新增页面必须改的 4 个位点**：① `pageLoaders`（13-26）② `lazy()` const 声明（28-39，漏改则编译失败）③ `NAV_PREFETCH`（42-50，仅当进顶栏）④ 渲染分支 — 受保护页走 `switch`（219-240）、公开/游客页走未登录三元链（275-283）；公开页还需改 `PUBLIC_PAGES`/`GUEST_ONLY_PAGES`。**⚠️ `switch` 的 `default` 会静默渲染 HomePage（237-238），漏改不是白屏而是更难发现的静默首页**
+- Hash-based SPA（无 React Router）：`parseHashRoute()` 解析，`/courses/:id` → course-detail；`React.lazy()` 代码分割 + `NAV_PREFETCH` hover 预取；过渡 140ms 退场（`page-enter`/`page-exit`）；**TopNav/ReviewGate 也走 lazy**（TopNav 静态链携带 framer-motion，不得进入口图 —— 2026-08-30 起首屏预算 200KB 由 `e2e/check-perf-budget.mjs` 守门，当前 184.4KB）
+- **新增页面必须改的 4 个位点**：① `pageLoaders`（12-25）② `lazy()` const 声明（27-44，漏改则编译失败）③ `NAV_PREFETCH`（46-55，仅当进顶栏）④ 渲染分支 — 受保护页走 `switch`（225-247）、公开/游客页走未登录三元链（283-291）；公开页还需改 `PUBLIC_PAGES`/`GUEST_ONLY_PAGES`。**⚠️ `switch` 的 `default` 会静默渲染 HomePage（245-246），漏改不是白屏而是更难发现的静默首页**
 - **路由守卫双白名单**：`PUBLIC_PAGES`（未登录可访问：`/`、`/login`、`/register`、`/local`）与 `GUEST_ONLY_PAGES`（已登录访问则重定向回 `#/`）。新增公开页只改前者，二者勿混用
 
 ## Data Isolation
@@ -112,7 +112,7 @@
 - **环境为 `node` 而非 jsdom**：写不了依赖 DOM 的组件测试 → 需要浏览器行为时拆成纯函数（如 `inkSurface.ts`/`inkWavePaths.ts`/`sound.ts`）或把断言下沉到数据层
 - **E2E**：`npm run test:e2e` 仅 `e2e/tests/smoke.spec.ts` 一个用例（真实会话认证）；`e2e/` 的工具脚本见 `ARCHITECTURE.md`，`playwright-report/`、`test-results/` 是产物目录
 - **已知缺口**：全库**无全局 ErrorBoundary** — 页面靠各自 `ErrorState` + `App.tsx` 的 Suspense `pageFallback` 兜底，勿假设有全局兜底
-- **lint 长期项**（2026-08）：`client/src/components/ui/Modal.tsx` 使用未加载的 `react-hooks/exhaustive-deps` 规则（1 error + 8 warnings），修 eslint 配置/依赖时一并处理
+- **lint 基线**（2026-08-30）：`eslint-plugin-react-hooks` 已装载（rules-of-hooks=error / exhaustive-deps=warn），全库 **0 error / 0 warning**；泛型 hook 转发调用方 deps 的既有豁免见 `useApi.ts`（disable-line + 契约注释）。注意：向已有 effect 的 deps 补依赖前先确认声明顺序 —— deps 数组在渲染期求值，引用声明在下方的 const 会 TDZ（曾致 PomodoroPage/Card3D 崩溃风险）
 
 ## 环境
 

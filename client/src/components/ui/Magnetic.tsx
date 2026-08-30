@@ -41,9 +41,6 @@ export function Magnetic({
     return () => mq.removeEventListener('change', onChange);
   }, []);
 
-  // 缓动函数：easeOutQuad
-  const easing = useCallback((t: number) => t * (2 - t), []);
-
   const applyTransform = useCallback(() => {
     if (!elRef.current) return;
 
@@ -96,13 +93,6 @@ export function Magnetic({
   const startRAF = () => {
     if (rafRef.current) return;
     rafRef.current = requestAnimationFrame(applyTransform);
-  };
-
-  const stopRAF = () => {
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
   };
 
   // 组件卸载时清理 RAF

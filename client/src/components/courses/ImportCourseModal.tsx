@@ -87,7 +87,7 @@ export function ImportCourseModal({ isOpen, zone, zones, onZoneChange, onClose, 
         // 将 JSON 数据转换为原始文本格式（假设 JSON 包含 episodes 数组）
         if (fileContent.episodes && Array.isArray(fileContent.episodes)) {
           textToParse = fileContent.episodes
-            .map((ep: any) => `${ep.title}\n${formatDurationHuman(ep.durationSeconds)}`)
+            .map((ep: { title: string; durationSeconds: number }) => `${ep.title}\n${formatDurationHuman(ep.durationSeconds)}`)
             .join('\n');
         }
       }

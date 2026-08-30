@@ -177,12 +177,14 @@ export function PomodoroPage() {
   };
 
   // 进行中会话实时 elapsed：基于计划时长减剩余（60s 刷新，分钟粒度）
+  // 计划时长在 effect 内从 activeSession 派生（声明在下方,deps 引用会 TDZ）
   useEffect(() => {
     if (!activeSession) return;
+    const planned = activeSession.plannedDurationSeconds || 0;
     const update = () => {
       const endMs = new Date(activeSession.plannedEndAt).getTime();
       const remainSec = Math.max(0, Math.floor((endMs - Date.now()) / 1000));
-      setActiveElapsedSec(totalPlannedSeconds - remainSec);
+      setActiveElapsedSec(planned - remainSec);
     };
     update();
     const timer = setInterval(update, 60000);

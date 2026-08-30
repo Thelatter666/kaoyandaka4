@@ -1,6 +1,8 @@
 node_modules/
 dist/
 .env
+# 生产环境真实配置含密钥,严禁入库(2026-08-30 健康检查 P0)
+deploy/.env.production
 *.local
 .DS_Store
 .vite/
