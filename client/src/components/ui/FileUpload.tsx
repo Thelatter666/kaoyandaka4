@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { IconUpload } from '@tabler/icons-react';
+import { Upload } from 'lucide-react';
 import './FileUpload.css';
 
 const mainVariant = {
@@ -38,7 +38,7 @@ export const FileUpload = ({
 
   const handleFileChange = (newFiles: File[]) => {
     setFiles((prevFiles) => [...prevFiles, ...newFiles]);
-    onChange && onChange(newFiles);
+    onChange?.(newFiles);
   };
 
   const handleClick = () => {
@@ -142,7 +142,7 @@ export const FileUpload = ({
                 className="file-upload-placeholder glass-1"
               >
                 {files.length === 0 && (
-                  <IconUpload size={20} className="file-upload-icon" />
+                  <Upload size={20} className="file-upload-icon" />
                 )}
               </motion.div>
             )}
