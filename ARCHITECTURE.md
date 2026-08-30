@@ -22,7 +22,7 @@ client/src/          → React SPA (hash-router, lazy-loaded pages)
   api/               → Per-resource API wrappers (auth, tasks, presets, focus, courses, reviews, statistics, settings, backup) + client.ts (统一 fetch + 401 全局登出；各方法内按 isLocalMode()/isLocalApp() 分支到本地)
   local/             → 本地模式数据层 (IndexedDB): db.ts, localStore.ts, mode.ts, storage.ts, accounts.ts, types.ts
   components/        → UI primitives + feature components (layout/, tasks/, timer/, courses/, presets/, forest/, heatmap/, review/, landing/, ui/)
-  pages/             → Page components with co-located CSS (HomePage, PlanPage, PomodoroPage, ReviewPage, LoginPage/RegisterPage, LocalModePage, CourseDetailPage, CoursesPage, PresetsPage, StatisticsPage, AuthPage.css 遗留)
+  pages/             → Page components with co-located CSS (HomePage, PlanPage, PomodoroPage, ReviewPage, LoginPage/RegisterPage, LocalModePage, CourseDetailPage, CoursesPage, PresetsPage, StatisticsPage；AuthPage.css 为 Login/Register/LocalModePage 三页共用样式)
   hooks/             → useApi, useAuth, useCountdown, useFocusSession, useKeyboardSort, useScreenWakeLock, useTheme
   utils/             → date/duration/sound/accessibility + localStatistics + localImport + parseCourseText + uuid
   workers/           → countdown-title.ts (标签页标题倒计时), end-sound.ts (番茄钟准点响铃)
@@ -41,7 +41,7 @@ shared/src/          → Shared between front-end and back-end
   types/index.ts     → Re-exported TS types inferred from schemas
 
 plans/               → 18 个动效实现计划（001-018，全部为动画/动效类）+ README.md 总账表（#/标题/严重度/模块/状态/依赖）
-docs/                → adr/ (砚池 4 条) + superpowers/ (specs 8 / plans 7 / spikes 14 项)
+docs/                → adr/ 6 条（0001-0004 砚池 / 0005 复盘锁 / 0006 暂停） + superpowers/ (specs 8 / plans 7 / spikes 14 项)
 交接文档/             → 01-进度与上下文 / 02-后续任务与子代理分阶段实施 / 03-P3本地模式交接 / 04-P3本地模式完成交接报告 / 05-砚池计时器实施交接
 deploy/              → nginx.conf, nginx.ip.conf, deploy.sh, server-management-prompt.txt
 e2e/                 → playwright.config.ts + tests/smoke.spec.ts + 工具脚本（见下）
@@ -76,10 +76,10 @@ e2e/                 → playwright.config.ts + tests/smoke.spec.ts + 工具脚�
 ## 前端路由（client/src/App.tsx 明细）
 
 - `pageLoaders`：12 项（landing/home/plan/presets/pomodoro/courses/courseDetail/statistics/login/register/review/local）
-- `lazy()` const：12 条独立声明（第 28-39 行，新增页面勿漏）
+- `lazy()` const：14 条（第 27-44 行，新增页面勿漏；12 条页面 + TopNav/ReviewGate 两条非页面 lazy —— 2026-08-30 拆出入口图回归首屏预算）
 - `NAV_PREFETCH`：7 条（`#/`、`#/plan`、`#/presets`、`#/pomodoro`、`#/courses`、`#/statistics`、`#/review`）
 - `PUBLIC_PAGES` = `{'/', '/login', '/register', '/local'}`；`GUEST_ONLY_PAGES` = `{'/login', '/register', '/local'}`
-- 渲染：受保护页走 `switch`（default 回 HomePage）；公开/游客页走未登录三元链
+- 渲染：受保护页走 `switch`（default 回 HomePage）；公开/游客页走未登录三元链；TopNav 由 Suspense 占位 `.top-nav-fallback`（56px，global.css）
 - 过渡：`page-enter`/`page-exit`，退场 140ms（`--dur-page-exit`）
 
 ## UI 组件清单
@@ -101,7 +101,7 @@ e2e/                 → playwright.config.ts + tests/smoke.spec.ts + 工具脚�
 
 - `client/vite.config.ts`：`manualChunks` 拆 **4 个** vendor —— `react-vendor`(react/react-dom/scheduler) / `lucide-vendor` / `motion-vendor`(framer-motion/motion-dom/motion-utils) / `virtual-vendor`(@tanstack/react-virtual)
 - alias：`@shared` → `shared/src`；dev proxy：`/api` → `http://localhost:3001`；端口 5173
-- 性能预算脚本：`e2e/check-perf-budget.mjs`（构建后核对 chunk 体积预算）
+- 性能预算脚本：`e2e/check-perf-budget.mjs`（构建后核对 chunk 体积预算；2026-08-30 起 TopNav/ReviewGate 已拆出入口图，首屏 JS 184.4KB ≤ 200KB）
 
 ## 环境变量（.env 位于项目根）
 
@@ -138,5 +138,4 @@ import { CreateTaskSchema } from '../../../shared/src/schemas/task.js';
 ## 已知缺口与待清理
 
 - **无全局 ErrorBoundary**：页面靠各自 `ErrorState` + `App.tsx` 的 `pageFallback`（Suspense fallback）兜底，勿假设有全局兜底
-- `client/src/pages/AuthPage.css` 无对应 `AuthPage.tsx`（疑似死文件，可清理）
 - 组件测试受限于 vitest node 环境：需要浏览器行为时拆成纯函数（如 `inkSurface.ts`/`inkWavePaths.ts`/`sound.ts`）或将断言下沉到数据层
