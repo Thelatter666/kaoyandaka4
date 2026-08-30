@@ -132,3 +132,9 @@ input, textarea, select {
     animation: none;
   }
 }
+
+/* TopNav lazy 加载期的占位（App.tsx Suspense fallback）：
+   高度须与 TopNav.css 的 .top-nav 一致，避免 chunk 加载完成时布局跳动 */
+.top-nav-fallback {
+  height: 56px;
+}

@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { AuroraBackground } from './components/layout/AuroraBackground';
-import { TopNav } from './components/layout/TopNav';
 import { SkipLink } from './components/ui/SkipLink';
 import { ToastContainer } from './components/ui/Toast';
 import { LoadingState } from './components/ui/LoadingState';
-import { ReviewGate } from './components/review/ReviewGate';
 import { useAuth } from './hooks/useAuth';
 import './styles/global.css';
 import './styles/utilities.css';
@@ -38,6 +36,12 @@ const LoginPage = lazy(pageLoaders.login);
 const RegisterPage = lazy(pageLoaders.register);
 const ReviewPage = lazy(pageLoaders.review);
 const LocalModePage = lazy(pageLoaders.local);
+
+/* TopNav / ReviewGate 也走代码分割：TopNav 静态链携带 framer-motion（motion-vendor
+   143KB）与 ProfileDropdown/Dropdown/ThemeToggle，登录前首屏（介绍页）不渲染它们，
+   拆出入口图回归 200KB 首屏预算（e2e/check-perf-budget.mjs） */
+const TopNav = lazy(() => import('./components/layout/TopNav').then((m) => ({ default: m.TopNav })));
+const ReviewGate = lazy(() => import('./components/review/ReviewGate').then((m) => ({ default: m.ReviewGate })));
 
 /* 顶栏导航 hash → 页面 chunk 预取（hover/focus 即加载，点击时 chunk 已就绪） */
 const NAV_PREFETCH: Record<string, () => Promise<{ default: React.ComponentType<never> } | unknown>> = {
@@ -297,7 +301,9 @@ export default function App() {
       <SkipLink />
       {/* 极光背景：固定全屏 z-index 0，全页面共享（设计文档 7.1） */}
       <AuroraBackground />
-      <TopNav activeHash={hash} onNavigate={navigate} onPrefetch={prefetchNav} />
+      <Suspense fallback={<div className="top-nav-fallback" aria-hidden="true" />}>
+        <TopNav activeHash={hash} onNavigate={navigate} onPrefetch={prefetchNav} />
+      </Suspense>
       {/* 页面过渡容器：key = page + 参数，重挂载即播 .page-enter */}
       <div
         key={routeKey(displayed)}
