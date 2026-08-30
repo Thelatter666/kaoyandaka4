@@ -27,8 +27,8 @@ await page.waitForTimeout(400);
 for (const s of shots) {
   await page.evaluate(({ theme, pct, low, mode }) => {
     document.querySelector(`#themeSeg button[data-v="${theme}"]`).click();
-    document.querySelector(`#modeSeg button[data-v="${mode}"]`)?.click()
-      ?? document.querySelector(`#modeSeg2 button[data-v="${mode}"]`)?.click();
+    document.querySelector(`#modeSeg button[data-v="${mode}"]`)?.click();
+    document.querySelector(`#modeSeg2 button[data-v="${mode}"]`)?.click();
     const m2 = document.querySelector(`#modeSeg2 button[data-v="${mode}"]`);
     if (m2) m2.click();
     const lt = document.getElementById('lowtime');

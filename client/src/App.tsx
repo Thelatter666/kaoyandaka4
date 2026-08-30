@@ -219,7 +219,7 @@ export default function App() {
     } else if (isLoggedIn && GUEST_ONLY_PAGES.has(page)) {
       window.location.hash = '#/';
     }
-  }, [isLoggedIn, isLoading, hash]);
+  }, [isLoggedIn, isLoading, hash, incoming.page]);
 
   const renderPage = () => {
     switch (displayed.page) {

@@ -1,11 +1,20 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
+import reactHooks from 'eslint-plugin-react-hooks';
 
 export default [
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
     ignores: ['**/node_modules/', '**/dist/', '**/.vite/', '*.config.*'],
+  },
+  {
+    files: ['client/src/**/*.{ts,tsx}'],
+    plugins: { 'react-hooks': reactHooks },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+    },
   },
   {
     languageOptions: {

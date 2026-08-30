@@ -19,16 +19,6 @@ interface AnimatedThemeToggleProps extends React.ButtonHTMLAttributes<HTMLButton
   onThemeChange?: (theme: 'light' | 'dark') => void;
 }
 
-// 简化的多边形收缩函数
-function polygonCollapsed(pointX: number, pointY: number, vertexCount: number): string {
-  const points: [number, number][] = [];
-  for (let i = 0; i < vertexCount; i++) {
-    const angle = (Math.PI * 2 * i) / vertexCount - Math.PI / 2;
-    points.push([pointX, pointY]); // 初始时所有点在中心
-  }
-  return `polygon(${points.map(([x, y]) => `${x}px ${y}px`).join(', ')})`;
-}
-
 const AnimatedThemeToggle = ({
   className,
   duration = 400,
