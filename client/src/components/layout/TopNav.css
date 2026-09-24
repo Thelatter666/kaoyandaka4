@@ -141,15 +141,88 @@
   color: var(--color-accent-primary-strong);
 }
 
-/* 右：主题切换 + 账户菜单 */
+/* 右：主题切换 + 账户菜单 + 关闭系统 */
 .top-nav__actions {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
 }
 
-/* <960px：导航文字隐藏，图标-only（aria-label 保留，触控区 ≥44px） */
-@media (max-width: 959px) {
+/* 关闭系统（最右上角）：仅本机启动时渲染。
+   44px 圆钮，与 .theme-toggle / .sound-toggle 同一套图标钮造型——
+   带文字标签会把 max-width 960px 的胶囊撑破（内容实测 973px）。 */
+.top-nav__power {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.top-nav__power:hover {
+  color: var(--color-accent-danger);
+  box-shadow: var(--shadow-glass-md);
+}
+
+/* 位移仅鼠标设备生效（触摸 tap 后粘性 hover 会卡住上浮状态） */
+@media (hover: hover) and (pointer: fine) {
+  .top-nav__power:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.top-nav__power:active {
+  transform: scale(0.97);
+}
+
+/* Reduced motion: 取消形变 */
+@media (prefers-reduced-motion: reduce) {
+  .top-nav__power:hover,
+  .top-nav__power:active {
+    transform: none;
+  }
+}
+
+.top-nav__powered-off {
+  position: fixed;
+  inset: 0;
+  z-index: 320;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  background: var(--color-bg-overlay);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  text-align: center;
+  padding: var(--space-lg);
+}
+
+.top-nav__powered-off-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+.top-nav__powered-off-desc {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ≤1023px：导航文字隐藏，图标-only（aria-label 保留，触控区 ≥44px）。
+   断点从 960 上移到 1024：加了「关闭系统」圆钮后带文字的自然宽度在 960px
+   视口只剩 2px 余量（邮箱前缀字符稍宽即溢出），此处提前收成图标。 */
+@media (max-width: 1023px) {
   .top-nav__link-label {
     display: none;
   }

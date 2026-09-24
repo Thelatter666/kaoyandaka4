@@ -104,7 +104,8 @@ complete 写 `study_records` 时 `actual_duration_seconds` 已扣除累计暂停
 
 - `PomodoroPage.handleContinue` 不再 `setSelectedPreset(null)`:预设与 `durationMinutes` 本就存活至完成态,直接保留 → 砚池空池预览与控制卡显示上次预设
 - 刷新恢复路径(会话恢复):`useEffect([activeSession, presets])` 按 `presetNameSnapshot` 匹配 presets 列表设置 `selectedPreset`;匹配不到(预设已删/漫游)→ `null`,维持现状漫游
-- 行为不变项:「取消」「不休息」「短/长休息」入口仍清空选中
+- 行为不变项:「取消」「不休息」入口仍清空选中
+  - **2026-09-24 修订:「短/长休息」不再清空选中** —— 休息是这一轮的间歇而非流程终点,休息结束回到 dock 时仍选中刚才那个预设(时长同步保留)。原「所有非继续入口一律清空」的取舍按使用反馈收窄。见 `2026-09-24-lock-exit-and-timer-latency-design.md`
 
 ## 4. 休息结束提示音 + 响铃开关修复
 

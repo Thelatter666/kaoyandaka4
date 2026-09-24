@@ -410,14 +410,16 @@ export function PomodoroPage() {
   };
 
   const handleStartBreak = (mode: 'short' | 'long') => {
+    // 保留 selectedPreset 与 durationMinutes：休息是这一轮的间歇，不是流程终点——
+    // 休息结束后 dock 仍选中刚才那个预设，「再来一轮」不必重新找卡。
+    // （原设计为休息入口清空选中，2026-09 按使用反馈改为与其他入口一致地保留）
     startBreak(mode);
     setStep('idle');
-    setSelectedPreset(null);
   };
 
   const handleContinue = () => {
     // 保留 selectedPreset 与 durationMinutes：完成态返回后砚池/控制卡
-    // 仍呈现刚才的预设（需求 2）；取消/休息入口才清空
+    // 仍呈现刚才的预设；「取消」「不休息」入口才清空
     setStep('idle');
   };
 

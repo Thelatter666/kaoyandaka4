@@ -1,12 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { KeyRound, Lock } from 'lucide-react';
 import { reviewLockApi } from '../../api/reviews';
 import { useAuth } from '../../hooks/useAuth';
-import { isReviewUnlocked, markReviewUnlocked } from '../../utils/unlockMarker';
+import {
+  clearReviewUnlocked,
+  isReviewUnlocked,
+  markReviewUnlocked,
+  onReviewLocked,
+} from '../../utils/unlockMarker';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { ErrorState } from '../ui/ErrorState';
 import { LoadingState } from '../ui/LoadingState';
+import { ReviewLockProvider } from './ReviewLockContext';
 import './ReviewGate.css';
 
 /**
@@ -14,6 +20,10 @@ import './ReviewGate.css';
  * children 保持 lazy（本组件不静态 import ReviewPage，勿破坏代码分割）。
  * 三态：未设锁 → 引导设置；已锁未解锁 → 验证；解锁 → children。
  * 解锁标记为会话 cookie（ADR-0005）：跨标签页共享，浏览器关闭即失效。
+ *
+ * 已解锁态额外向下提供 lock()（页头「上锁」按钮）：清标记 + 回到验证态，
+ * 不必关掉整个浏览器或退出系统就能把复盘重新锁上。另一标签页上锁时，
+ * 本页经 BroadcastChannel 收到通知也回到验证态。
  */
 type GateStep = 'loading' | 'error' | 'setup' | 'verify' | 'unlocked';
 
@@ -87,7 +97,23 @@ export function ReviewGate({ children }: { children: React.ReactNode }) {
     }
   };
 
-  if (step === 'unlocked') return <>{children}</>;
+  /** 上锁：清掉解锁标记回到验证态；清空密码框，避免下次进来残留上一次的输入 */
+  const handleLock = useCallback(() => {
+    clearReviewUnlocked();
+    setPassword('');
+    setFormError(null);
+    setStep('verify');
+  }, []);
+
+  // 其他标签页上锁 → 本页同步回到验证态（解锁标记是标签页共享的）
+  useEffect(() => {
+    if (step !== 'unlocked') return;
+    return onReviewLocked(handleLock);
+  }, [step, handleLock]);
+
+  if (step === 'unlocked') {
+    return <ReviewLockProvider value={handleLock}>{children}</ReviewLockProvider>;
+  }
 
   return (
     <main className="review-gate">

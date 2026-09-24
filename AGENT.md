@@ -19,6 +19,7 @@
 | 动本地模式 | `交接文档/03-P3本地模式交接.md` + `client/src/local/` |
 | 动砚池计时器 | `CONTEXT.md` + `docs/adr/0001`–`0004` + `交接文档/05-砚池计时器实施交接.md` |
 | 动复盘锁 / 专注暂停 | spec `docs/superpowers/specs/2026-08-28-review-lock-and-focus-updates-design.md` + `docs/adr/0005`/`0006` |
+| 动「关闭系统」/ 本地启动器 | spec `docs/superpowers/specs/2026-09-24-lock-exit-and-timer-latency-design.md` + `scripts/local-power.mjs` + 桌面 `砚台考研打卡.command` |
 | 部署/服务器 | `deploy/nginx.conf` + `.claude/skills/manage-server/` |
 | 查当前测试/lint 状态 | 跑 `npx vitest run` / `npx eslint .`（勿依赖本文快照） |
 
@@ -82,11 +83,19 @@
 - **同构格式**：导出 `BackupFile`（shared backup.ts，schemaVersion 1）双模式互通；服务器导入**先删后插**防跨账号 ID 串号（勿改回 ON DUPLICATE KEY UPDATE）
 - **本地模式规则**：新增本地数据逻辑进 `client/src/local/`；本地归属用 accountId；本地模式单测文件头部须 `import 'fake-indexeddb/auto'`
 
+## 本地启动与「关闭系统」（桌面 .command）
+
+- **日常入口是仓库外的** `~/Desktop/砚台考研打卡.command`（双击起前后端 + 打开 5173；不在版本控制内，改它前先 `cp` 备份）
+- **「关闭系统」不是登出**：停掉本地前后端 + 关标签页，服务端会话留在 MySQL，下次双击仍是登录态。按钮只在 `localhost`/`127.0.0.1` 渲染（`utils/localPower.ts` 的 `isLocalLauncherHost()`）
+- **本机独有能力一律走启动脚本拉起的进程，不要加进 Express**：线上后端不得具备关机/文件系统等本机能力。现例：`scripts/local-power.mjs`（127.0.0.1:**3999** 单端点，要求白名单 Origin + 自定义头 `x-kaoyan-power`，后者强制 CORS 预检）；退出码 `0` 约定为「收到关机请求」，启动脚本据此收尾，`1`（起不来）时保留服务不误拆
+- 关机时**必须显式清复盘解锁标记**：只关标签页不关浏览器，会话 cookie 不会自然失效，「忘了手动上锁也自动上锁」就落空
+- 监听器端口写死 3999，改端口要同时改 `scripts/local-power.mjs`、`client/src/utils/localPower.ts` 与启动脚本的三处
+
 ## Key Conventions
 
 - **Validation**：所有输入用 `shared/src/schemas/` 的 Zod schema，新路由 MUST 用 `validate()` 中间件
 - **暂停判断**：专注会话「暂停中」一律看 `paused_at` 非空（status 无 paused 值，ADR-0006）；单次暂停最多抵 `FOCUS_PAUSE_MAX_SECONDS`（300s）学习时间，超挂部分不补
-- **复盘锁**：哈希存 `user_settings` 键 `review_lock_hash`（服务器 bcrypt / 本地 SHA-256+salt，ADR-0005）；解锁标记为**会话 cookie** `kaoyandaily_review_unlocked`（值 = 身份 id，跨标签页共享、浏览器关闭失效）
+- **复盘锁**：哈希存 `user_settings` 键 `review_lock_hash`（服务器 bcrypt / 本地 SHA-256+salt，ADR-0005）；解锁标记为**会话 cookie** `kaoyandaily_review_unlocked`（值 = 身份 id，跨标签页共享、浏览器关闭失效）。**上锁 = 删该 cookie + BroadcastChannel 广播**（`utils/unlockMarker.ts`；不广播则另一标签页继续摊开复盘内容）
 - **IDs**：UUID v4（DB `CHAR(36)`），服务器端 `generateUUID()` 生成
 - **Dates**：日期字段用 `YYYY-MM-DD` 字符串；DB 存 `DATETIME`
 - **204 响应**：DELETE 与部分 PATCH 返回 204 无 body → client 用 `undefined as T` 处理
