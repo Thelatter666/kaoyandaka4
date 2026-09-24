@@ -256,6 +256,8 @@ const reviews = {
   },
 
   async upsert(data: UpsertReviewInput): Promise<Review> {
+    // 与服务器 UpsertReviewSchema 的 min(1) 对齐（本地路径不经 Zod 校验）
+    if (data.content.length === 0) throw new Error('复盘内容不能为空');
     const accountId = requireAccountId();
     const rows = await rowsByAccount<LocalReview>('reviews', accountId);
     const existing = rows.find((r) => r.reviewDate === data.date);

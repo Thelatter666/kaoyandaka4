@@ -89,6 +89,12 @@ export function ReviewPage() {
   };
 
   const handleSave = async () => {
+    // 服务器 UpsertReviewSchema 要求内容非空；本地模式不经 Zod 校验，故在此统一拦截，
+    // 否则同一操作服务器报「保存失败」而本地能存进一条空白复盘（口径不一）
+    if (content.length === 0) {
+      showToast('error', '复盘内容不能为空');
+      return;
+    }
     setSaving('saving');
     try {
       await reviewsApi.upsert({ date: selectedDate, content });

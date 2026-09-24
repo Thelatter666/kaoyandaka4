@@ -211,6 +211,14 @@ describe('reviews', () => {
     const history = await localStore.reviews.getHistory();
     expect(history.map((r) => r.reviewDate)).toEqual(['2026-08-18', '2026-08-16']);
   });
+
+  it('upsert 拒绝空内容（与服务器 UpsertReviewSchema 的 min(1) 对齐）', async () => {
+    await expect(localStore.reviews.upsert({ date: '2026-08-17', content: '' })).rejects.toThrow(
+      '复盘内容不能为空'
+    );
+    // 拒绝须发生在写入前：不得留下一条空白复盘
+    expect(await localStore.reviews.getByDate('2026-08-17')).toBeNull();
+  });
 });
 
 describe('courses', () => {
