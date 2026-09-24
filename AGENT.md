@@ -108,8 +108,9 @@
 
 ## Testing
 
-- **单测/集成**：`npx vitest run`（匹配 `**/*.test.ts(x)`，与被测文件同目录共存）。基线：2026-08 为 **15 文件 / 126 tests 全绿**（以实跑为准；根 `vitest.config.ts` 已配 `@shared` 别名）
-- **环境为 `node` 而非 jsdom**：写不了依赖 DOM 的组件测试 → 需要浏览器行为时拆成纯函数（如 `inkSurface.ts`/`inkWavePaths.ts`/`sound.ts`）或把断言下沉到数据层
+- **单测/集成**：`npx vitest run`（匹配 `**/*.test.ts(x)`，与被测文件同目录共存）。基线：2026-09 为 **15 文件 / 127 tests 全绿**（以实跑为准；根 `vitest.config.ts` 已配 `@shared` 别名）
+- **E2E 前置**：`npx playwright install`（chromium 二进制不在仓库内，新机器首次跑 `test:e2e` 会报 "Executable doesn't exist"）
+- **环境为 `node` 而非 jsdom**：写不了依赖 DOM 的组件测试 → 需要浏览器行为时拆成纯函数（如 `inkSurface.ts`/`inkWavePaths.ts`/`sound.ts`/`focusPause.ts`/`reviewLockHash.ts`）或把断言下沉到数据层
 - **E2E**：`npm run test:e2e` 仅 `e2e/tests/smoke.spec.ts` 一个用例（真实会话认证）；`e2e/` 的工具脚本见 `ARCHITECTURE.md`，`playwright-report/`、`test-results/` 是产物目录
 - **已知缺口**：全库**无全局 ErrorBoundary** — 页面靠各自 `ErrorState` + `App.tsx` 的 Suspense `pageFallback` 兜底，勿假设有全局兜底
 - **lint 基线**（2026-08-30）：`eslint-plugin-react-hooks` 已装载（rules-of-hooks=error / exhaustive-deps=warn），全库 **0 error / 0 warning**；泛型 hook 转发调用方 deps 的既有豁免见 `useApi.ts`（disable-line + 契约注释）。注意：向已有 effect 的 deps 补依赖前先确认声明顺序 —— deps 数组在渲染期求值，引用声明在下方的 const 会 TDZ（曾致 PomodoroPage/Card3D 崩溃风险）
@@ -132,4 +133,6 @@
 
 进行**任何代码修改**，必须按以下流程执行，每阶段需用户确认后才进入下一步：
 
-1. **提需求** → 2. **探索理解** → 3. **复述对齐**（用户确认后才动手）→ 4. **新建分支**（从 `main`，如 `feat/xxx`、`docs/xxx`，禁止直接改 main）→ 5. **执行任务**（加载 `mywf` skill：brainstorm → grilling → spec → plan → 实现）→ 6. **效果确认**（只汇报效果，用户亲自检查）→ 7. **commit / merge 指令**（用户明确下令前，绝不 commit / merge / push）→ 8. **合并 main** → 9. **同步远端**（**github 与 gitee 双远端均需推送**：`git push github main` + `git push origin main`）→ 10. **同步服务器**（按 `manage-server` skill 部署）
+1. **提需求** → 2. **探索理解** → 3. **复述对齐**（用户确认后才动手）→ 4. **新建分支**（从 `main`，如 `feat/xxx`、`docs/xxx`，禁止直接改 main）→ 5. **执行任务**（加载 `mywf` skill 承载执行：它**不规定流程**，只定交付契约——spec/plan/术语表/ADR 按需落盘且不静默省略——与三个人类决策点（动手前意图确认、难逆转的架构选择、收尾合入）；`grilling`/`writing-plans`/`using-git-worktrees` 等是可选工具，存在不等于要走）→ 6. **效果确认**（只汇报效果，用户亲自检查）→ 7. **commit / merge 指令**（用户明确下令前，绝不 commit / merge / push）→ 8. **合并 main** → 9. **同步远端**（**github 与 gitee 双远端均需推送**：`git push github main` + `git push origin main`）→ 10. **同步服务器**（按 `manage-server` skill 部署）
+
+**「每阶段确认」的边界**：外层的逐步确认约束的是**分支、提交、发布纪律**（第 3/4/6/7 步的闸门）。第 5 步内部怎么推进——单线程还是派子代理、要不要 `grilling`、分几步交付——归 `mywf`，只有它列出的三个决策点需要打扰用户，其余自行推断并说明。用户明确表示「不参与决策」时，第 3、6 步可一并让出，但第 7 步（commit/merge/push）与第 9、10 步（推送远端、部署服务器）**仍需明确指令**——「不参与决策」不等于「授权发布」。

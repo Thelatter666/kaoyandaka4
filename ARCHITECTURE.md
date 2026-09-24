@@ -23,8 +23,8 @@ client/src/          → React SPA (hash-router, lazy-loaded pages)
   local/             → 本地模式数据层 (IndexedDB): db.ts, localStore.ts, mode.ts, storage.ts, accounts.ts, types.ts
   components/        → UI primitives + feature components (layout/, tasks/, timer/, courses/, presets/, forest/, heatmap/, review/, landing/, ui/)
   pages/             → Page components with co-located CSS (HomePage, PlanPage, PomodoroPage, ReviewPage, LoginPage/RegisterPage, LocalModePage, CourseDetailPage, CoursesPage, PresetsPage, StatisticsPage；AuthPage.css 为 Login/Register/LocalModePage 三页共用样式)
-  hooks/             → useApi, useAuth, useCountdown, useFocusSession, useKeyboardSort, useScreenWakeLock, useTheme
-  utils/             → date/duration/sound/accessibility + localStatistics + localImport + parseCourseText + uuid
+  hooks/             → useApi, useAuth, useFocusSession, useKeyboardSort, useScreenWakeLock, useTheme
+  utils/             → date/duration/sound/accessibility + focusPause (专注暂停纯函数) + unlockMarker (复盘锁解锁标记) + reviewLockHash (本地复盘锁哈希) + localStatistics + localImport + parseCourseText + uuid
   workers/           → countdown-title.ts (标签页标题倒计时), end-sound.ts (番茄钟准点响铃)
   styles/            → tokens.css, global.css, utilities.css
 

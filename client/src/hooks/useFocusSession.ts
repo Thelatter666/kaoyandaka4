@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { SessionSubject, SubSubject, FocusSource } from '@shared/types';
+import { SHORT_BREAK_MINUTES, LONG_BREAK_MINUTES } from '@shared/constants';
 import { focusApi } from '../api/focus';
 import { ApiError } from '../api/client';
 
@@ -188,7 +189,8 @@ const startFocus = useCallback(async (presetId: string | null, minutes: number, 
   }, [activeSession, checkActive]);
 
   const startBreak = useCallback((mode: 'short' | 'long') => {
-    const seconds = mode === 'short' ? 300 : 900; // 5 or 15 minutes
+    // 时长取自共享常量：页面的砚池用同一常量算总时长，硬编码会使钟面总量与倒数脱节
+    const seconds = (mode === 'short' ? SHORT_BREAK_MINUTES : LONG_BREAK_MINUTES) * 60;
     setBreakMode(mode === 'short' ? 'short_break' : 'long_break');
     setBreakRemainingSeconds(seconds);
     setBreakEndsAt(Date.now() + seconds * 1000);
