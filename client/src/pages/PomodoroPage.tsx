@@ -451,11 +451,14 @@ export function PomodoroPage() {
     return () => clearInterval(timer);
   }, [paused, activeSession?.pausedAt, resumeFocus]);
 
-  // Determine if we should show long break option（沿用既有规则）
-  const showLongBreak = roundCount % LONG_BREAK_AFTER_ROUNDS === 0 && roundCount > 0;
-
   // 今日已完成轮次：统计接口种子 + 本页按钮完成（roundCount 自 1 起）+ 自然结束
   const completedRoundsToday = statsRounds + Math.max(0, roundCount - 1) + naturalRounds;
+
+  // 每 LONG_BREAK_AFTER_ROUNDS 轮提示长休息：以 completedRoundsToday 判定，与页面
+  // 「今日已完成 N 轮」同源。不可改用 roundCount —— 它只在手动完成时递增，而自然到点
+  // 结束（最常见路径）计入 naturalRounds，会让长休息几乎永不触发
+  const showLongBreak =
+    completedRoundsToday > 0 && completedRoundsToday % LONG_BREAK_AFTER_ROUNDS === 0;
 
   const breakTotalSeconds = breakMode === 'short_break' ? SHORT_BREAK_MINUTES * 60 : LONG_BREAK_MINUTES * 60;
 
