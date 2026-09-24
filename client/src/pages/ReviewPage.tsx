@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { NotebookPen, RefreshCw, Check, AlertCircle, CalendarDays, BookOpen } from 'lucide-react';
+import { NotebookPen, RefreshCw, Check, AlertCircle, CalendarDays, BookOpen, Lock } from 'lucide-react';
 import { PageShell } from '../components/layout/PageShell';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -10,6 +10,7 @@ import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { showToast } from '../components/ui/Toast';
 import { reviewsApi, Review } from '../api/reviews';
+import { useReviewLock } from '../components/review/ReviewLockContext';
 import { today, formatDate, formatDateDisplay } from '../utils/date';
 import './ReviewPage.css';
 
@@ -18,6 +19,7 @@ import './ReviewPage.css';
  * - 左栏：有复盘记录的日期倒序列表 + 日期选择器（可补写无复盘的日子）
  * - 右栏：所选日期的复盘详情，可编辑/保存（复用 upsert，最后写赢）
  * - 未保存修改切换日期 → ConfirmDialog 确认，防丢字
+ * - 解锁态页头提供「上锁」（由 ReviewGate 经 context 下发）：就近重新锁上，不必退出系统
  */
 const DAY_NAMES = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -36,6 +38,11 @@ export function ReviewPage() {
   const [saving, setSaving] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   /** 未保存确认中的待切换日期（null = 无待确认） */
   const [pendingDate, setPendingDate] = useState<string | null>(null);
+  /** 有未保存修改时的待上锁确认 */
+  const [pendingLock, setPendingLock] = useState(false);
+
+  /** 上锁入口由复盘门禁下发；不在门禁内（未设锁/未解锁）时为 null，不渲染按钮 */
+  const lock = useReviewLock();
 
   const dirty = content !== savedContent;
 
@@ -88,6 +95,21 @@ export function ReviewPage() {
     setPendingDate(null);
   };
 
+  /** 上锁会卸载本页（门禁切回验证态），未保存的修改随之丢失——先确认再锁 */
+  const handleLockClick = () => {
+    if (!lock) return;
+    if (dirty) {
+      setPendingLock(true);
+      return;
+    }
+    lock();
+  };
+
+  const handleConfirmLock = () => {
+    setPendingLock(false);
+    lock?.();
+  };
+
   const handleSave = async () => {
     // 服务器 UpsertReviewSchema 要求内容非空；本地模式不经 Zod 校验，故在此统一拦截，
     // 否则同一操作服务器报「保存失败」而本地能存进一条空白复盘（口径不一）
@@ -123,7 +145,23 @@ export function ReviewPage() {
   };
 
   return (
-    <PageShell title="复盘" subtitle="回顾每一段学习的痕迹">
+    <PageShell
+      title="复盘"
+      subtitle="回顾每一段学习的痕迹"
+      actions={
+        lock ? (
+          <Button
+            variant="glass"
+            size="sm"
+            onClick={handleLockClick}
+            title="立即上锁，下次进入需重新输入复盘锁密码"
+          >
+            <Lock size={16} strokeWidth={1.75} aria-hidden="true" />
+            上锁
+          </Button>
+        ) : undefined
+      }
+    >
       {loading ? (
         <LoadingState message="加载复盘记录中..." />
       ) : error ? (
@@ -233,6 +271,17 @@ export function ReviewPage() {
         message="当前复盘内容尚未保存，切换日期将丢失这些修改。确定切换吗？"
         confirmLabel="放弃修改，切换"
         cancelLabel="留在当前日期"
+        destructive={false}
+      />
+
+      <ConfirmDialog
+        isOpen={pendingLock}
+        onClose={() => setPendingLock(false)}
+        onConfirm={handleConfirmLock}
+        title="有未保存的修改"
+        message="当前复盘内容尚未保存，上锁后这些修改会丢失。确定上锁吗？"
+        confirmLabel="放弃修改，上锁"
+        cancelLabel="留在当前页面"
         destructive={false}
       />
     </PageShell>
