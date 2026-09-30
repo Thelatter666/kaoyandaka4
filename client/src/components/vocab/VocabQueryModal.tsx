@@ -6,9 +6,12 @@
  * 错误：LlmError 各 kind 的文案已含在 message 中（C3 定稿），本层只按 kind 追加
  * CORS 的「换服务商」提示；弹窗内联展示 + Toast + 重试按钮；提交时传 AbortSignal，
  * 弹窗关闭即 abort 在途请求。
+ *
+ * 暂存：LLM 查词失败（任何 LlmError，非「未配置」）时错误区出现「暂存单词」——
+ * 以 `{word}`（无 content）创建空内容卡，词库里带「待补全」标记，LLM 恢复后补全。
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Search } from 'lucide-react';
+import { BookmarkPlus, Search } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { showToast } from '../ui/Toast';
@@ -46,10 +49,13 @@ export function VocabQueryModal({
   const [errorMessage, setErrorMessage] = useState('');
   const [errorKind, setErrorKind] = useState<LlmErrorKind | null>(null);
   const [creating, setCreating] = useState(false);
+  const [stashing, setStashing] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   const normalized = normalizeWord(word);
   const isNotConfigured = errorKind === 'not_configured';
+  /* 查词失败（LLM 侧）才提供暂存；未配置走「去配置」引导，重复词等非 LLM 错误不提供 */
+  const canStage = errorKind !== null && errorKind !== 'not_configured';
 
   /* 关闭（含 Modal 240ms 退场窗口）后中止在途请求并清态：下次打开不残留上次结果 */
   useEffect(() => {
@@ -63,6 +69,7 @@ export function VocabQueryModal({
     setErrorMessage('');
     setErrorKind(null);
     setCreating(false);
+    setStashing(false);
   }, [isOpen]);
 
   const runLookup = async (raw: string) => {
@@ -109,6 +116,29 @@ export function VocabQueryModal({
       showToast('error', message);
     } finally {
       if (abortRef.current === controller) abortRef.current = null;
+    }
+  };
+
+  /** 暂存：LLM 不可用时先落一张空内容卡（服务器/本地均只传 word），恢复后补全 */
+  const handleStage = async () => {
+    if (!normalized) return;
+    setStashing(true);
+    try {
+      const card = await vocabApi.create({ word: normalized });
+      onCreated(card);
+      showToast('success', '已暂存，LLM 恢复后可补全');
+      onClose();
+    } catch (err) {
+      const message =
+        err instanceof ApiError && err.code === 'WORD_EXISTS'
+          ? '该单词已在词库中'
+          : err instanceof Error
+            ? err.message
+            : '暂存失败';
+      showToast('error', message);
+      setErrorMessage(message);
+    } finally {
+      setStashing(false);
     }
   };
 
@@ -212,11 +242,33 @@ export function VocabQueryModal({
                   去配置 LLM
                 </Button>
               ) : (
-                <Button variant="primary" disabled={!normalized} onClick={() => { void runLookup(word); }}>
-                  重试
-                </Button>
+                <>
+                  <Button
+                    variant="primary"
+                    disabled={!normalized || stashing}
+                    onClick={() => { void runLookup(word); }}
+                  >
+                    重试
+                  </Button>
+                  {canStage && (
+                    <Button
+                      variant="glass"
+                      loading={stashing}
+                      disabled={!normalized}
+                      onClick={() => { void handleStage(); }}
+                    >
+                      <BookmarkPlus size={16} strokeWidth={1.75} aria-hidden="true" />
+                      暂存单词
+                    </Button>
+                  )}
+                </>
               )}
             </div>
+            {canStage && (
+              <p className="vocab-query__stage-hint">
+                也可先暂存该词（空词卡），LLM 恢复后在词库的「待补全」里补全内容。
+              </p>
+            )}
           </div>
         )}
       </div>

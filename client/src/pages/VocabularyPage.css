@@ -849,6 +849,13 @@
   line-height: 1.6;
 }
 
+.vocab-query__stage-hint {
+  margin: var(--space-sm) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+}
+
 /* ---------- LLM 配置弹窗 ---------- */
 
 .vocab-llm {
@@ -882,11 +889,170 @@
   font-size: var(--text-sm);
 }
 
+/* 测试连接：按钮 + 结果文案（成功绿 / 失败按 LlmError.message 展示） */
+.vocab-llm__test {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.vocab-llm__test-result {
+  min-width: 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.vocab-llm__test-result--ok {
+  color: var(--color-accent-success-strong);
+  font-weight: var(--font-medium);
+}
+
+.vocab-llm__test-result--error {
+  color: var(--color-accent-danger);
+}
+
 .vocab-llm__actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-md);
   margin-top: var(--space-xs);
+}
+
+/* ---------- 待补全（暂存卡）：过滤开关 / 勾选 / 批量进度 ---------- */
+
+/* 「待补全 (N)」过滤开关：与索引切换并列的玻璃胶囊 */
+.vocab-pending {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 var(--space-md);
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.vocab-pending:hover:not(:disabled) {
+  color: var(--color-text-primary);
+}
+
+.vocab-pending--active {
+  background: var(--color-accent-warning-light);
+  color: var(--color-accent-warning-strong);
+  font-weight: var(--font-semibold);
+}
+
+.vocab-pending:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.vocab-pending:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 1px;
+}
+
+/* 批量补全：进度读数 + 取消钮（进行中） */
+.vocab-batch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.vocab-batch__progress {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.vocab-batch__empty {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* 勾选框：仅过滤模式下待补全卡的头部出现 */
+.vocab-card__check {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: var(--color-accent-primary);
+  cursor: pointer;
+}
+
+.vocab-card__check:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+/* 待补全徽标：警示色浅底，与「已毕业」的实底绿区分 */
+.vocab-card__badge--pending {
+  background: var(--color-accent-warning-light);
+  color: var(--color-accent-warning-strong);
+}
+
+/* 逐卡批量补全状态（排队 / 补全中 / 已补全 / 失败原因摘要） */
+.vocab-card__completion {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin: var(--space-xs) 0 0;
+  min-width: 0;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.vocab-card__completion--queued,
+.vocab-card__completion--cancelled {
+  color: var(--color-text-muted);
+}
+
+.vocab-card__completion--running {
+  color: var(--color-text-secondary);
+}
+
+.vocab-card__completion--success {
+  color: var(--color-accent-success-strong);
+}
+
+.vocab-card__completion--error {
+  color: var(--color-accent-danger);
+}
+
+.vocab-card__completion-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 空内容卡（暂存）的详情占位：不渲染释义/例句 */
+.vocab-detail__empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-bg);
+}
+
+.vocab-detail__empty-title {
+  color: var(--color-accent-warning-strong);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+}
+
+.vocab-detail__empty-text {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.6;
 }
 
 /* ---------- 窄屏 ---------- */

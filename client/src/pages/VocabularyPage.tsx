@@ -3,6 +3,9 @@
  *
  * - 词库：三索引（乱序 / 顺序 / 掌握程度）+ 查询单词（LLM 浏览器直连）+ 卡片展开
  *   （完整详解、发音、手动调档 / 重置进度 / 删除）。
+ * - 待补全：definitions 为空的暂存卡带「待补全」标记；「待补全 (N)」过滤模式下卡片带
+ *   勾选框（默认全选），「补全选中（N）」由本页状态机串行逐卡 lookupWord → update({content})，
+ *   逐卡展示 ✓/✗（失败含原因摘要），AbortController 支持中途取消，结束后汇总 Toast。
  * - 复习：`buildReviewQueue` 取今日队列（配额 5/10/20/30/全部，默认 10）→
  *   新词首学（正面即详解）→ 到期卡正面只露单词音标、翻面自评三键 →
  *   「不认识」追加队尾立刻重现（不占配额）→ 完成态计数。
@@ -23,14 +26,19 @@ import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { showToast } from '../components/ui/Toast';
-import { VocabCardItem, VocabDetail } from '../components/vocab/VocabCardItem';
+import {
+  VocabCardItem,
+  VocabDetail,
+  isPendingVocabCard,
+  type VocabCompletionState,
+} from '../components/vocab/VocabCardItem';
 import { VocabIndexSwitcher, type VocabIndexMode } from '../components/vocab/VocabIndexSwitcher';
 import { VocabLlmConfigModal } from '../components/vocab/VocabLlmConfigModal';
 import { VocabQueryModal } from '../components/vocab/VocabQueryModal';
 import { VocabReviewCard } from '../components/vocab/VocabReviewCard';
 import { VocabSpeakButton } from '../components/vocab/VocabSpeakButton';
 import { vocabApi } from '../api/vocab';
-import { loadLlmConfig } from '../utils/vocabLlm';
+import { loadLlmConfig, lookupWord } from '../utils/vocabLlm';
 import { today } from '../utils/date';
 import { buildReviewQueue } from '@shared/srs';
 import type { ReviewGrade, VocabCard } from '@shared/types';
@@ -58,6 +66,20 @@ interface ReviewSummary {
   learned: number;
   reviewed: number;
   relearned: number;
+}
+
+/** 批量补全 run：串行逐卡执行，itemState/itemError 供卡片逐卡展示 ✓/✗ */
+interface BatchRun {
+  /** 本次运行的卡片 id 快照（补全成功后仍钉在过滤列表中，便于核对结果） */
+  ids: string[];
+  total: number;
+  done: number;
+  success: number;
+  failed: number;
+  itemState: Record<string, VocabCompletionState>;
+  itemError: Record<string, string>;
+  running: boolean;
+  cancelled: boolean;
 }
 
 const SESSION_KEY = 'kaoyandaily-vocab-review';
@@ -112,6 +134,12 @@ export function VocabularyPage() {
   /** 乱序种子：每次进入词库视图 / 重选「乱序」自增，触发重洗 */
   const [shuffleVersion, setShuffleVersion] = useState(0);
 
+  /* 待补全过滤 + 批量补全 */
+  const [filterPending, setFilterPending] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set());
+  const [batch, setBatch] = useState<BatchRun | null>(null);
+  const batchAbortRef = useRef<AbortController | null>(null);
+
   const [quota, setQuota] = useState<QuotaChoice>(DEFAULT_QUOTA);
   const [session, setSession] = useState<ReviewSession | null>(null);
   const [summary, setSummary] = useState<ReviewSummary | null>(null);
@@ -134,16 +162,40 @@ export function VocabularyPage() {
 
   useEffect(() => { void fetchCards(); }, [fetchCards]);
 
-  const upsertCard = useCallback((card: VocabCard) => {
-    setCards((prev) => {
-      const exists = prev.some((item) => item.id === card.id);
-      return exists ? prev.map((item) => (item.id === card.id ? card : item)) : [...prev, card];
+  /** 清理某卡的批量补全标记（补全完成 / 删除后不再展示「已取消 / 补全失败」旧状态） */
+  const clearBatchMark = useCallback((id: string) => {
+    setBatch((prev) => {
+      if (!prev || !(id in prev.itemState)) return prev;
+      return {
+        ...prev,
+        itemState: Object.fromEntries(
+          Object.entries(prev.itemState).filter(([key]) => key !== id)
+        ) as Record<string, VocabCompletionState>,
+        itemError: Object.fromEntries(
+          Object.entries(prev.itemError).filter(([key]) => key !== id)
+        ),
+      };
     });
   }, []);
 
-  const removeCard = useCallback((id: string) => {
-    setCards((prev) => prev.filter((item) => item.id !== id));
-  }, []);
+  const upsertCard = useCallback(
+    (card: VocabCard) => {
+      setCards((prev) => {
+        const exists = prev.some((item) => item.id === card.id);
+        return exists ? prev.map((item) => (item.id === card.id ? card : item)) : [...prev, card];
+      });
+      if (!isPendingVocabCard(card)) clearBatchMark(card.id);
+    },
+    [clearBatchMark]
+  );
+
+  const removeCard = useCallback(
+    (id: string) => {
+      setCards((prev) => prev.filter((item) => item.id !== id));
+      clearBatchMark(id);
+    },
+    [clearBatchMark]
+  );
 
   /* ---- 复习 session：sessionStorage 恢复与持久化 ---- */
 
@@ -224,6 +276,176 @@ export function VocabularyPage() {
     if (mode === 'random') setShuffleVersion((prev) => prev + 1);
     setIndexMode(mode);
   }, []);
+
+  /* ---- 待补全过滤与批量补全 ---- */
+
+  const pendingCards = useMemo(() => cards.filter(isPendingVocabCard), [cards]);
+
+  const selectedPendingCount = useMemo(
+    () => pendingCards.reduce((count, card) => (selectedIds.has(card.id) ? count + 1 : count), 0),
+    [pendingCards, selectedIds]
+  );
+
+  /* 过滤列表 = 待补全卡 + 本批次已处理的卡（补全成功后仍留在列表中展示 ✓ 与完整内容） */
+  const visibleCards = useMemo(() => {
+    if (!filterPending) return orderedCards;
+    const pinned = new Set(batch?.ids ?? []);
+    return orderedCards.filter((card) => isPendingVocabCard(card) || pinned.has(card.id));
+  }, [filterPending, orderedCards, batch]);
+
+  /* 勾选集合与待补全集合同步：剔除已补全 / 已删除的 id；
+     过滤模式下新出现的待补全卡（如刚暂存）默认勾选，保证「补全选中」不落空 */
+  const prevPendingIdsRef = useRef<ReadonlySet<string>>(new Set());
+  useEffect(() => {
+    const currentIds = new Set(pendingCards.map((card) => card.id));
+    const known = prevPendingIdsRef.current;
+    prevPendingIdsRef.current = currentIds;
+    setSelectedIds((prev) => {
+      const next = new Set<string>();
+      let changed = false;
+      for (const id of prev) {
+        if (currentIds.has(id)) next.add(id);
+        else changed = true;
+      }
+      if (filterPending) {
+        for (const id of currentIds) {
+          if (!known.has(id) && !next.has(id)) {
+            next.add(id);
+            changed = true;
+          }
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [pendingCards, filterPending]);
+
+  /* 离开页面时中止在途的批量补全请求 */
+  useEffect(() => () => batchAbortRef.current?.abort(), []);
+
+  const handleFilterToggle = useCallback(() => {
+    if (filterPending) {
+      setFilterPending(false);
+      setSelectedIds(new Set());
+      setBatch(null);
+      return;
+    }
+    /* 进入过滤：默认全选当前待补全卡 */
+    setFilterPending(true);
+    setSelectedIds(new Set(cards.filter(isPendingVocabCard).map((card) => card.id)));
+  }, [filterPending, cards]);
+
+  const handleSelectChange = useCallback((id: string, selected: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (selected) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const cancelBatch = useCallback(() => {
+    batchAbortRef.current?.abort();
+  }, []);
+
+  /** 批量补全：串行 for + AbortController（不引并发库），逐卡回写结果与失败原因 */
+  const startBatch = useCallback(
+    async (ids: string[]) => {
+      const config = loadLlmConfig();
+      if (!config) {
+        setLlmOpen(true);
+        return;
+      }
+      const idSet = new Set(ids);
+      const queue = cards.filter((card) => idSet.has(card.id) && isPendingVocabCard(card));
+      if (queue.length === 0) return;
+
+      const controller = new AbortController();
+      batchAbortRef.current = controller;
+      setBatch({
+        ids: queue.map((card) => card.id),
+        total: queue.length,
+        done: 0,
+        success: 0,
+        failed: 0,
+        itemState: Object.fromEntries(
+          queue.map((card) => [card.id, 'queued' as VocabCompletionState])
+        ),
+        itemError: {},
+        running: true,
+        cancelled: false,
+      });
+
+      let success = 0;
+      let failed = 0;
+      for (const card of queue) {
+        if (controller.signal.aborted) break;
+        setBatch((prev) => (prev ? { ...prev, itemState: { ...prev.itemState, [card.id]: 'running' } } : prev));
+        try {
+          const content = await lookupWord(config, card.word, controller.signal);
+          const updated = await vocabApi.update(card.id, { content });
+          upsertCard(updated);
+          success += 1;
+          setBatch((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  done: prev.done + 1,
+                  success,
+                  itemState: { ...prev.itemState, [card.id]: 'success' },
+                }
+              : prev
+          );
+        } catch (err) {
+          if ((err as Error).name === 'AbortError') break;
+          failed += 1;
+          const message = err instanceof Error ? err.message : '补全失败';
+          setBatch((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  done: prev.done + 1,
+                  failed,
+                  itemState: { ...prev.itemState, [card.id]: 'error' },
+                  itemError: { ...prev.itemError, [card.id]: message },
+                }
+              : prev
+          );
+        }
+      }
+
+      batchAbortRef.current = null;
+      const cancelled = controller.signal.aborted;
+      if (cancelled) {
+        /* 取消：在途与未处理的卡标记「已取消」，不残留「补全中/排队中」 */
+        setBatch((prev) =>
+          prev
+            ? {
+                ...prev,
+                running: false,
+                cancelled: true,
+                itemState: Object.fromEntries(
+                  Object.entries(prev.itemState).map(([id, state]) =>
+                    state === 'queued' || state === 'running'
+                      ? [id, 'cancelled' as VocabCompletionState]
+                      : [id, state]
+                  )
+                ),
+              }
+            : prev
+        );
+      } else {
+        setBatch((prev) => (prev ? { ...prev, running: false, cancelled: false } : prev));
+      }
+      if (cancelled) {
+        showToast('info', `已取消补全：成功 ${success} · 失败 ${failed}`);
+      } else if (failed > 0) {
+        showToast('error', `补全完成：成功 ${success} · 失败 ${failed}`);
+      } else {
+        showToast('success', `补全完成：成功 ${success} · 失败 ${failed}`);
+      }
+    },
+    [cards, upsertCard]
+  );
 
   /* ---- 复习流程 ---- */
 
@@ -320,6 +542,44 @@ export function VocabularyPage() {
           {cards.length > 0 && (
             <>
               <VocabIndexSwitcher value={indexMode} onChange={handleIndexChange} />
+              <button
+                type="button"
+                className={
+                  filterPending
+                    ? 'vocab-pending glass-1 vocab-pending--active'
+                    : 'vocab-pending glass-1'
+                }
+                aria-pressed={filterPending}
+                disabled={batch?.running || (!filterPending && pendingCards.length === 0)}
+                title={
+                  pendingCards.length > 0
+                    ? `只看待补全词卡（${pendingCards.length}）`
+                    : '没有待补全的词卡'
+                }
+                onClick={handleFilterToggle}
+              >
+                待补全 ({pendingCards.length})
+              </button>
+              {filterPending &&
+                (batch?.running ? (
+                  <div className="vocab-batch">
+                    <span className="vocab-batch__progress tabular-nums" role="status">
+                      补全中 {batch.done}/{batch.total}
+                    </span>
+                    <Button size="sm" variant="ghost" onClick={cancelBatch}>
+                      取消补全
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    disabled={selectedPendingCount === 0}
+                    onClick={() => { void startBatch([...selectedIds]); }}
+                  >
+                    补全选中（{selectedPendingCount}）
+                  </Button>
+                ))}
               <span className="vocab-toolbar__count tabular-nums">{cards.length} 词</span>
             </>
           )}
@@ -333,14 +593,22 @@ export function VocabularyPage() {
             actionLabel="查询单词"
             onAction={() => setQueryOpen(true)}
           />
+        ) : filterPending && visibleCards.length === 0 ? (
+          <p className="vocab-batch__empty">没有待补全的词卡。</p>
         ) : (
           <div className="vocab-list">
-            {orderedCards.map((card) => (
+            {visibleCards.map((card) => (
               <VocabCardItem
                 key={card.id}
                 card={card}
                 onUpdated={upsertCard}
                 onDeleted={removeCard}
+                onOpenLlmConfig={() => setLlmOpen(true)}
+                selectable={filterPending}
+                selected={selectedIds.has(card.id)}
+                onSelectedChange={handleSelectChange}
+                completionState={batch?.itemState[card.id] ?? null}
+                completionMessage={batch?.itemError[card.id]}
               />
             ))}
           </div>
