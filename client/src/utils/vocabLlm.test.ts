@@ -111,6 +111,12 @@ describe('extractJsonContent', () => {
   it('围栏前后有解释文字：只取围栏内', () => {
     expect(extractJsonContent('好的，结果如下：\n```json\n{"a":1}\n```\n以上。')).toBe('{"a":1}');
   });
+
+  it('<think> 思维链块：先剥离再取 JSON（含大小写与无围栏两种形态）', () => {
+    expect(extractJsonContent('<think>思考过程</think>{"a":1}')).toBe('{"a":1}');
+    expect(extractJsonContent('<THINK>思考\n过程</THINK>\n{"a":1}\n')).toBe('{"a":1}');
+    expect(extractJsonContent('<think>先想一下</think>\n```json\n{"a":1}\n```\n<think>再检查</think>')).toBe('{"a":1}');
+  });
 });
 
 describe('lookupWord', () => {
@@ -137,13 +143,24 @@ describe('lookupWord', () => {
     };
     expect(body.model).toBe('deepseek-chat');
     expect(body.temperature).toBe(0.3);
+    // 契约同时放 system 与 user：部分网关会丢弃 system，仅 system 携带契约时模型会跑偏
     expect(body.messages[0]).toEqual({ role: 'system', content: VOCAB_SYSTEM_PROMPT });
-    expect(body.messages[1]).toEqual({ role: 'user', content: 'abandon' });
+    expect(body.messages).toHaveLength(2);
+    expect(body.messages[1].role).toBe('user');
+    expect(body.messages[1].content).toContain('考研英语辅导老师');
+    expect(body.messages[1].content).toContain(VOCAB_SYSTEM_PROMPT);
+    expect(body.messages[1].content).toContain('现在查询单词：abandon');
   });
 
   it('剥围栏后校验：围栏包裹的合法 JSON 直接通过', async () => {
     stubFetch(chatResponse('```json\n' + JSON.stringify(validContent) + '\n```'));
     await expect(lookupWord(config, 'abandon')).resolves.toEqual(validContent);
+  });
+
+  it('<think> 思维链混入 content：剥离后正常解析', async () => {
+    stubFetch(chatResponse(`<think>用户想查 abandon，先回忆词根…</think>${JSON.stringify(validContent)}`));
+    await expect(lookupWord(config, 'abandon')).resolves.toEqual(validContent);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('契约违规一次后重试成功：第二次消息附上次失败原因', async () => {

@@ -4,8 +4,11 @@
  * 约定（见 spec §3）：
  * - 配置存 localStorage 设备级 `kaoyandaily-vocab-llm-config`，三字段（baseUrl/apiKey/model）
  *   均非空才算「已配置」；配置不进备份（含 apiKey）。
- * - 响应剥 ```json 围栏 → 契约校验；失败自动重试 1 次（附上次失败原因），仍失败抛
- *   `LlmError('contract')`；网络/CORS/401/429/超时分别归类，文案即用户提示。
+ * - 响应先剥 <think> 思维链块、再剥 ```json 围栏 → 契约校验；失败自动重试 1 次（附上次失败原因），
+ *   仍失败抛 `LlmError('contract')`；网络/CORS/401/429/超时分别归类，文案即用户提示。
+ * - 契约同时放进 system 与 user 消息：部分「网页产品转 API」的网关会丢弃/覆盖 system
+ *   （上游自带人设），仅 system 携带契约时模型会把单词当普通对话指令；并进 user 后稳定合规。
+ *   正规服务商下 system 保留契约仍是最佳实践，故两处都带，不注入 reasoning_effort 等思考参数。
  * - 契约校验手写而非复用 `@shared/schemas/vocab` 的 Zod schema：值导入会把 zod 运行时
  *   拖进前端产物，而 `e2e/check-perf-budget.mjs` 断言全部 assets/*.js 不含 "invalid_type"。
  *   校验规则与 `VocabContentSchema` 逐条对齐（含长度上限与未知键丢弃）。
@@ -49,10 +52,11 @@ export function saveLlmConfig(config: VocabLlmConfig): void {
   localStorage.setItem(VOCAB_LLM_CONFIG_KEY, JSON.stringify(config));
 }
 
-/** 剥 ```json 围栏（无围栏时原样 trim；围栏外有杂文时取围栏内内容） */
+/** 先剥 <think> 思维链块，再剥 ```json 围栏（无围栏时原样 trim；围栏外有杂文时取围栏内内容） */
 export function extractJsonContent(raw: string): string {
-  const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  return (fence ? fence[1] : raw).trim();
+  const withoutThinking = raw.replace(/<think>[\s\S]*?<\/think>/gi, '');
+  const fence = withoutThinking.match(/```(?:json)?\s*([\s\S]*?)```/);
+  return (fence ? fence[1] : withoutThinking).trim();
 }
 
 export const VOCAB_SYSTEM_PROMPT = `你是一位考研英语辅导老师。用户会给你一个英语单词或短语，请输出考研备考者需要的单词详解。
@@ -174,7 +178,7 @@ export async function lookupWord(config: VocabLlmConfig, word: string, signal?: 
 
   const messages: ChatMessage[] = [
     { role: 'system', content: VOCAB_SYSTEM_PROMPT },
-    { role: 'user', content: word },
+    { role: 'user', content: `${VOCAB_SYSTEM_PROMPT}\n现在查询单词：${word}` },
   ];
   const first = await call(messages);
   const parsed = parseContent(first);
