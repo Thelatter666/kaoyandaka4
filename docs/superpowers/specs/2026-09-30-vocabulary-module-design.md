@@ -1,0 +1,197 @@
+# 单词本模块设计（Vocabulary Module）
+
+> 日期：2026-09-30　状态：已与用户逐节对齐
+> 关联：`AGENT.md`（路由四位点/数据隔离/备份体系）、`docs/adr/`（无新 ADR，若实现中出现架构分歧再补）
+> 术语：词卡 = 一条单词详解记录；首学 = 新词第一次完整学习（不评分）；到期 = `next_review_date ≤ 今日`
+
+## 0. 一句话
+
+新增「单词本」模块：用户接入自己的 LLM（OpenAI 兼容，浏览器直连）查询单词生成考研向详解，以扇贝单词式翻面卡进行「新词首学 + 到期复习」的简化 SRS 循环；词库支持乱序 / 顺序 / 掌握程度三种索引，数据双模式（MySQL + IndexedDB）并纳入备份体系。
+
+## 1. 已对齐决策
+
+| # | 决策点 | 结论 |
+|---|---|---|
+| 1 | 数据模式 | **双模式都要**（MySQL 表 + Express 路由 + IndexedDB store + localStore，与现有 7 业务模块同构） |
+| 2 | LLM 路径 | **统一浏览器直连**（OpenAI 兼容 `/chat/completions`，key 存 localStorage 设备级；服务器代理仅留后路不实现） |
+| 3 | 词卡结构 | **混合式**：核心字段结构化（音标/释义/例句），拓展内容（辨析/词源/记忆法）为 Markdown 富文本 |
+| 4 | 复习调度 | **简化 SRS**：掌握档 0-5 + 间隔表 + 自评三键（认识/模糊/不认识） |
+| 5 | 配额语义 | **新词首学 + 到期复习**合占每日配额 N（默认 10，可选 5/10/20/30/全部） |
+| 6 | 备份 | **进备份**：`BackupFile.data` 加可选 `vocabCards`，schemaVersion 保持 1 |
+| 7 | 页面组织 | **单页双视图**：`#/vocabulary` 内「词库 / 复习」tab 切换，TopNav 加第 8 项 |
+
+## 2. 数据模型
+
+### 2.1 MySQL（`server/src/db/schema.sql` 追加 + `migrate.ts` 幂等 CREATE TABLE IF NOT EXISTS）
+
+```sql
+CREATE TABLE IF NOT EXISTS vocab_cards (
+  id CHAR(36) NOT NULL,
+  user_id CHAR(36) NOT NULL,
+  word VARCHAR(100) NOT NULL,            -- 存储 trim+lowercase 归一
+  phonetic VARCHAR(100) NULL,
+  definitions JSON NOT NULL,             -- [{pos, meaning}]，读时 parse / 写时 stringify（mysql2 JSON 列返回 string）
+  examples JSON NOT NULL,                -- [{en, zh}]
+  extra TEXT NULL,                       -- Markdown 拓展：词根词缀/易混辨析/记忆法
+  exam_freq VARCHAR(20) NULL,            -- '高' | '中' | '低'，LLM 不确定给 NULL
+  mastery_level TINYINT NOT NULL DEFAULT 0,   -- 0-5
+  interval_days INT NOT NULL DEFAULT 0,
+  next_review_date DATE NOT NULL,
+  is_mastered BOOLEAN NOT NULL DEFAULT FALSE, -- 满 5 档置位，退出到期队列
+  first_learned_at DATETIME NULL,        -- 首学完成标记；NULL = 新词区
+  correct_count INT NOT NULL DEFAULT 0,
+  wrong_count INT NOT NULL DEFAULT 0,
+  last_reviewed_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY idx_vocab_user_word (user_id, word),
+  KEY idx_vocab_user_next_review (user_id, next_review_date),
+  KEY idx_vocab_user_mastery (user_id, mastery_level),
+  CONSTRAINT fk_vocab_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+### 2.2 IndexedDB（`client/src/local/db.ts`，DB_VERSION 1→2）
+
+新增 store `vocabCards`：keyPath `id`；索引 `accountId`、`accountId_word`（unique）、`accountId_nextReviewDate`、`accountId_masteryLevel`。`localStore` 新增 `vocab` 命名空间，返回前 strip `accountId`，惯例与既有 8 store 一致。
+
+### 2.3 Shared（`shared/src/schemas/vocab.ts` + `shared/src/srs.ts`）
+
+Zod schema：
+- `VocabDefinitionSchema` `{pos: string(min1), meaning: string(min1)}`
+- `VocabExampleSchema` `{en: string(min1), zh: string(min1)}`
+- `VocabContentSchema` `{phonetic?, definitions: min1/max10, examples: min1/max10, extra?(Markdown), examFreq?: '高'|'中'|'低'|null}` —— **同时充当 LLM 输出契约**（`VocabLookupResultSchema` 即它）
+- `CreateVocabCardSchema` `{word: min1/max100, content: VocabContentSchema}`
+- `UpdateVocabCardSchema` `{masteryLevel?: 0-5, reset?: boolean}`（二者互斥）
+- `ReviewGradeSchema` `enum('known','fuzzy','unknown')`
+
+常量（进 `shared/src/constants.ts`）：`VOCAB_MASTERY_MAX=5`、`VOCAB_SRS_INTERVALS=[0,1,2,4,7,15]`（下标 = 掌握档）。
+
+SRS 纯函数（`shared/src/srs.ts`，服务器与本地**调用同一份**，杜绝口径漂移）：
+
+```
+applyReview(card, grade, today) -> Partial<VocabCard>
+  known:   mastery = min(5, m+1); interval = SRS_INTERVALS[mastery];
+           next = today + interval; is_mastered = (mastery === 5); correct_count+1
+  fuzzy:   mastery 不变; interval = 1; next = today + 1
+  unknown: mastery = max(0, m-2); interval = 0; next = today; wrong_count+1
+  共通: last_reviewed_at = now
+```
+
+```
+buildReviewQueue(cards, today, quota) -> {newCards, dueCards}
+  newCards: first_learned_at 为空，按 created_at 升序
+  dueCards: first_learned_at 非空 && !is_mastered && next_review_date ≤ today，
+            按 mastery 升序、同级按 next_review_date 升序
+  截断：新词优先占额度，剩余额度给到期词（总和不超 quota；quota=null = 全部）
+```
+
+手动调档（PATCH 语义）：`masteryLevel=n` → `interval=SRS_INTERVALS[n]`、`next=today+interval`、`is_mastered=(n===5)`；`reset=true` → mastery=0、interval=0、`next=today+1`、清 `is_mastered`。
+
+### 2.4 备份（第 9 类资源）
+
+- `shared/src/schemas/backup.ts`：`data` 加可选 `vocabCards: array(BackupRecordSchema)`，**schemaVersion 保持 1**（旧版导入新备份安全 strip；新版读旧备份得空数组）
+- 服务器：`utils/backup.ts` 组装 + `utils/import-mapping.ts` 映射 + `utils/import.ts` `TABLE_DEFS`/冲突键加 `vocab`（候选键：`id` 与 `'word:xxx'`，冲突先删后插）
+- 本地：`localStore.backup` 导出/导入同步加；导入合并语义与其余资源一致
+- **LLM 配置不进备份**（含 apiKey，导出即泄漏）
+
+## 3. LLM 集成
+
+### 3.1 配置面板
+
+单词本页右上角设置弹窗，字段：`baseURL`（如 `https://api.deepseek.com/v1`）、`apiKey`（密码型遮罩）、`model`（如 `deepseek-chat`）。存 localStorage `kaoyandaily-vocab-llm-config`（设备级，与 theme/powerSave 语义一致）；**三字段均非空才算已配置**。未配置时点「查询单词」直接引导打开面板。
+
+### 3.2 调用与容错链
+
+1. `POST {baseURL}/chat/completions`，`Authorization: Bearer <apiKey>`，`AbortController` 超时 30s
+2. 取 `choices[0].message.content` → 剥 ` ```json ` 围栏（若有）→ `VocabContentSchema.parse` 校验
+3. 校验失败自动重试 1 次（重试消息附上次的解析错误，要求修正输出）
+4. 仍失败 → 分类错误提示（网络失败 / 401 key 无效 / 429 限流 / 响应不符合契约），Toast + 手动重试
+5. CORS 被拒的错误文案明示「该服务商可能不允许浏览器直连」，后路 = 未来加服务器代理（本期不做）
+
+### 3.3 提示词（全文框架，实现卡内定稿）
+
+角色：考研英语辅导老师。输入：单词。输出：**只输出 JSON**（无围栏无解释），结构 = VocabContentSchema：
+- `phonetic`：美式音标（查不到给 null）
+- `definitions`：1-10 条，覆盖全部常用词性，`meaning` 简明中文释义（考研核心义在前）
+- `examples`：1-10 条双语例句，风格贴近考研真题长难句，`zh` 为准确翻译
+- `extra`：Markdown——词根词缀拆解、高频易混词辨析（2-4 组）、一句话记忆法
+- `examFreq`：该词考研考频（高/中/低），不确定给 null
+
+### 3.4 查询流程与查重
+
+输入 → trim+lowercase 归一 → 先查词库（`GET /vocab` 全量已在页面状态中，本地查找即可）→
+**已存在**：打开已有卡片 + Toast「已在词库中」，不重复调 LLM →
+**不存在**：调 LLM → 生成预览（结构化渲染）→「加入单词本」入库：`mastery=0`、`interval=0`、`next_review_date=今天+1`、`first_learned_at=NULL`（**当天即出现在复习页新词区**）。
+
+## 4. 复习系统（扇贝式）
+
+- **入口**：复习 tab → 选今日配额（5/10/20/30/全部，默认 10）→ 开始
+- **队列**：`buildReviewQueue`；session 内 `unknown` 的词**追加队尾立刻重现**（不占配额）；重现轮在最新卡片状态上再次调用 `applyReview` 并落库（不回滚首次评分）
+- **首学卡**：正面即完整详解（不遮答案），点「知道了」→ `POST /vocab/:id/learn` 置 `first_learned_at`（不动 SRS 字段）
+- **复习卡**：正面只有单词+音标+发音钮（遮全部释义）→ 点击翻面看详解 → 翻面后出现自评三键（认识/模糊/不认识）→ `POST /vocab/:id/review`
+- **完成态**：配额取完显示「今日新学 x · 复习 y · 待重练 z」
+- **进度恢复**：session 进度（队列 id 序列、当前下标、重练列表）存 sessionStorage `kaoyandaily-vocab-review`，刷新回到同一张卡
+- **发音**：`speechSynthesis`（en-US），词库卡与复习卡均有发音钮
+
+## 5. 词库视图与三索引
+
+- 顶部索引切换器：**乱序**（每次进入重新洗牌）/ **顺序**（`created_at` 升序）/ **掌握程度**（`mastery` 升序，同级按 `word` 字母序，毕业词自然沉底）
+- 卡片列表项：单词 + 音标 + 首要释义摘要 + 掌握档圆点（5 点）；点击展开详情：全字段（含 extra Markdown 渲染）+ 发音 + 手动调档/重置 + 删除（ConfirmDialog）
+- 「查询单词」按钮置于词库视图顶部
+
+## 6. 页面、路由与导航
+
+- `client/src/pages/VocabularyPage.tsx`（+ co-located CSS，BEM）；子组件进 `client/src/components/vocab/`（查询弹窗、词卡、复习卡、索引切换器、LLM 配置弹窗）
+- **App.tsx 四位点**：① `pageLoaders` 加 `vocab`（13 项）② `lazy()` 加 1 条（15 条）③ `NAV_PREFETCH` 加 `#/vocabulary`（8 条）④ 受保护页 `switch` 加分支；`PUBLIC_PAGES`/`GUEST_ONLY_PAGES` 不动
+- **TopNav 第 8 项「单词本」**：胶囊已满宽（余 1px），按节能钮先例让宽，具体让法实现卡内实测定；**验收判据：960px 下 8 项不换行不溢出**
+- **动效红线**：颜色全走 `tokens.css`；翻面用 framer-motion，`useShouldReduceMotion()`（节能模式超集）下瞬时切换；不得引入常驻（无限）动画；新页必须留在 lazy chunk
+
+## 7. 服务端端点（`server/src/routes/vocab.ts`，挂载层 `requireAuth`）
+
+| 端点 | 说明 |
+|---|---|
+| `GET /api/v1/vocab` | 全量词卡（个人量级，三索引/查重/队列计算均在客户端） |
+| `POST /api/v1/vocab` | 加入词库，`CreateVocabCardSchema`；UNIQUE 冲突 → `409 WORD_EXISTS` |
+| `PATCH /api/v1/vocab/:id` | 手动调档 / 重置进度 |
+| `DELETE /api/v1/vocab/:id` | 204 无 body |
+| `POST /api/v1/vocab/:id/review` | `{grade}` → 服务器调 shared `applyReview` 落库，返回更新后卡片 |
+| `POST /api/v1/vocab/:id/learn` | 首学完成，置 `first_learned_at` |
+
+错误形状、`validate()`、transform 惯例全沿用既有模式；单表操作无需 `withTransaction`；无新增限流。
+
+## 8. 测试策略
+
+- **shared**：`srs.test.ts`（三键×档位边界表驱动、毕业、负下限）、`buildReviewQueue`（新词优先/到期排序/配额截断/毕业排除/quota=null）、vocab schema 边界
+- **server**：export 组装含 vocab、import-mapping 第 9 类映射与 `word:` 冲突键（沿用既有 utils 测试模式）
+- **client**：localStore `vocab` 命名空间（`fake-indexeddb/auto`：CRUD/SRS/查重/strip）、LLM 响应解析纯函数（剥围栏/坏 JSON/字段缺失/重试契约）
+- **E2E**：不做 LLM 真调用例；可选本地模式词库冒烟（`#/local` 进：加词→列表→翻面）；节能模式 E2E 的无限动画扫描自动覆盖新页
+- **回归红线**：vitest 全绿、eslint 0/0、首屏 JS ≤200KB（`e2e/check-perf-budget.mjs`）
+
+## 9. 用户视角验收判据
+
+1. 未配置 LLM 查词 → 引导配置面板；配置后查 `abandon` → 结构化详解 → 加入 → 词库出现卡片
+2. 重复查 `abandon` → 提示已在词库，不重复调 LLM
+3. 复习流：新词首学 → 到期翻面自评 → 答错当场重现 → 完成后 DB `next_review_date` 符合间隔表
+4. 三索引切换行为正确（乱序刷新即变、顺序按加入先后、掌握度低在前毕业沉底）
+5. 备份导出含 `vocabCards`，导入另一模式/账户后词库与进度完整恢复；LLM 配置不出现在备份中
+6. 双模式（服务器 / `#/local`）各自可用、数据独立
+7. 960px 顶栏 8 项不溢出；节能模式与 `prefers-reduced-motion` 下翻面无过渡动画
+8. 三条回归红线全过
+
+## 10. 明确不做（YAGNI）
+
+教材/词书批量导入；四选一与拼写测验；真人发音音频；服务器 LLM 代理（仅留后路）；LLM 配置云同步；词卡图片；跨用户词库分享。
+
+## 11. 拆卡预告（领地互斥，writing-plans 阶段细化）
+
+| 卡 | 领地 | 依赖 |
+|---|---|---|
+| C1 shared 纯函数层 | `shared/src/`（schemas/vocab.ts、srs.ts、constants.ts、backup.ts、types） | 无 |
+| C2 server 层 | `server/src/`（schema.sql、migrate.ts、routes/vocab.ts、utils/backup+import*、index.ts 挂载） | C1 |
+| C3 client 数据层 | `client/src/local/`（db.ts、localStore.ts）、`client/src/api/vocab.ts`、LLM 客户端纯函数 | C1 |
+| C4 client UI 层 | `client/src/pages/VocabularyPage*`、`components/vocab/`、App.tsx、TopNav、tokens | C3 |
+| C5 文档同步+E2E | `AGENT.md`/`ARCHITECTURE.md`/`CONTEXT.md`/`e2e/` | C2+C4 |
+
+C2 与 C3 并行（都只依赖 C1、领地互斥）；C4 依赖 C3 的类型与 api；C5 收尾。
