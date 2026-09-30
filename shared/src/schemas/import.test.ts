@@ -10,6 +10,7 @@ const diff = {
   focusSessions: { added: 8, updated: 0, kept: 0 },
   studyRecords: { added: 20, updated: 0, kept: 0 },
   settings: { added: 1, updated: 0, kept: 0 },
+  vocabCards: { added: 0, updated: 0, kept: 0 },
 };
 
 const validFile = {

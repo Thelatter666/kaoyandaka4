@@ -16,3 +16,7 @@ export const LONG_BREAK_AFTER_ROUNDS = 4;
 export const FOCUS_PAUSE_MAX_SECONDS = 300;
 
 export const EXAM_DATE = '2026-12-20';
+
+/** 单词本 SRS：掌握档上限（满档即毕业）与间隔表（下标 = 掌握档，单位天） */
+export const VOCAB_MASTERY_MAX = 5;
+export const VOCAB_SRS_INTERVALS: readonly number[] = [0, 1, 2, 4, 7, 15];
