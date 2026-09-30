@@ -4,6 +4,9 @@
  * 约定（见 spec §3）：
  * - 配置存 localStorage 设备级 `kaoyandaily-vocab-llm-config`，三字段（baseUrl/apiKey/model）
  *   均非空才算「已配置」；配置不进备份（含 apiKey）。
+ * - 提示词预设存 localStorage 设备级 `kaoyandaily-vocab-prompt-presets`（同样不进备份、不上传服务器）：
+ *   契约骨架固定不可自定义，仅 `extra` 部分要求可由用户改写；`lookupWord` 内部解析激活预设，签名不变，
+ *   故单查/批量查词/补全自动生效（spec §13）。
  * - 响应先剥 <think> 思维链块、再剥 ```json 围栏 → 契约校验；失败自动重试 1 次（附上次失败原因），
  *   仍失败抛 `LlmError('contract')`；网络/CORS/401/429/超时分别归类，文案即用户提示。
  * - 契约同时放进 system 与 user 消息：部分「网页产品转 API」的网关会丢弃/覆盖 system
@@ -15,6 +18,8 @@
  */
 
 import type { VocabContent, VocabDefinition, VocabExample } from '@shared/types';
+import { VOCAB_BATCH_MAX } from '@shared/constants';
+import { normalizeWord } from '../local/types';
 
 export interface VocabLlmConfig {
   baseUrl: string;
@@ -59,14 +64,83 @@ export function extractJsonContent(raw: string): string {
   return (fence ? fence[1] : withoutThinking).trim();
 }
 
-export const VOCAB_SYSTEM_PROMPT = `你是一位考研英语辅导老师。用户会给你一个英语单词或短语，请输出考研备考者需要的单词详解。
+export const DEFAULT_EXTRA_REQUIREMENT = '词根词缀拆解、2-4 组高频易混词辨析、一句话记忆法';
+
+/** 契约骨架固定（JSON 结构/格式/数量/转义要求不可自定义），仅 extra 部分要求可由用户改写（spec §13.1） */
+export function buildVocabSystemPrompt(extraRequirement?: string | null): string {
+  const extra = extraRequirement?.trim() ? extraRequirement.trim() : DEFAULT_EXTRA_REQUIREMENT;
+  return `你是一位考研英语辅导老师。用户会给你一个英语单词或短语，请输出考研备考者需要的单词详解。
 只输出一个 JSON 对象，不要输出任何解释、不要使用 Markdown 代码围栏。JSON 结构：
 {"phonetic":"美式音标，如 /əˈbændən/，查不到给 null",
  "definitions":[{"pos":"词性缩写如 v./n./adj.","meaning":"简明中文释义，考研核心义在前"}],
  "examples":[{"en":"英文例句，风格贴近考研真题长难句","zh":"对应的准确中文翻译"}],
- "extra":"Markdown 字符串：词根词缀拆解、2-4 组高频易混词辨析、一句话记忆法；没有可靠内容给 null",
+ "extra":"Markdown 字符串，没有可靠内容给 null",
  "examFreq":"该词在考研英语中的考频：高 / 中 / 低，不确定给 null"}
-要求：definitions 覆盖该词全部常用词性（1-10 条）；examples 给 1-10 条；字符串内不得出现未转义的换行。`;
+要求：definitions 覆盖该词全部常用词性（1-10 条）；examples 给 1-10 条；字符串内不得出现未转义的换行。
+extra 部分的要求：${extra}`;
+}
+
+/** 默认预设的构建结果，向后兼容导出（无激活预设时 lookupWord 使用的提示词） */
+export const VOCAB_SYSTEM_PROMPT = buildVocabSystemPrompt(null);
+
+/* ---- 提示词预设存储（设备级 localStorage，不进备份、不上传服务器；spec §13.3） ---- */
+
+export interface VocabPromptPreset {
+  id: string;
+  name: string;
+  extraRequirement: string;
+}
+
+export interface VocabPromptStore {
+  presets: VocabPromptPreset[];
+  activeId: string | null;
+}
+
+export const VOCAB_PROMPT_STORE_KEY = 'kaoyandaily-vocab-prompt-presets';
+
+/** 读取失败/不存在/结构非法 → 空 store（校验宽松：仅保留字段齐全的预设） */
+export function loadPromptStore(): VocabPromptStore {
+  try {
+    const raw = localStorage.getItem(VOCAB_PROMPT_STORE_KEY);
+    if (!raw) return { presets: [], activeId: null };
+    const parsed = JSON.parse(raw) as Partial<VocabPromptStore>;
+    const presets = Array.isArray(parsed.presets)
+      ? parsed.presets.filter(
+          (p): p is VocabPromptPreset =>
+            !!p && typeof p.id === 'string' && typeof p.name === 'string' && typeof p.extraRequirement === 'string'
+        )
+      : [];
+    const activeId = typeof parsed.activeId === 'string' ? parsed.activeId : null;
+    return { presets, activeId };
+  } catch {
+    return { presets: [], activeId: null };
+  }
+}
+
+export function savePromptStore(store: VocabPromptStore): void {
+  localStorage.setItem(VOCAB_PROMPT_STORE_KEY, JSON.stringify(store));
+}
+
+/** 当前生效的 extra 要求；无 activeId 或 activeId 指向不存在的预设 → null（= 用默认，spec §13.3） */
+export function getActiveExtraRequirement(): string | null {
+  const store = loadPromptStore();
+  if (!store.activeId) return null;
+  return store.presets.find((p) => p.id === store.activeId)?.extraRequirement ?? null;
+}
+
+/** 批量输入解析：切分 → 归一 → 去空/超长 → 保序去重 → 截断（max 默认 VOCAB_BATCH_MAX，spec §14.1） */
+export function parseWordList(raw: string, max: number = VOCAB_BATCH_MAX): { words: string[]; truncated: number } {
+  const seen = new Set<string>();
+  const words: string[] = [];
+  for (const piece of raw.split(/[\s,;，；]+/)) {
+    const word = normalizeWord(piece);
+    if (!word || word.length > 100 || seen.has(word)) continue;
+    seen.add(word);
+    words.push(word);
+  }
+  if (words.length <= max) return { words, truncated: 0 };
+  return { words: words.slice(0, max), truncated: words.length - max };
+}
 
 /* ---- 契约校验（VocabContentSchema 的等价手写实现） ---- */
 
@@ -214,9 +288,10 @@ export async function lookupWord(config: VocabLlmConfig, word: string, signal?: 
     return data.choices?.[0]?.message?.content ?? '';
   };
 
+  const prompt = buildVocabSystemPrompt(getActiveExtraRequirement());
   const messages: ChatMessage[] = [
-    { role: 'system', content: VOCAB_SYSTEM_PROMPT },
-    { role: 'user', content: `${VOCAB_SYSTEM_PROMPT}\n现在查询单词：${word}` },
+    { role: 'system', content: prompt },
+    { role: 'user', content: `${prompt}\n现在查询单词：${word}` },
   ];
   const first = await call(messages);
   const parsed = parseContent(first);

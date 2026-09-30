@@ -20,3 +20,6 @@ export const EXAM_DATE = '2026-12-20';
 /** 单词本 SRS：掌握档上限（满档即毕业）与间隔表（下标 = 掌握档，单位天） */
 export const VOCAB_MASTERY_MAX = 5;
 export const VOCAB_SRS_INTERVALS: readonly number[] = [0, 1, 2, 4, 7, 15];
+
+/** 单词本批量查词：单次最多处理的词数（超出截断，见 spec §14.3） */
+export const VOCAB_BATCH_MAX = 20;

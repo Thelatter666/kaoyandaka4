@@ -1,15 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { VOCAB_BATCH_MAX } from '@shared/constants';
 import type { VocabContent } from '@shared/types';
 import {
+  DEFAULT_EXTRA_REQUIREMENT,
   LlmError,
   VOCAB_LLM_CONFIG_KEY,
+  VOCAB_PROMPT_STORE_KEY,
   VOCAB_SYSTEM_PROMPT,
+  buildVocabSystemPrompt,
   extractJsonContent,
+  getActiveExtraRequirement,
   loadLlmConfig,
+  loadPromptStore,
   lookupWord,
+  parseWordList,
   saveLlmConfig,
+  savePromptStore,
   testLlmConnection,
   type VocabLlmConfig,
+  type VocabPromptStore,
 } from './vocabLlm';
 
 /* ---- 测试替身：内存 localStorage + fetch mock（node 环境无浏览器存储） ---- */
@@ -120,6 +129,105 @@ describe('extractJsonContent', () => {
   });
 });
 
+describe('buildVocabSystemPrompt', () => {
+  it('默认构建：含契约骨架与默认 extra 要求，且等于向后兼容的 VOCAB_SYSTEM_PROMPT', () => {
+    const prompt = buildVocabSystemPrompt();
+    // 契约骨架（JSON 结构与数量/格式要求）由代码持有
+    expect(prompt).toContain('只输出一个 JSON 对象');
+    expect(prompt).toContain('"definitions"');
+    expect(prompt).toContain('"examples"');
+    expect(prompt).toContain('"examFreq"');
+    // JSON 示例里 extra 的描述中性化，具体内容要求只在末尾用户段落
+    expect(prompt).toContain('"extra":"Markdown 字符串，没有可靠内容给 null"');
+    expect(prompt).toContain(`extra 部分的要求：${DEFAULT_EXTRA_REQUIREMENT}`);
+    expect(prompt).toBe(VOCAB_SYSTEM_PROMPT);
+    expect(buildVocabSystemPrompt(null)).toBe(VOCAB_SYSTEM_PROMPT);
+  });
+
+  it('自定义 extra：仅末尾要求段被替换、骨架不变；空白值回落默认', () => {
+    const custom = buildVocabSystemPrompt('只讲词根');
+    expect(custom).toContain('extra 部分的要求：只讲词根');
+    expect(custom).not.toContain(DEFAULT_EXTRA_REQUIREMENT);
+    expect(custom).toContain('只输出一个 JSON 对象');
+    expect(custom).toContain('"definitions"');
+
+    expect(buildVocabSystemPrompt('  ')).toBe(VOCAB_SYSTEM_PROMPT);
+    expect(buildVocabSystemPrompt('  只讲词根  ')).toContain('extra 部分的要求：只讲词根');
+  });
+});
+
+describe('提示词预设存储（loadPromptStore / savePromptStore / getActiveExtraRequirement）', () => {
+  const store: VocabPromptStore = {
+    presets: [{ id: 'p1', name: '只讲词根', extraRequirement: '只讲词根词缀拆解' }],
+    activeId: 'p1',
+  };
+
+  it('save 后 load 往返一致；非法预设被丢弃、activeId 非字符串回落 null', () => {
+    savePromptStore(store);
+    expect(JSON.parse(localStorage.getItem(VOCAB_PROMPT_STORE_KEY) as string)).toEqual(store);
+    expect(loadPromptStore()).toEqual(store);
+
+    localStorage.setItem(
+      VOCAB_PROMPT_STORE_KEY,
+      JSON.stringify({ presets: [store.presets[0], { id: 'bad', name: 1 }, null], activeId: 42 })
+    );
+    expect(loadPromptStore()).toEqual({ presets: [store.presets[0]], activeId: null });
+  });
+
+  it('无存储 / 坏 JSON / 非对象结构 → 空 store', () => {
+    expect(loadPromptStore()).toEqual({ presets: [], activeId: null });
+    localStorage.setItem(VOCAB_PROMPT_STORE_KEY, 'not-json');
+    expect(loadPromptStore()).toEqual({ presets: [], activeId: null });
+    localStorage.setItem(VOCAB_PROMPT_STORE_KEY, '"presets"');
+    expect(loadPromptStore()).toEqual({ presets: [], activeId: null });
+    localStorage.setItem(VOCAB_PROMPT_STORE_KEY, JSON.stringify({ presets: 'x' }));
+    expect(loadPromptStore()).toEqual({ presets: [], activeId: null });
+  });
+
+  it('getActiveExtraRequirement：命中返回 / 指向不存在的预设或缺失 activeId 回落 null', () => {
+    expect(getActiveExtraRequirement()).toBeNull();
+    savePromptStore(store);
+    expect(getActiveExtraRequirement()).toBe('只讲词根词缀拆解');
+    savePromptStore({ ...store, activeId: 'ghost' });
+    expect(getActiveExtraRequirement()).toBeNull();
+    savePromptStore({ ...store, activeId: null });
+    expect(getActiveExtraRequirement()).toBeNull();
+  });
+});
+
+describe('parseWordList', () => {
+  it('切分（空格/换行/中英文逗号分号）→ 小写归一 → 去空 → 保序去重', () => {
+    expect(parseWordList('abandon, Benefit\nabandon;  x  ')).toEqual({
+      words: ['abandon', 'benefit', 'x'],
+      truncated: 0,
+    });
+    expect(parseWordList('one，two；three four')).toEqual({ words: ['one', 'two', 'three', 'four'], truncated: 0 });
+  });
+
+  it('空输入 / 纯分隔符 → 空列表', () => {
+    expect(parseWordList('')).toEqual({ words: [], truncated: 0 });
+    expect(parseWordList('  ,;，；\n ')).toEqual({ words: [], truncated: 0 });
+  });
+
+  it('超长项（>100 字符）丢弃，100 字符边界保留', () => {
+    const kept = 'a'.repeat(100);
+    const dropped = 'b'.repeat(101);
+    expect(parseWordList(`${kept} ${dropped}`)).toEqual({ words: [kept], truncated: 0 });
+  });
+
+  it('显式 max 超限截断：保序取前 max 个并返回截断数；未超限 truncated 为 0', () => {
+    expect(parseWordList('a b c d', 2)).toEqual({ words: ['a', 'b'], truncated: 2 });
+    expect(parseWordList('a b', 2)).toEqual({ words: ['a', 'b'], truncated: 0 });
+  });
+
+  it('默认 max = VOCAB_BATCH_MAX（20）', () => {
+    const raw = Array.from({ length: VOCAB_BATCH_MAX + 3 }, (_, i) => `w${i}`).join(' ');
+    const { words, truncated } = parseWordList(raw);
+    expect(words).toHaveLength(VOCAB_BATCH_MAX);
+    expect(truncated).toBe(3);
+  });
+});
+
 describe('lookupWord', () => {
   it('成功路径：请求形状正确 + 契约校验通过（缺省字段归一为 null）', async () => {
     stubFetch(chatResponse(JSON.stringify({ definitions: validContent.definitions, examples: validContent.examples })));
@@ -151,6 +259,34 @@ describe('lookupWord', () => {
     expect(body.messages[1].content).toContain('考研英语辅导老师');
     expect(body.messages[1].content).toContain(VOCAB_SYSTEM_PROMPT);
     expect(body.messages[1].content).toContain('现在查询单词：abandon');
+  });
+
+  it('激活预设生效：system 与 user 消息均为自定义 extra 要求构建的提示词（骨架仍在）', async () => {
+    const extraRequirement = '只讲词根词缀拆解，不要辨析和记忆法';
+    savePromptStore({ presets: [{ id: 'p1', name: '只讲词根', extraRequirement }], activeId: 'p1' });
+    stubFetch(chatResponse(JSON.stringify(validContent)));
+    await expect(lookupWord(config, 'abandon')).resolves.toEqual(validContent);
+
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string) as {
+      messages: Array<{ role: string; content: string }>;
+    };
+    const expected = buildVocabSystemPrompt(extraRequirement);
+    expect(body.messages[0]).toEqual({ role: 'system', content: expected });
+    expect(body.messages[1].content).toContain(expected);
+    expect(body.messages[1].content).toContain('现在查询单词：abandon');
+    expect(body.messages[0].content).toContain(extraRequirement);
+    expect(body.messages[0].content).not.toContain(DEFAULT_EXTRA_REQUIREMENT);
+    expect(body.messages[0].content).toContain('只输出一个 JSON 对象');
+  });
+
+  it('activeId 指向不存在的预设 → 回落默认提示词', async () => {
+    savePromptStore({ presets: [], activeId: 'ghost' });
+    stubFetch(chatResponse(JSON.stringify(validContent)));
+    await lookupWord(config, 'abandon');
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string) as {
+      messages: Array<{ role: string; content: string }>;
+    };
+    expect(body.messages[0]).toEqual({ role: 'system', content: VOCAB_SYSTEM_PROMPT });
   });
 
   it('剥围栏后校验：围栏包裹的合法 JSON 直接通过', async () => {
