@@ -20,6 +20,7 @@ const RESOURCE_LABELS: Record<keyof DiffSummary, string> = {
   focusSessions: '专注会话',
   studyRecords: '学习记录',
   settings: '用户设置',
+  vocabCards: '单词本',
 };
 
 interface ImportBackupModalProps {

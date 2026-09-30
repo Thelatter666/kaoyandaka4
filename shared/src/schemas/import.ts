@@ -25,6 +25,7 @@ export const DiffSummarySchema = z.object({
   focusSessions: DiffItemSchema,
   studyRecords: DiffItemSchema,
   settings: DiffItemSchema,
+  vocabCards: DiffItemSchema,
 });
 export type DiffSummary = z.infer<typeof DiffSummarySchema>;
 

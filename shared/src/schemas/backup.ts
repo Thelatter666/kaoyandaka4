@@ -34,6 +34,8 @@ export const BackupFileSchema = z.object({
     focusSessions: z.array(BackupRecordSchema),
     studyRecords: z.array(BackupRecordSchema),
     settings: z.array(BackupSettingSchema),
+    /** 第 9 类资源，旧版备份/导入端省略（可选，保持 schemaVersion 1） */
+    vocabCards: z.array(BackupRecordSchema).optional(),
   }),
 });
 

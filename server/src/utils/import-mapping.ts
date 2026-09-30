@@ -1,5 +1,7 @@
 import type { BackupFile } from '../../../shared/src/schemas/backup.js';
 import { SubjectEnum, SubSubjectEnum } from '../../../shared/src/schemas/common.js';
+import { normalizeWord } from '../../../shared/src/schemas/vocab.js';
+import { VOCAB_MASTERY_MAX } from '../../../shared/src/constants.js';
 
 /**
  * 导入字段白名单严格映射（camelCase 条目 → snake_case DB 行）。
@@ -67,6 +69,32 @@ const SESSION_SUBJECTS = ['math', 'english', '408', 'free'] as const;
 const FOCUS_STATUSES = ['in_progress', 'completed', 'cancelled'] as const;
 const FOCUS_SOURCES = ['pomodoro', 'plan', 'course'] as const;
 const RECORD_SOURCES = ['focus_session', 'course_video'] as const;
+const EXAM_FREQS = ['高', '中', '低'] as const;
+
+/** 非负整数：整数校验之外附加下限校验（词卡计数/间隔字段） */
+const intNonNegative = (v: unknown, path: string): number => {
+  const n = intRequired(v, path);
+  if (n < 0) fail(path, '不能为负数');
+  return n;
+};
+
+/**
+ * JSON 数组列（definitions/examples）：必须为数组，逐项按白名单收窄（多余键丢弃），
+ * 返回序列化后的 JSON 字符串——mysql2 不会把 JS 数组按 JSON 写入列，插入前需 stringify。
+ */
+const jsonArrayRequired = (
+  v: unknown,
+  path: string,
+  mapItem: (item: Record<string, unknown>, itemPath: string) => Record<string, string>
+): string => {
+  if (!Array.isArray(v)) fail(path, '必须为数组');
+  return JSON.stringify(
+    v.map((item, i) => {
+      if (typeof item !== 'object' || item === null) fail(`${path}[${i}]`, '必须为对象');
+      return mapItem(item as Record<string, unknown>, `${path}[${i}]`);
+    })
+  );
+};
 
 const mapPreset = (e: Record<string, unknown>, p: string): Row => ({
   id: strRequired(e.id, `${p}.id`),
@@ -163,6 +191,43 @@ const mapSetting = (e: Record<string, unknown>, p: string): Row => ({
   setting_value: strRequired(e.value, `${p}.value`),
 });
 
+/** 第 9 类资源（单词本词卡）：word 归一 lowercase；masteryLevel 越界报 MappingError */
+const mapVocabCard = (e: Record<string, unknown>, p: string): Row => {
+  const masteryLevel = intRequired(e.masteryLevel, `${p}.masteryLevel`);
+  if (masteryLevel < 0 || masteryLevel > VOCAB_MASTERY_MAX) {
+    fail(`${p}.masteryLevel`, `必须在 0-${VOCAB_MASTERY_MAX} 之间`);
+  }
+  return {
+    id: strRequired(e.id, `${p}.id`),
+    word: normalizeWord(strRequired(e.word, `${p}.word`)),
+    phonetic: strNullable(e.phonetic, `${p}.phonetic`),
+    definitions: jsonArrayRequired(e.definitions, `${p}.definitions`, (d, dp) => ({
+      pos: strRequired(d.pos, `${dp}.pos`),
+      meaning: strRequired(d.meaning, `${dp}.meaning`),
+    })),
+    examples: jsonArrayRequired(e.examples, `${p}.examples`, (x, xp) => ({
+      en: strRequired(x.en, `${xp}.en`),
+      zh: strRequired(x.zh, `${xp}.zh`),
+    })),
+    extra: strNullable(e.extra, `${p}.extra`),
+    exam_freq: enumNullable(EXAM_FREQS)(e.examFreq, `${p}.examFreq`),
+    mastery_level: masteryLevel,
+    interval_days: intNonNegative(e.intervalDays, `${p}.intervalDays`),
+    next_review_date: strRequired(e.nextReviewDate, `${p}.nextReviewDate`),
+    is_mastered: boolStrict(e.isMastered, `${p}.isMastered`),
+    first_learned_at: strNullable(e.firstLearnedAt, `${p}.firstLearnedAt`),
+    correct_count: intNonNegative(e.correctCount, `${p}.correctCount`),
+    wrong_count: intNonNegative(e.wrongCount, `${p}.wrongCount`),
+    last_reviewed_at: strNullable(e.lastReviewedAt, `${p}.lastReviewedAt`),
+    created_at: strRequired(e.createdAt, `${p}.createdAt`),
+    updated_at: strRequired(e.updatedAt, `${p}.updatedAt`),
+  };
+};
+
+/** 词卡数组映射（导出供单测直调；默认路径前缀与 mapBackupData 一致） */
+export const mapVocabCards = (items: unknown[], p = 'data.vocabCards'): Row[] =>
+  items.map((e, i) => mapVocabCard(e as Record<string, unknown>, `${p}[${i}]`));
+
 export interface MappedData {
   presets: Row[];
   tasks: Row[];
@@ -172,6 +237,7 @@ export interface MappedData {
   focusSessions: Row[];
   studyRecords: Row[];
   settings: Row[];
+  vocabCards: Row[];
 }
 
 /** 把备份文件 data 映射为 snake_case 行集合（未知键丢弃；任一非法立即抛 MappingError） */
@@ -185,5 +251,7 @@ export function mapBackupData(data: BackupFile['data']): MappedData {
     focusSessions: data.focusSessions.map((e, i) => mapFocusSession(e as Record<string, unknown>, `data.focusSessions[${i}]`)),
     studyRecords: data.studyRecords.map((e, i) => mapStudyRecord(e as Record<string, unknown>, `data.studyRecords[${i}]`)),
     settings: data.settings.map((e, i) => mapSetting(e as Record<string, unknown>, `data.settings[${i}]`)),
+    // 旧版备份可省略 vocabCards（BackupFileSchema 可选）→ 空数组
+    vocabCards: mapVocabCards(data.vocabCards ?? []),
   };
 }

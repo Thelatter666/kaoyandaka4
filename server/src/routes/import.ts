@@ -73,6 +73,7 @@ async function loadExistingKeys(userId: string): Promise<ExistingKeys> {
   const [focusSessions] = await pool.query<RowDataPacket[]>('SELECT id FROM focus_sessions WHERE user_id = ?', [userId]);
   const [studyRecords] = await pool.query<RowDataPacket[]>('SELECT id FROM study_records WHERE user_id = ?', [userId]);
   const [settings] = await pool.query<RowDataPacket[]>('SELECT setting_key FROM user_settings WHERE user_id = ?', [userId]);
+  const [vocabCards] = await pool.query<RowDataPacket[]>('SELECT id, word FROM vocab_cards WHERE user_id = ?', [userId]);
   return {
     presets: presets.map((r) => String(r.id)),
     tasks: tasks.map((r) => String(r.id)),
@@ -82,6 +83,7 @@ async function loadExistingKeys(userId: string): Promise<ExistingKeys> {
     focusSessions: focusSessions.map((r) => String(r.id)),
     studyRecords: studyRecords.map((r) => String(r.id)),
     settings: settings.map((r) => String(r.setting_key)),
+    vocabCards: { ids: vocabCards.map((r) => String(r.id)), words: vocabCards.map((r) => String(r.word)) },
   };
 }
 
@@ -110,6 +112,7 @@ router.post('/preview', importLimiter, validate(BackupFileSchema), async (req: R
       : computeDiffSummary(mapped, {
           presets: [], tasks: [], reviews: { ids: [], dates: [] },
           courses: [], episodes: [], focusSessions: [], studyRecords: [], settings: [],
+          vocabCards: { ids: [], words: [] },
         });
 
     res.json({
@@ -169,7 +172,7 @@ router.post('/', importLimiter, validate(ImportRequestSchema), async (req: Reque
 
       if (mode === 'overwrite') {
         // 删除顺序：先删引用方（episodes 引用 courses），其余无交叉外键
-        const order: (keyof typeof TABLE_DEFS)[] = ['episodes', 'courses', 'focusSessions', 'studyRecords', 'tasks', 'reviews', 'presets', 'settings'];
+        const order: (keyof typeof TABLE_DEFS)[] = ['episodes', 'courses', 'focusSessions', 'studyRecords', 'tasks', 'reviews', 'presets', 'settings', 'vocabCards'];
         for (const key of order) {
           await connection.query(`DELETE FROM ${TABLE_DEFS[key].table} WHERE user_id = ?`, [userId]);
         }
@@ -178,11 +181,11 @@ router.post('/', importLimiter, validate(ImportRequestSchema), async (req: Reque
       const write = async (key: keyof typeof TABLE_DEFS, rows: Record<string, unknown>[]) => {
         const withUser = rows.map((r) => ({ ...r, user_id: userId }));
 
-        // merge：先删目标账号内冲突行（id / reviews 的 date / settings 的 key），
+        // merge：先删目标账号内冲突行（id / reviews 的 date / settings 的 key / vocabCards 的 word），
         // 再纯插入文件行——弃用 ON DUPLICATE KEY UPDATE，杜绝跨账号更新他人行。
         if (mode === 'merge') {
-          const conflictMode: 'id' | 'review' | 'setting' =
-            key === 'reviews' ? 'review' : key === 'settings' ? 'setting' : 'id';
+          const conflictMode: 'id' | 'review' | 'setting' | 'vocab' =
+            key === 'reviews' ? 'review' : key === 'settings' ? 'setting' : key === 'vocabCards' ? 'vocab' : 'id';
           for (const del of collectConflictKeys(TABLE_DEFS[key].table, withUser, conflictMode)) {
             await connection.query(del.sql, del.params);
           }
@@ -211,6 +214,7 @@ router.post('/', importLimiter, validate(ImportRequestSchema), async (req: Reque
       await write('focusSessions', mapped.focusSessions);
       await write('studyRecords', mapped.studyRecords);
       await write('settings', mapped.settings);
+      await write('vocabCards', mapped.vocabCards);
 
       return userId;
     });

@@ -19,33 +19,34 @@
 
 ```
 client/src/          → React SPA (hash-router, lazy-loaded pages)
-  api/               → Per-resource API wrappers (auth, tasks, presets, focus, courses, reviews, statistics, settings, backup) + client.ts (统一 fetch + 401 全局登出；各方法内按 isLocalMode()/isLocalApp() 分支到本地)
-  local/             → 本地模式数据层 (IndexedDB): db.ts, localStore.ts, mode.ts, storage.ts, accounts.ts, types.ts
-  components/        → UI primitives + feature components (layout/, tasks/, timer/, courses/, presets/, forest/, heatmap/, review/, landing/, ui/)
-  pages/             → Page components with co-located CSS (HomePage, PlanPage, PomodoroPage, ReviewPage, LoginPage/RegisterPage, LocalModePage, CourseDetailPage, CoursesPage, PresetsPage, StatisticsPage；AuthPage.css 为 Login/Register/LocalModePage 三页共用样式)
+  api/               → Per-resource API wrappers (auth, tasks, presets, focus, courses, reviews, statistics, settings, vocab, backup) + client.ts (统一 fetch + 401 全局登出；各方法内按 isLocalMode()/isLocalApp() 分支到本地)
+  local/             → 本地模式数据层 (IndexedDB)：db.ts（DB_VERSION 2；stores：accounts + presets/tasks/reviews/courses/episodes/focusSessions/studyRecords/settings/vocabCards + meta）, localStore.ts, mode.ts, storage.ts, accounts.ts, types.ts
+  components/        → UI primitives + feature components (layout/, tasks/, timer/, courses/, presets/, forest/, heatmap/, review/, vocab/, landing/, ui/)
+  pages/             → Page components with co-located CSS (HomePage, PlanPage, PomodoroPage, ReviewPage, LoginPage/RegisterPage, LocalModePage, CourseDetailPage, CoursesPage, PresetsPage, StatisticsPage, VocabularyPage；AuthPage.css 为 Login/Register/LocalModePage 三页共用样式)
   hooks/             → useApi, useAuth, useFocusSession, useKeyboardSort, useScreenWakeLock, useTheme, usePowerSave（节能模式：开关 + useShouldReduceMotion 降级谓词）
-  utils/             → date/duration/sound/accessibility + focusPause (专注暂停纯函数) + unlockMarker (复盘锁解锁标记,含上锁与跨标签广播) + localPower (关闭系统:本机判定 + 关机请求) + reviewLockHash (本地复盘锁哈希) + powerSave (节能模式真源与判定) + localStatistics + localImport + parseCourseText + uuid
+  utils/             → date/duration/sound/accessibility + focusPause (专注暂停纯函数) + unlockMarker (复盘锁解锁标记,含上锁与跨标签广播) + localPower (关闭系统:本机判定 + 关机请求) + reviewLockHash (本地复盘锁哈希) + powerSave (节能模式真源与判定) + localStatistics + localImport + parseCourseText + uuid + vocabLlm (LLM 浏览器直连客户端：lookupWord / testLlmConnection / 配置读写 + buildVocabSystemPrompt（契约骨架固定 + extra 可自定义）/ 提示词预设 CRUD（loadPromptStore / savePromptStore / getActiveExtraRequirement）/ parseWordList 批量输入解析)
   workers/           → countdown-title.ts (标签页标题倒计时), end-sound.ts (番茄钟准点响铃)
   styles/            → tokens.css, global.css, utilities.css, power-save.css (节能模式开销削减层)
 
 server/src/          → Express REST API
-  routes/            → 11 个路由文件: auth, presets, tasks, reviews, focus, courses, statistics, settings, reviewLock, export, import（另有 export.test.ts 测试）
+  routes/            → 12 个路由文件: auth, presets, tasks, reviews, focus, courses, statistics, settings, reviewLock, export, import, vocab（另有 export.test.ts 测试）
   middleware/        → cors, auth (requireAuth), validate (Zod), errorHandler (AppError)
   db/                → connection.ts (pool), transaction.ts (withTransaction), schema.sql, init.ts, migrate.ts, rollback-users.sql
-  utils/             → date.ts, uuid.ts, backup.ts (导出组装), import.ts / import-mapping.ts (导入纯函数)
+  utils/             → date.ts, uuid.ts, backup.ts (导出组装；备份文件 data 共 9 类资源), import.ts / import-mapping.ts (导入纯函数，含 vocabCards 第 9 类)
   types/             → express-mysql-session 类型扩展
 
 shared/src/          → Shared between front-end and back-end
-  constants.ts       → 共享常量（科目分组、专注时长档位、休息时长、暂停上限 FOCUS_PAUSE_MAX_SECONDS 等）
-  schemas/           → Zod validation schemas per resource（auth/common/course/focus/preset/review/settings/statistics/task + backup 导出格式 v1 + import 导入模式/差异摘要）
+  constants.ts       → 共享常量（科目分组、专注时长档位、休息时长、暂停上限 FOCUS_PAUSE_MAX_SECONDS、单词本 VOCAB_MASTERY_MAX / VOCAB_SRS_INTERVALS 等；零依赖，前端可直接值导入）
+  schemas/           → Zod validation schemas per resource（auth/common/course/focus/preset/review/settings/statistics/task/vocab + backup 导出格式 v1 + import 导入模式/差异摘要）
+  srs.ts             → 单词本 SRS 纯函数（applyReview / buildReviewQueue / addDays，服务器与本地同源）
   types/index.ts     → Re-exported TS types inferred from schemas
 
 plans/               → 18 个动效实现计划（001-018，全部为动画/动效类）+ README.md 总账表（#/标题/严重度/模块/状态/依赖）
 scripts/             → local-power.mjs：本地关机监听器（127.0.0.1:3999，「关闭系统」按钮的落地点，仅由桌面启动脚本拉起，npm 脚本不引用）
-docs/                → adr/ 7 条（0001-0004 砚池 / 0005 复盘锁 / 0006 暂停 / 0007 节能模式存储与口径） + superpowers/ (specs 11 / plans 8 / spikes 16 项)
+docs/                → adr/ 8 条（0001-0004 砚池 / 0005 复盘锁 / 0006 暂停 / 0007 节能模式存储与口径 / 0008 单词本 LLM 直连与设备级配置） + superpowers/ (specs 12 / plans 9 / spikes 16 项)
 交接文档/             → 01-进度与上下文 / 02-后续任务与子代理分阶段实施 / 03-P3本地模式交接 / 04-P3本地模式完成交接报告 / 05-砚池计时器实施交接
 deploy/              → nginx.conf, nginx.ip.conf, deploy.sh, server-management-prompt.txt
-e2e/                 → playwright.config.ts + tests/smoke.spec.ts + 工具脚本（见下）
+e2e/                 → playwright.config.ts + tests/（smoke / power-save / vocab 三个 spec）+ 工具脚本（见下）
 ```
 
 ## 客户端 API 模块与本地分支（2026-08-28 核对）
@@ -53,6 +54,7 @@ e2e/                 → playwright.config.ts + tests/smoke.spec.ts + 工具脚�
 | 模块 | 本地开关函数 | 分支方法数 |
 |---|---|---|
 | tasks / presets / focus / courses / reviews / statistics / settings | `isLocalMode()` | 8 / 4 / 6 / 5 / 6 / 3 / 2 |
+| vocab | `isLocalMode()` | 6 |
 | backup | `isLocalApp()` | 3 |
 | auth | 无分支（本地模式无服务器会话，设计如此） | 0 |
 
@@ -69,16 +71,19 @@ e2e/                 → playwright.config.ts + tests/smoke.spec.ts + 工具脚�
 | courses | `GET /`、`GET /:id`、`POST /parse`、`POST /`、`DELETE /:id`、`PATCH /:id/episodes/:eid/toggle` |
 | statistics | `GET /forest`、`GET /today-summary`、`GET /heatmap`（`/forest` 是唯一用 `validate(schema, 'query')` 的端点） |
 | settings | `GET /`、`PUT /` |
+| vocab | `GET /`、`POST /`（`content` 可选，缺省即暂存空卡：`definitions/examples` 落空数组）、`PATCH /:id`（`masteryLevel` / `reset` / `content` 三选一；`content` 分支只补内容、不动 SRS 字段）、`DELETE /:id`、`POST /:id/review`（body 为裸 grade 字符串或 `{grade}`，见 AGENT.md「服务端总装」的 `strict:false`）、`POST /:id/learn` |
 | export | `GET /`（全量备份，requireAuth） |
 | import | `POST /preview`、`POST /`（importLimiter；**无挂载层 requireAuth**，会话归属在 handler 内处理） |
 
-数据库 9 张表：`users` + `study_presets` / `daily_tasks` / `daily_reviews` / `online_courses` / `course_episodes` / `focus_sessions` / `user_settings` / `study_records`（schema 见 `server/src/db/schema.sql`）。
+数据库 10 张表：`users` + `study_presets` / `daily_tasks` / `daily_reviews` / `online_courses` / `course_episodes` / `focus_sessions` / `user_settings` / `study_records` / `vocab_cards`（schema 见 `server/src/db/schema.sql`；另有 express-mysql-session 隐式管理的 `sessions` 表，不在 schema.sql 内）。
+
+备份文件 `BackupFile.data` 共 9 类资源：presets / tasks / reviews / courses / episodes / focusSessions / studyRecords / settings / `vocabCards`（第 9 类为可选，schemaVersion 保持 1——旧版导入端安全 strip）。
 
 ## 前端路由（client/src/App.tsx 明细）
 
-- `pageLoaders`：12 项（landing/home/plan/presets/pomodoro/courses/courseDetail/statistics/login/register/review/local）
-- `lazy()` const：14 条（第 27-44 行，新增页面勿漏；12 条页面 + TopNav/ReviewGate 两条非页面 lazy —— 2026-08-30 拆出入口图回归首屏预算）
-- `NAV_PREFETCH`：7 条（`#/`、`#/plan`、`#/presets`、`#/pomodoro`、`#/courses`、`#/statistics`、`#/review`）
+- `pageLoaders`：13 项（landing/home/plan/presets/pomodoro/courses/courseDetail/statistics/login/register/review/local/vocab）
+- `lazy()` const：15 条（第 29-47 行，新增页面勿漏；13 条页面 + TopNav/ReviewGate 两条非页面 lazy —— 2026-08-30 拆出入口图回归首屏预算）
+- `NAV_PREFETCH`：8 条（`#/`、`#/plan`、`#/presets`、`#/pomodoro`、`#/courses`、`#/statistics`、`#/vocabulary`、`#/review`）
 - `PUBLIC_PAGES` = `{'/', '/login', '/register', '/local'}`；`GUEST_ONLY_PAGES` = `{'/login', '/register', '/local'}`
 - 渲染：受保护页走 `switch`（default 回 HomePage）；公开/游客页走未登录三元链；TopNav 由 Suspense 占位 `.top-nav-fallback`（56px，global.css）
 - 过渡：`page-enter`/`page-exit`，退场 140ms（`--dur-page-exit`）
@@ -87,10 +92,11 @@ e2e/                 → playwright.config.ts + tests/smoke.spec.ts + 工具脚�
 
 - **通用组件**（`client/src/components/ui/`）：Button, Card, Modal(portal 到 body), Toast, ConfirmDialog, ProgressBar, EmptyState/ErrorState/LoadingState, SkipLink, SubjectBadge, Dropdown, Calendar, ImportBackupModal(导入向导), ProfileDropdown(顶栏账户菜单: 导出/导入/复盘锁/登出), SoundToggle, ThemeToggle, PowerSaveToggle(节能模式开关, 44px 圆钮, 开启时主色高亮兼作状态指示)
 - **复盘门禁**（`client/src/components/review/`）：ReviewGate(三态门禁,包裹 ReviewPage 保持 lazy) + ReviewLockModal(设置/修改弹窗) + ReviewLockContext(上锁回调 context,独立 chunk 以免复盘页拖带门禁依赖)
-- **顶栏**（`client/src/components/layout/TopNav.tsx`）：品牌 + 7 项导航 + 节能模式/主题/账户菜单 + 「关闭系统」（仅本机 host 渲染，见 AGENT.md「本地启动与关闭系统」）。**顶栏宽度已满**：960px 胶囊内实测仅余 1px，新增控件须同时让宽（加入节能钮时把 `.top-nav` 的 gap 8→6px、`.top-nav__links` 的 gap 4→3px 共让出 10px）
+- **顶栏**（`client/src/components/layout/TopNav.tsx`）：品牌 + 8 项导航 + 节能模式/主题/账户菜单 + 「关闭系统」（仅本机 host 渲染，见 AGENT.md「本地启动与关闭系统」）。**顶栏宽度已满**：960px 胶囊上限不变，为第 8 项「单词本」按节能钮先例让宽——`.top-nav` gap 6→5px、左 padding 16→12px / 右 8→6px、`.top-nav__links` gap 4→3→2px、`.top-nav__link` padding 16→8px、`.top-nav__actions` gap 4→3px（实测 8 项 + 右侧动作区自然宽 1012px，收窄后余 44px，图标与文字未压缩、触控高度仍 44px）
+- **单词本**（`client/src/components/vocab/`）：VocabQueryModal(LLM 查词：textarea 输入 + 单查/批量查词，逐词状态列表与进度、取消；失败可「暂存单词」) / VocabLlmConfigModal(设备级配置 + 「测试连接」+ 「提示词」预设管理区：单选列表 / 新建编辑 / 删除 / 只读预览) / VocabCardItem + VocabDetail(词库卡与详情：待补全徽标 / 内容待补全占位 / 单卡「AI 补全」) / VocabReviewCard(翻面复习卡) / VocabIndexSwitcher(三索引) / VocabMasteryDots / VocabSpeakButton / markdown.tsx(纯 React 轻量 Markdown)。`VocabularyPage` 工具栏含「待补全 (N)」过滤与「补全选中（N）」串行批量补全（逐卡 排队/进行/成功/失败，AbortController 可取消）；术语见 `CONTEXT.md`，决策见 `docs/adr/0008` 与 spec §12–§14（2026-09-30 增补）
 - **动效组件**（framer-motion）：AnimatedThemeToggle, Magnetic, GlowCard, Card3D, FileUpload, GradientCard, InteractiveHoverButton
 - **砚池计时器**（`client/src/components/timer/`）：RingCountdown.tsx + RingCountdown.css + inkSurface.ts(等面积 LUT) + inkWavePaths.ts(三变体波形) + BurstParticles.tsx；设计见 `docs/adr/0001`-`0004` 与 `docs/superpowers/specs/2026-08-21-pomodoro-inkwell-design.md`；术语见 `CONTEXT.md`
-- **功能子目录**：courses/ forest/ heatmap/ landing/ layout/ presets/ tasks/
+- **功能子目录**：courses/ forest/ heatmap/ landing/ layout/ presets/ tasks/ vocab/
 
 ## CSS 与设计令牌
 
@@ -103,7 +109,8 @@ e2e/                 → playwright.config.ts + tests/smoke.spec.ts + 工具脚�
 
 - `client/vite.config.ts`：`manualChunks` 拆 **4 个** vendor —— `react-vendor`(react/react-dom/scheduler) / `lucide-vendor` / `motion-vendor`(framer-motion/motion-dom/motion-utils) / `virtual-vendor`(@tanstack/react-virtual)
 - alias：`@shared` → `shared/src`；dev proxy：`/api` → `http://localhost:3001`；端口 5173
-- 性能预算脚本：`e2e/check-perf-budget.mjs`（构建后核对 chunk 体积预算；2026-08-30 起 TopNav/ReviewGate 已拆出入口图，2026-09-24 实测首屏 JS 184.8KB ≤ 200KB）
+- 性能预算脚本：`e2e/check-perf-budget.mjs`（构建后核对 chunk 体积预算；2026-08-30 起 TopNav/ReviewGate 已拆出入口图，2026-09-30 单词本（含暂存/补全/测试连接 + 提示词管理/批量查词）加入后实测首屏 JS **189.6KB** ≤ 200KB，`VocabularyPage` 仍在 lazy chunk）
+- 测试基线（2026-09-30 实跑）：单测 `npx vitest run` **20 文件 / 210 tests 全绿**；E2E `PW_CHANNEL=chrome npx playwright test` 6 用例（smoke / power-save / vocab）串行 `workers: 1`；`npx eslint .` 0 error / 0 warning。数字以实跑为准
 
 ## 环境变量（.env 位于项目根）
 
@@ -142,3 +149,4 @@ import { CreateTaskSchema } from '../../../shared/src/schemas/task.js';
 
 - **无全局 ErrorBoundary**：页面靠各自 `ErrorState` + `App.tsx` 的 `pageFallback`（Suspense fallback）兜底，勿假设有全局兜底
 - 组件测试受限于 vitest node 环境：需要浏览器行为时拆成纯函数（如 `inkSurface.ts`/`inkWavePaths.ts`/`sound.ts`）或将断言下沉到数据层
+- **死代码（2026-09-30 onboarding 全库核实，零引用）**：`hooks/useApi.ts`、`hooks/useKeyboardSort.ts`、`ui/GlowCard.tsx`、`ui/AnimatedThemeToggle.tsx`、`ui/Card3D.tsx`（CourseZoneCard.tsx 头注释明确弃用 Card3D）；清理时可顺手合并 `parseTimeString` 双实现——`utils/duration.ts:29`（导出版）与 `utils/parseCourseText.ts:19`（私有版）语义重复

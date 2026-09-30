@@ -10,7 +10,7 @@ export interface ExportAccountRow {
 /** 单行原始数据（DB 形态），字段映射职责在本模块内完成 */
 type Row = Record<string, unknown>;
 
-/** 8 个业务资源的原始行集合 */
+/** 9 个业务资源的原始行集合 */
 export interface ExportRows {
   presets: Row[];
   tasks: Row[];
@@ -20,6 +20,7 @@ export interface ExportRows {
   focusSessions: Row[];
   studyRecords: Row[];
   settings: Row[];
+  vocabCards: Row[];
 }
 
 /* 标量归一化辅助 */
@@ -28,6 +29,9 @@ const strReq = (v: unknown): string => String(v);
 const bool = (v: unknown): boolean => Boolean(v);
 const num = (v: unknown): number => (typeof v === 'number' ? v : Number(v));
 const numOrNull = (v: unknown): number | null => (v == null ? null : num(v));
+
+/** JSON 列取值：mysql2 默认已把 JSON 列解析为 JS 值，jsonStrings=true 时为字符串，两种形态兼容 */
+const jsonValue = (v: unknown): unknown => (typeof v === 'string' ? JSON.parse(v) : v);
 
 const mapPreset = (r: Row) => ({
   id: strReq(r.id),
@@ -124,6 +128,27 @@ const mapSetting = (r: Row) => ({
   value: strReq(r.setting_value),
 });
 
+// 第 9 类资源（单词本词卡）：camelCase 直通、不含 user_id；definitions/examples 为数组
+const mapVocabCard = (r: Row) => ({
+  id: strReq(r.id),
+  word: strReq(r.word),
+  phonetic: str(r.phonetic),
+  definitions: jsonValue(r.definitions),
+  examples: jsonValue(r.examples),
+  extra: str(r.extra),
+  examFreq: str(r.exam_freq),
+  masteryLevel: num(r.mastery_level),
+  intervalDays: num(r.interval_days),
+  nextReviewDate: strReq(r.next_review_date).slice(0, 10),
+  isMastered: bool(r.is_mastered),
+  firstLearnedAt: str(r.first_learned_at),
+  correctCount: num(r.correct_count),
+  wrongCount: num(r.wrong_count),
+  lastReviewedAt: str(r.last_reviewed_at),
+  createdAt: strReq(r.created_at),
+  updatedAt: strReq(r.updated_at),
+});
+
 /** 组装导出文件 payload（纯函数，可单测；exportedAt 取调用时刻 UTC ISO） */
 export function buildBackupPayload(account: ExportAccountRow, rows: ExportRows): BackupFile {
   return {
@@ -144,6 +169,7 @@ export function buildBackupPayload(account: ExportAccountRow, rows: ExportRows):
       focusSessions: rows.focusSessions.map(mapFocusSession),
       studyRecords: rows.studyRecords.map(mapStudyRecord),
       settings: rows.settings.map(mapSetting),
+      vocabCards: rows.vocabCards.map(mapVocabCard),
     },
   };
 }

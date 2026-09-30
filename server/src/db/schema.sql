@@ -184,3 +184,36 @@ CREATE TABLE IF NOT EXISTS user_settings (
     CONSTRAINT fk_settings_user FOREIGN KEY (user_id)
         REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 10. vocab_cards（单词本词卡）
+-- ============================================================
+-- 单词本模块：word 存 trim+lowercase 归一值，唯一约束 (user_id, word)；
+-- definitions/examples 为 JSON 数组（写入 stringify，读回为已解析的 JS 值）；
+-- next_review_date 用 DATE（本地日历日），其余时间戳为 DATETIME；
+-- is_mastered=TRUE（满 5 档）退出到期复习队列。
+CREATE TABLE IF NOT EXISTS vocab_cards (
+    id               CHAR(36) PRIMARY KEY,
+    user_id          CHAR(36) NOT NULL,
+    word             VARCHAR(100) NOT NULL,
+    phonetic         VARCHAR(100) NULL,
+    definitions      JSON NOT NULL,
+    examples         JSON NOT NULL,
+    extra            TEXT NULL,
+    exam_freq        VARCHAR(20) NULL,
+    mastery_level    TINYINT NOT NULL DEFAULT 0,
+    interval_days    INT NOT NULL DEFAULT 0,
+    next_review_date DATE NOT NULL,
+    is_mastered      BOOLEAN NOT NULL DEFAULT FALSE,
+    first_learned_at DATETIME NULL,
+    correct_count    INT NOT NULL DEFAULT 0,
+    wrong_count      INT NOT NULL DEFAULT 0,
+    last_reviewed_at DATETIME NULL,
+    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    UNIQUE INDEX idx_vocab_user_word (user_id, word),
+    INDEX idx_vocab_user_next_review (user_id, next_review_date),
+    INDEX idx_vocab_user_mastery (user_id, mastery_level),
+    CONSTRAINT fk_vocab_user FOREIGN KEY (user_id)
+        REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

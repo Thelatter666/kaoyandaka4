@@ -61,6 +61,25 @@ const rows = {
   ],
   studyRecords: [],
   settings: [{ setting_key: 'pomodoro_sound_enabled', setting_value: '1' }],
+  vocabCards: [{
+    id: 'v1',
+    word: 'abandon',
+    phonetic: '/əˈbændən/',
+    definitions: JSON.stringify([{ pos: 'v.', meaning: '放弃' }, { pos: 'n.', meaning: '放任' }]),
+    examples: JSON.stringify([{ en: 'He abandoned the plan.', zh: '他放弃了计划。' }]),
+    extra: '**词根**：a- + band（禁令）→ 放弃',
+    exam_freq: '高',
+    mastery_level: 3,
+    interval_days: 4,
+    next_review_date: '2026-10-04',
+    is_mastered: 0,
+    first_learned_at: '2026-09-30 08:00:00',
+    correct_count: 3,
+    wrong_count: 1,
+    last_reviewed_at: '2026-09-30 08:00:00',
+    created_at: '2026-09-29 07:00:00',
+    updated_at: '2026-09-30 08:00:00',
+  }],
 };
 
 describe('buildBackupPayload', () => {
@@ -95,12 +114,89 @@ describe('buildBackupPayload', () => {
   });
 
   it('空资源导出为空数组且结构键齐全', () => {
-    const empty = { presets: [], tasks: [], reviews: [], courses: [], episodes: [], focusSessions: [], studyRecords: [], settings: [] };
+    const empty = { presets: [], tasks: [], reviews: [], courses: [], episodes: [], focusSessions: [], studyRecords: [], settings: [], vocabCards: [] };
     const payload = buildBackupPayload(accountRow, empty);
     expect(payload.data.reviews).toEqual([]);
+    expect(payload.data.vocabCards).toEqual([]);
     expect(Object.keys(payload.data)).toEqual([
-      'presets', 'tasks', 'reviews', 'courses', 'episodes', 'focusSessions', 'studyRecords', 'settings',
+      'presets', 'tasks', 'reviews', 'courses', 'episodes', 'focusSessions', 'studyRecords', 'settings', 'vocabCards',
     ]);
+  });
+
+  it('vocabCards：camelCase 产出、无 user_id / snake_case 键、JSON 反序列化为数组', () => {
+    const payload = buildBackupPayload(accountRow, rows);
+    const card = payload.data.vocabCards![0]!;
+    expect(card).toEqual({
+      id: 'v1',
+      word: 'abandon',
+      phonetic: '/əˈbændən/',
+      definitions: [{ pos: 'v.', meaning: '放弃' }, { pos: 'n.', meaning: '放任' }],
+      examples: [{ en: 'He abandoned the plan.', zh: '他放弃了计划。' }],
+      extra: '**词根**：a- + band（禁令）→ 放弃',
+      examFreq: '高',
+      masteryLevel: 3,
+      intervalDays: 4,
+      nextReviewDate: '2026-10-04',
+      isMastered: false,
+      firstLearnedAt: '2026-09-30 08:00:00',
+      correctCount: 3,
+      wrongCount: 1,
+      lastReviewedAt: '2026-09-30 08:00:00',
+      createdAt: '2026-09-29 07:00:00',
+      updatedAt: '2026-09-30 08:00:00',
+    });
+    expect(Array.isArray(card.definitions)).toBe(true);
+    expect(JSON.stringify(payload)).not.toContain('user_id');
+    expect(JSON.stringify(payload)).not.toContain('mastery_level');
+    expect(JSON.stringify(payload)).not.toContain('next_review_date');
+  });
+
+  it('vocabCards：mysql2 已解析为 JS 值的 JSON 列同样原样导出', () => {
+    const parsedRows = {
+      ...rows,
+      vocabCards: [{ ...rows.vocabCards[0]!, definitions: [{ pos: 'v.', meaning: '放弃' }], examples: [{ en: 'a', zh: 'b' }] }],
+    };
+    const payload = buildBackupPayload(accountRow, parsedRows);
+    expect(payload.data.vocabCards![0]!.definitions).toEqual([{ pos: 'v.', meaning: '放弃' }]);
+  });
+
+  it('vocabCards：暂存卡（definitions/examples 为 []）导出为空数组且通过 BackupFileSchema', () => {
+    const stubRows = {
+      ...rows,
+      vocabCards: [{
+        ...rows.vocabCards[0]!,
+        phonetic: null,
+        definitions: '[]',
+        examples: '[]',
+        extra: null,
+        exam_freq: null,
+        mastery_level: 0,
+        interval_days: 0,
+        is_mastered: 0,
+        first_learned_at: null,
+        correct_count: 0,
+        wrong_count: 0,
+        last_reviewed_at: null,
+      }],
+    };
+    const payload = buildBackupPayload(accountRow, stubRows);
+    const card = payload.data.vocabCards![0]!;
+    expect(card.definitions).toEqual([]);
+    expect(card.examples).toEqual([]);
+    expect(card.phonetic).toBeNull();
+    expect(card.extra).toBeNull();
+    expect(card.examFreq).toBeNull();
+    expect(BackupFileSchema.safeParse(payload).success).toBe(true);
+  });
+
+  it('vocabCards：mysql2 已解析的空数组列同样导出为 []', () => {
+    const parsedRows = {
+      ...rows,
+      vocabCards: [{ ...rows.vocabCards[0]!, definitions: [], examples: [] }],
+    };
+    const payload = buildBackupPayload(accountRow, parsedRows);
+    expect(payload.data.vocabCards![0]!.definitions).toEqual([]);
+    expect(payload.data.vocabCards![0]!.examples).toEqual([]);
   });
 
   it('focus 会话可空 actual_duration_seconds 原样导出为 null / 数值', () => {

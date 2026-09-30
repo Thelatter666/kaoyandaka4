@@ -65,6 +65,10 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         'SELECT setting_key, setting_value FROM user_settings WHERE user_id = ? ORDER BY setting_key',
         [req.userId]
       );
+      const [vocabCards] = await connection.query(
+        'SELECT * FROM vocab_cards WHERE user_id = ? ORDER BY created_at, id',
+        [req.userId]
+      );
 
       return buildBackupPayload(account, {
         presets: presets as never,
@@ -75,6 +79,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         focusSessions: focusSessions as never,
         studyRecords: studyRecords as never,
         settings: settings as never,
+        vocabCards: vocabCards as never,
       });
     });
 

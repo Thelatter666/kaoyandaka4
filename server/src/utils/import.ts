@@ -43,15 +43,22 @@ export interface ExistingKeys {
   focusSessions: string[];
   studyRecords: string[];
   settings: string[];
+  vocabCards: { ids: string[]; words: string[] };
 }
 
 const toSet = (arr: string[]): Set<string> => new Set(arr);
 const idKeys = (rows: Record<string, unknown>[]): string[][] => rows.map((r) => [String(r.id)]);
 
-/** 汇总 8 资源差异摘要（口径见设计文档：每表冲突键集合对比） */
+/** 汇总 9 资源差异摘要（口径见设计文档：每表冲突键集合对比） */
 export function computeDiffSummary(fileData: MappedData, existing: ExistingKeys): DiffSummary {
   const reviewKeys = fileData.reviews.map((r) => [String(r.id), `date:${String(r.review_date)}`]);
   const reviewExisting = new Set([...existing.reviews.ids, ...existing.reviews.dates.map((d) => `date:${d}`)]);
+  // vocab_cards 候选冲突键：id 与 word（同用户下 word 为唯一约束）
+  const vocabKeys = fileData.vocabCards.map((r) => [String(r.id), `word:${String(r.word)}`]);
+  const vocabExisting = new Set([
+    ...existing.vocabCards.ids,
+    ...existing.vocabCards.words.map((w) => `word:${w}`),
+  ]);
   return {
     presets: computeDiffCounts(idKeys(fileData.presets), toSet(existing.presets)),
     tasks: computeDiffCounts(idKeys(fileData.tasks), toSet(existing.tasks)),
@@ -64,6 +71,7 @@ export function computeDiffSummary(fileData: MappedData, existing: ExistingKeys)
       fileData.settings.map((r) => [String(r.setting_key)]),
       toSet(existing.settings)
     ),
+    vocabCards: computeDiffCounts(vocabKeys, vocabExisting),
   };
 }
 
@@ -118,7 +126,7 @@ export interface TableDef {
   table: string;
 }
 
-/** 8 表定义：表名（overwrite 删除顺序在路由中固定） */
+/** 9 表定义：表名（overwrite 删除顺序在路由中固定） */
 export const TABLE_DEFS: Record<keyof MappedData, { table: string }> = {
   presets: { table: 'study_presets' },
   tasks: { table: 'daily_tasks' },
@@ -128,6 +136,7 @@ export const TABLE_DEFS: Record<keyof MappedData, { table: string }> = {
   focusSessions: { table: 'focus_sessions' },
   studyRecords: { table: 'study_records' },
   settings: { table: 'user_settings' },
+  vocabCards: { table: 'vocab_cards' },
 };
 
 /**
@@ -162,12 +171,14 @@ export type ConflictDelete = { sql: string; params: unknown[] };
  * - 'review'（daily_reviews）：先按 id 删（全局主键），再按 (user_id, review_date)
  *   唯一键删一条（`review_date IN (...)`），避免插入时撞该唯一约束。
  * - 'setting'（user_settings）：按联合主键 (user_id, setting_key) 删（`setting_key IN`）。
+ * - 'vocab'（vocab_cards）：先按 id 删（全局主键），再按 (user_id, word) 唯一键删一条
+ *   （`word IN`），避免插入时撞该唯一约束。
  * 空 rows 返回 []；rows 需已含 user_id（路由在写前统一注入）。
  */
 export function collectConflictKeys(
   table: string,
   rows: Record<string, unknown>[],
-  mode: 'id' | 'review' | 'setting'
+  mode: 'id' | 'review' | 'setting' | 'vocab'
 ): ConflictDelete[] {
   if (rows.length === 0) return [];
   const userId = String(rows[0]!.user_id);
@@ -184,6 +195,9 @@ export function collectConflictKeys(
   } else if (mode === 'review') {
     push('id', rows.map((r) => String(r.id)));
     push('review_date', rows.map((r) => String(r.review_date)));
+  } else if (mode === 'vocab') {
+    push('id', rows.map((r) => String(r.id)));
+    push('word', rows.map((r) => String(r.word)));
   } else {
     push('setting_key', rows.map((r) => String(r.setting_key)));
   }

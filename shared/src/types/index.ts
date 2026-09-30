@@ -9,3 +9,4 @@ export type { UpsertReviewInput, SetReviewLockInput, VerifyReviewLockInput } fro
 export type { UpdateSettingsInput } from '../schemas/settings.js';
 export type { BackupFile, BackupAccount, BackupSetting } from '../schemas/backup.js';
 export type { ImportMode, DiffItem, DiffSummary, ImportPreviewResponse, ImportRequest } from '../schemas/import.js';
+export type { VocabDefinition, VocabExample, VocabContent, VocabCard, CreateVocabCardInput, UpdateVocabCardInput, ReviewGrade } from '../schemas/vocab.js';
