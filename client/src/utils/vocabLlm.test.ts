@@ -8,6 +8,7 @@ import {
   loadLlmConfig,
   lookupWord,
   saveLlmConfig,
+  testLlmConnection,
   type VocabLlmConfig,
 } from './vocabLlm';
 
@@ -218,5 +219,57 @@ describe('lookupWord', () => {
       (e: unknown) => e
     );
     expect(err).toBe(abortErr);
+  });
+});
+
+describe('testLlmConnection', () => {
+  it('成功：POST 最小对话（不带 temperature/思考参数），HTTP 2xx 即成功（content 为空也通过）', async () => {
+    stubFetch(chatResponse(''));
+    await expect(testLlmConnection(config)).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://api.example.com/v1/chat/completions');
+    expect(init.method).toBe('POST');
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer sk-test');
+    expect(JSON.parse(init.body as string)).toEqual({
+      model: 'deepseek-chat',
+      messages: [{ role: 'user', content: '回复 ok' }],
+      max_tokens: 64,
+    });
+  });
+
+  it('401/403 → unauthorized；429 → rate_limit；500 → network', async () => {
+    stubFetch(chatResponse('', 401));
+    expect((await catchLlmError(testLlmConnection(config))).kind).toBe('unauthorized');
+
+    stubFetch(chatResponse('', 403));
+    expect((await catchLlmError(testLlmConnection(config))).kind).toBe('unauthorized');
+
+    stubFetch(chatResponse('', 429));
+    expect((await catchLlmError(testLlmConnection(config))).kind).toBe('rate_limit');
+
+    stubFetch(chatResponse('', 500));
+    expect((await catchLlmError(testLlmConnection(config))).kind).toBe('network');
+  });
+
+  it('网络异常 → cors；超时 TimeoutError → network（15 秒文案）；调用方 AbortError 原样透传', async () => {
+    stubFetch(new TypeError('Failed to fetch'));
+    expect((await catchLlmError(testLlmConnection(config))).kind).toBe('cors');
+
+    const timeoutErr = new Error('The operation was aborted due to timeout');
+    timeoutErr.name = 'TimeoutError';
+    stubFetch(timeoutErr);
+    const err = await catchLlmError(testLlmConnection(config));
+    expect(err.kind).toBe('network');
+    expect(err.message).toContain('15 秒');
+
+    const abortErr = new Error('The operation was aborted.');
+    abortErr.name = 'AbortError';
+    stubFetch(abortErr);
+    const passed = await testLlmConnection(config).then(
+      () => null,
+      (e: unknown) => e
+    );
+    expect(passed).toBe(abortErr);
   });
 });

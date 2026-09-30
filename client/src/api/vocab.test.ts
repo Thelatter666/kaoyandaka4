@@ -91,4 +91,68 @@ describe('vocabApi（双模式）', () => {
       { url: '/api/v1/vocab', method: 'GET', body: undefined },
     ]);
   });
+
+  it('暂存创建：本地模式落库空内容卡；服务器模式 POST body 含 word、不含 content 键', async () => {
+    const pending = await vocabApi.create({ word: ' Pending ' });
+    expect(pending).toMatchObject({
+      word: 'pending',
+      phonetic: null,
+      definitions: [],
+      examples: [],
+      extra: null,
+      examFreq: null,
+      masteryLevel: 0,
+      firstLearnedAt: null,
+    });
+    expect((await vocabApi.list()).map((c) => c.word)).toEqual(['pending']);
+
+    setLocalMode(false);
+    const fetchMock = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(
+      async () =>
+        ({
+          ok: true,
+          status: 201,
+          json: async () => ({ id: 'srv-2', word: 'pending' }),
+        }) as unknown as Response
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await vocabApi.create({ word: '  Pending ' });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/v1/vocab');
+    expect(init.method).toBe('POST');
+    const body = JSON.parse(init.body as string) as Record<string, unknown>;
+    expect(body).toEqual({ word: 'pending' });
+    expect(body).not.toHaveProperty('content');
+  });
+
+  it('补全暂存卡：本地模式写内容且 SRS 字段不动；服务器模式 PATCH body 含完整 content', async () => {
+    const pending = await vocabApi.create({ word: 'pending' });
+    const filled = await vocabApi.update(pending.id, { content });
+    expect(filled).toMatchObject({
+      definitions: content.definitions,
+      examples: content.examples,
+      examFreq: '高',
+      masteryLevel: 0,
+      intervalDays: 0,
+      firstLearnedAt: null,
+    });
+
+    setLocalMode(false);
+    const fetchMock = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(
+      async () =>
+        ({
+          ok: true,
+          status: 200,
+          json: async () => ({ id: 'srv-3', word: 'pending' }),
+        }) as unknown as Response
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await vocabApi.update('srv-3', { content });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/v1/vocab/srv-3');
+    expect(init.method).toBe('PATCH');
+    expect(JSON.parse(init.body as string)).toEqual({ content });
+  });
 });

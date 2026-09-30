@@ -169,6 +169,42 @@ describe('mapLocalBackupData', () => {
       expect((e as MappingError).issues[0].path).toBe('data.vocabCards[0].masteryLevel');
     }
   });
+
+  it('vocabCards：definitions/examples 空数组（暂存待补全卡）通过映射', () => {
+    const file = backupFile({
+      vocabCards: [
+        {
+          id: 'v-pending',
+          word: 'Pending',
+          definitions: [],
+          examples: [],
+          masteryLevel: 0,
+          intervalDays: 0,
+          nextReviewDate: '2026-10-01',
+          isMastered: false,
+          firstLearnedAt: null,
+          correctCount: 0,
+          wrongCount: 0,
+          lastReviewedAt: null,
+          createdAt: '2026-09-30T02:00:00.000Z',
+        },
+      ],
+    });
+    const mapped = mapLocalBackupData(file.data);
+    expect(mapped.vocabCards).toHaveLength(1);
+    expect(mapped.vocabCards[0]).toMatchObject({
+      id: 'v-pending',
+      word: 'pending',
+      phonetic: null,
+      definitions: [],
+      examples: [],
+      extra: null,
+      examFreq: null,
+      firstLearnedAt: null,
+      // 服务器侧备份缺 updatedAt → 回落 createdAt
+      updatedAt: '2026-09-30T02:00:00.000Z',
+    });
+  });
 });
 
 describe('computeDiffCounts（服务器口径）', () => {

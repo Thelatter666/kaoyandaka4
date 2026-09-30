@@ -150,28 +150,66 @@ interface ChatMessage {
   content: string;
 }
 
+interface ChatRequestBody {
+  model: string;
+  messages: ChatMessage[];
+  temperature?: number;
+  max_tokens?: number;
+}
+
+/**
+ * 统一的 chat/completions 请求 + HTTP/网络错误分类（lookupWord 与 testLlmConnection 共用）：
+ * 401/403 → unauthorized、429 → rate_limit、其余非 2xx → network、fetch 异常 → cors、
+ * TimeoutError → network；调用方主动 abort（AbortError）原样透传供 UI 忽略。
+ * baseUrl 末尾斜杠剥掉，避免双斜杠。
+ */
+async function postChat(
+  config: VocabLlmConfig,
+  body: ChatRequestBody,
+  timeoutMs: number,
+  signal?: AbortSignal
+): Promise<Response> {
+  const base = config.baseUrl.replace(/\/+$/, '');
+  const timeout = AbortSignal.timeout(timeoutMs);
+  const combined = signal && typeof AbortSignal.any === 'function' ? AbortSignal.any([signal, timeout]) : timeout;
+  let res: Response;
+  try {
+    res = await fetch(`${base}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
+      body: JSON.stringify(body),
+      signal: combined,
+    });
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') throw err;
+    if ((err as Error).name === 'TimeoutError') {
+      throw new LlmError('network', `请求超时（${timeoutMs / 1000} 秒），请检查网络或服务商状态`);
+    }
+    throw new LlmError('cors', '无法连接 LLM 服务：该服务商可能不允许浏览器直连（CORS），或地址/网络有误');
+  }
+  if (res.status === 401 || res.status === 403) throw new LlmError('unauthorized', `API Key 无效或无权限（HTTP ${res.status}）`);
+  if (res.status === 429) throw new LlmError('rate_limit', '触发服务商限流（HTTP 429），请稍后重试');
+  if (!res.ok) throw new LlmError('network', `服务商返回 HTTP ${res.status}`);
+  return res;
+}
+
+/**
+ * 测试连接：POST 一条最小对话，HTTP 2xx 即成功（思考模型可能只返回思维链、content 为空，
+ * 不校验响应内容）；15 秒超时，错误分类与 lookupWord 完全一致。
+ */
+export async function testLlmConnection(config: VocabLlmConfig, signal?: AbortSignal): Promise<void> {
+  await postChat(
+    config,
+    { model: config.model, messages: [{ role: 'user', content: '回复 ok' }], max_tokens: 64 },
+    15_000,
+    signal
+  );
+}
+
 /** 查词：30 秒超时 + 契约失败自动重试 1 次；错误分类见 LlmErrorKind */
 export async function lookupWord(config: VocabLlmConfig, word: string, signal?: AbortSignal): Promise<VocabContent> {
-  const base = config.baseUrl.replace(/\/+$/, '');
   const call = async (messages: ChatMessage[]): Promise<string> => {
-    const timeout = AbortSignal.timeout(30_000);
-    const combined = signal && typeof AbortSignal.any === 'function' ? AbortSignal.any([signal, timeout]) : timeout;
-    let res: Response;
-    try {
-      res = await fetch(`${base}/chat/completions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
-        body: JSON.stringify({ model: config.model, messages, temperature: 0.3 }),
-        signal: combined,
-      });
-    } catch (err) {
-      if ((err as Error).name === 'AbortError') throw err;
-      if ((err as Error).name === 'TimeoutError') throw new LlmError('network', '请求超时（30 秒），请检查网络或服务商状态');
-      throw new LlmError('cors', '无法连接 LLM 服务：该服务商可能不允许浏览器直连（CORS），或地址/网络有误');
-    }
-    if (res.status === 401 || res.status === 403) throw new LlmError('unauthorized', `API Key 无效或无权限（HTTP ${res.status}）`);
-    if (res.status === 429) throw new LlmError('rate_limit', '触发服务商限流（HTTP 429），请稍后重试');
-    if (!res.ok) throw new LlmError('network', `服务商返回 HTTP ${res.status}`);
+    const res = await postChat(config, { model: config.model, messages, temperature: 0.3 }, 30_000, signal);
     const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
     return data.choices?.[0]?.message?.content ?? '';
   };

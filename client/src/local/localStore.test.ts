@@ -481,6 +481,71 @@ describe('vocab（单词本）', () => {
     expect(await localStore.vocab.getByWord('abandon')).toBeNull();
   });
 
+  it('create 暂存待补全：缺省 content → 空内容卡（空数组/null），SRS 字段照常初始化', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 8, 30, 10, 0, 0));
+    const card = await localStore.vocab.create({ word: '  Pending ' });
+    const { id, createdAt, updatedAt, ...rest } = card;
+    expect(id).toBeTruthy();
+    expect(createdAt).toBe(new Date(2026, 8, 30, 10, 0, 0).toISOString());
+    expect(updatedAt).toBe(createdAt);
+    expect(rest).toEqual({
+      word: 'pending',
+      phonetic: null,
+      definitions: [],
+      examples: [],
+      extra: null,
+      examFreq: null,
+      masteryLevel: 0,
+      intervalDays: 0,
+      nextReviewDate: '2026-10-01',
+      isMastered: false,
+      firstLearnedAt: null,
+      correctCount: 0,
+      wrongCount: 0,
+      lastReviewedAt: null,
+    });
+    expect(card).not.toHaveProperty('accountId');
+    expect(await localStore.vocab.getByWord('PENDING')).toMatchObject({ id: card.id, definitions: [], examples: [] });
+  });
+
+  it('update 补全 content：内容落库且 updatedAt 刷新；mastery/intervalDays/nextReviewDate/isMastered/lastReviewedAt 一律不动', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 8, 30, 10, 0, 0));
+    const card = await localStore.vocab.create({ word: 'pending' });
+    await localStore.vocab.learn(card.id);
+    const before = await localStore.vocab.review(card.id, 'known');
+    expect(before).toMatchObject({ masteryLevel: 1, definitions: [] });
+
+    vi.setSystemTime(new Date(2026, 8, 30, 12, 0, 0));
+    const filled = await localStore.vocab.update(card.id, { content: vocabContent });
+    expect(filled).toMatchObject({
+      phonetic: vocabContent.phonetic,
+      definitions: vocabContent.definitions,
+      examples: vocabContent.examples,
+      extra: null,
+      examFreq: '高',
+      updatedAt: new Date(2026, 8, 30, 12, 0, 0).toISOString(),
+      // SRS 进度 / 学习记录字段保持原值
+      masteryLevel: before.masteryLevel,
+      intervalDays: before.intervalDays,
+      nextReviewDate: before.nextReviewDate,
+      isMastered: before.isMastered,
+      firstLearnedAt: before.firstLearnedAt,
+      correctCount: before.correctCount,
+      wrongCount: before.wrongCount,
+      lastReviewedAt: before.lastReviewedAt,
+    });
+
+    // 防御顺序：content 优先于 reset/masteryLevel（契约三选一，本地按 content 先判）
+    const ignored = await localStore.vocab.update(card.id, { content: vocabContent, reset: true, masteryLevel: 5 });
+    expect(ignored).toMatchObject({
+      masteryLevel: before.masteryLevel,
+      intervalDays: before.intervalDays,
+      nextReviewDate: before.nextReviewDate,
+    });
+  });
+
   it('review：认识升档按间隔表排期、模糊顺延 1 天、不认识降 2 档当天到期、满档毕业', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 8, 30, 10, 0, 0));
@@ -589,6 +654,45 @@ describe('vocab（单词本）', () => {
       intervalDays: 1,
       nextReviewDate: '2026-10-01',
       firstLearnedAt: new Date(2026, 8, 30, 10, 0, 0).toISOString(),
+    });
+    expect(restored[0]).not.toHaveProperty('accountId');
+  });
+
+  it('暂存卡备份往返：导出保留空数组，merge 导入后仍为暂存形态（空内容、未学）', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 8, 30, 10, 0, 0));
+    const card = await localStore.vocab.create({ word: 'Pending' });
+
+    const file = await localStore.backup.exportBackup();
+    expect(file.data.vocabCards).toHaveLength(1);
+    expect(file.data.vocabCards![0]).not.toHaveProperty('accountId');
+    expect(file.data.vocabCards![0]).toMatchObject({
+      id: card.id,
+      word: 'pending',
+      phonetic: null,
+      definitions: [],
+      examples: [],
+      extra: null,
+      examFreq: null,
+      masteryLevel: 0,
+      intervalDays: 0,
+      nextReviewDate: '2026-10-01',
+      isMastered: false,
+      firstLearnedAt: null,
+      lastReviewedAt: null,
+    });
+
+    await localStore.vocab.remove(card.id);
+    await localStore.backup.importData(file, 'merge');
+    const restored = await localStore.vocab.list();
+    expect(restored).toHaveLength(1);
+    expect(restored[0]).toMatchObject({
+      id: card.id,
+      word: 'pending',
+      definitions: [],
+      examples: [],
+      firstLearnedAt: null,
+      isMastered: false,
     });
     expect(restored[0]).not.toHaveProperty('accountId');
   });

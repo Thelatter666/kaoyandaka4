@@ -222,7 +222,10 @@ const mapVocabExample = (e: unknown, p: string): VocabExample => {
   return { en: strRequired(row.en, `${p}.en`), zh: strRequired(row.zh, `${p}.zh`) };
 };
 
-/** 第 9 类资源（词卡）：word 归一为小写；服务器侧备份不含 updatedAt，缺失时回落 createdAt */
+/**
+ * 第 9 类资源（词卡）：word 归一为小写；服务器侧备份不含 updatedAt，缺失时回落 createdAt；
+ * definitions/examples 允许空数组（暂存待补全卡，与服务器导入映射同口径，arrRequired 仅校验类型）。
+ */
 const mapVocabCard = (e: Row, p: string): Omit<LocalVocabCard, 'accountId'> => {
   const createdAt = strRequired(e.createdAt, `${p}.createdAt`);
   return {

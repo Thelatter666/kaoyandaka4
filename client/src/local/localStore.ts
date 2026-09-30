@@ -759,15 +759,18 @@ const vocab = {
     const word = normalizeWord(input.word);
     if (await findVocabByWord(accountId, word)) throw new Error('WORD_EXISTS');
     const nowIso = new Date().toISOString();
+    // 暂存待补全：content 缺省 → 空内容卡（definitions/examples 空数组即标记，不进复习队列），
+    // LLM 恢复后经 update({ content }) 补全；其余 SRS 字段照常初始化
+    const content = input.content;
     const row: LocalVocabCard = {
       accountId,
       id: generateUUID(),
       word,
-      phonetic: input.content.phonetic ?? null,
-      definitions: input.content.definitions,
-      examples: input.content.examples,
-      extra: input.content.extra ?? null,
-      examFreq: input.content.examFreq ?? null,
+      phonetic: content?.phonetic ?? null,
+      definitions: content?.definitions ?? [],
+      examples: content?.examples ?? [],
+      extra: content?.extra ?? null,
+      examFreq: content?.examFreq ?? null,
       masteryLevel: 0,
       intervalDays: 0,
       // 新词当天即出现在复习页新词区；次日进入到期判定
@@ -784,13 +787,29 @@ const vocab = {
     return strip(row);
   },
 
-  /** 手动调档（按间隔表重排下次复习）或重置进度（回到未学，次日到期） */
+  /**
+   * 三选一（shared schema refine 保证互斥；本地防御顺序 content > reset > masteryLevel）：
+   * - content：补全暂存卡内容（只写内容字段 + updatedAt，SRS 进度字段一律不动）；
+   * - reset：重置进度（回到未学，次日到期）；
+   * - masteryLevel：手动调档（按间隔表重排下次复习）。
+   */
   async update(id: string, patch: UpdateVocabCardInput): Promise<VocabCard> {
     const row = await requireVocabCard(id);
     const todayStr = today();
+    const nowIso = new Date().toISOString();
     let next: LocalVocabCard;
-    if (patch.reset === true) {
-      next = { ...row, masteryLevel: 0, intervalDays: 0, nextReviewDate: addDays(todayStr, 1), isMastered: false };
+    if (patch.content !== undefined) {
+      next = {
+        ...row,
+        phonetic: patch.content.phonetic ?? null,
+        definitions: patch.content.definitions,
+        examples: patch.content.examples,
+        extra: patch.content.extra ?? null,
+        examFreq: patch.content.examFreq ?? null,
+        updatedAt: nowIso,
+      };
+    } else if (patch.reset === true) {
+      next = { ...row, masteryLevel: 0, intervalDays: 0, nextReviewDate: addDays(todayStr, 1), isMastered: false, updatedAt: nowIso };
     } else {
       const masteryLevel = patch.masteryLevel ?? row.masteryLevel;
       const intervalDays = VOCAB_SRS_INTERVALS[masteryLevel];
@@ -800,9 +819,9 @@ const vocab = {
         intervalDays,
         nextReviewDate: addDays(todayStr, intervalDays),
         isMastered: masteryLevel === VOCAB_MASTERY_MAX,
+        updatedAt: nowIso,
       };
     }
-    next.updatedAt = new Date().toISOString();
     await tx('vocabCards', 'readwrite', (t) => idbPut(t, 'vocabCards', next));
     return strip(next);
   },
