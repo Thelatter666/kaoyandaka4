@@ -11,6 +11,27 @@ const data: BackupFile['data'] = {
   focusSessions: [{ id: 'f1', presetId: null, presetNameSnapshot: '数学 25min', subjectSnapshot: 'math', subSubjectSnapshot: null, plannedDurationSeconds: 1500, actualDurationSeconds: null, startedAt: '2026-08-16 09:00:00', plannedEndAt: '2026-08-16 09:25:00', completedAt: null, status: 'in_progress', source: 'pomodoro', courseEpisodeId: null, taskId: 't1', createdAt: '2026-08-16 09:00:00', updatedAt: '2026-08-16 09:00:00' }],
   studyRecords: [{ id: 's1', presetNameSnapshot: '数学 25min', subjectSnapshot: 'math', subSubjectSnapshot: null, actualDurationSeconds: 1500, focusSessionId: null, taskId: null, courseEpisodeId: null, courseNameSnapshot: null, episodeTitleSnapshot: null, source: 'focus_session', notes: null, createdAt: '2026-08-16 09:25:00', updatedAt: '2026-08-16 09:25:00' }],
   settings: [{ key: 'pomodoro_sound_enabled', value: '1' }],
+  vocabCards: [{
+    id: 'v1',
+    word: 'Abandon',
+    phonetic: '/əˈbændən/',
+    definitions: [{ pos: 'v.', meaning: '放弃', hacker: 'x' }],
+    examples: [{ en: 'He abandoned the plan.', zh: '他放弃了计划。', extra: 'y' }],
+    extra: null,
+    examFreq: '高',
+    masteryLevel: 2,
+    intervalDays: 2,
+    nextReviewDate: '2026-10-02',
+    isMastered: false,
+    firstLearnedAt: null,
+    correctCount: 2,
+    wrongCount: 0,
+    lastReviewedAt: null,
+    createdAt: '2026-09-30 08:00:00',
+    updatedAt: '2026-09-30 08:00:00',
+    hacker: 'x',
+    user_id: 'other',
+  }],
 };
 
 describe('mapBackupData', () => {
@@ -69,5 +90,52 @@ describe('mapBackupData', () => {
       expect(issues[0]!.path).toContain('tasks');
       expect(issues[0]!.path).toContain('isCompleted');
     }
+  });
+
+  it('vocabCards：合法条目映射为 snake_case 行、word lowercase、多余键丢弃', () => {
+    const mapped = mapBackupData(data);
+    const card = mapped.vocabCards[0]!;
+    expect(card).toMatchObject({
+      id: 'v1',
+      word: 'abandon',
+      phonetic: '/əˈbændən/',
+      extra: null,
+      exam_freq: '高',
+      mastery_level: 2,
+      interval_days: 2,
+      next_review_date: '2026-10-02',
+      is_mastered: false,
+      first_learned_at: null,
+      correct_count: 2,
+      wrong_count: 0,
+      last_reviewed_at: null,
+    });
+    // definitions/examples 收窄为 JSON 字符串（插入 JSON 列用），条目内多余键被丢弃
+    expect(JSON.parse(card.definitions as string)).toEqual([{ pos: 'v.', meaning: '放弃' }]);
+    expect(JSON.parse(card.examples as string)).toEqual([{ en: 'He abandoned the plan.', zh: '他放弃了计划。' }]);
+    expect(card).not.toHaveProperty('hacker');
+    expect(card).not.toHaveProperty('user_id');
+  });
+
+  it('vocabCards：masteryLevel 越界（9 或 -1）报 MappingError', () => {
+    const bad = (masteryLevel: number) => ({
+      ...data,
+      vocabCards: [{ ...data.vocabCards![0]!, masteryLevel }],
+    });
+    expect(() => mapBackupData(bad(9))).toThrow(MappingError);
+    expect(() => mapBackupData(bad(-1))).toThrow(MappingError);
+  });
+
+  it('vocabCards：examFreq 非法枚举拒绝、definitions 非数组拒绝', () => {
+    const badEnum = { ...data, vocabCards: [{ ...data.vocabCards![0]!, examFreq: '极高' }] };
+    const badDefs = { ...data, vocabCards: [{ ...data.vocabCards![0]!, definitions: 'v. 放弃' }] };
+    expect(() => mapBackupData(badEnum)).toThrow(MappingError);
+    expect(() => mapBackupData(badDefs)).toThrow(MappingError);
+  });
+
+  it('vocabCards：旧版备份省略该字段 → 空数组', () => {
+    const legacy = { ...data };
+    delete legacy.vocabCards;
+    expect(mapBackupData(legacy).vocabCards).toEqual([]);
   });
 });

@@ -5,7 +5,7 @@ import {
 import type { MappedData } from './import-mapping.js';
 
 const emptyMapped: MappedData = {
-  presets: [], tasks: [], reviews: [], courses: [], episodes: [], focusSessions: [], studyRecords: [], settings: [],
+  presets: [], tasks: [], reviews: [], courses: [], episodes: [], focusSessions: [], studyRecords: [], settings: [], vocabCards: [],
 };
 
 describe('computeDiffCounts', () => {
@@ -21,25 +21,50 @@ describe('computeDiffCounts', () => {
     // r1：id 不冲突但 date 冲突 → updated；r2：全不冲突 → added；kept：r9 不在文件键 → 1
     expect(computeDiffCounts(fileKeys, existing)).toEqual({ added: 1, updated: 1, kept: 1 });
   });
+
+  it('vocabCards 复合键：id 或 word 任一冲突即 updated', () => {
+    const fileKeys = [['v1', 'word:abandon'], ['v2', 'word:benefit']];
+    const existing = new Set(['v9', 'word:abandon']);
+    // v1：id 不冲突但同词已存在 → updated；v2：全不冲突 → added；kept：v9 不在文件键 → 1
+    expect(computeDiffCounts(fileKeys, existing)).toEqual({ added: 1, updated: 1, kept: 1 });
+  });
 });
 
 describe('computeDiffSummary', () => {
-  it('汇总 8 资源（reviews 用复合键、settings 用 key）', () => {
+  it('汇总 9 资源（reviews 用复合键、settings 用 key、vocabCards 用 id/word 复合键）', () => {
     const fileData: MappedData = {
       ...emptyMapped,
       tasks: [{ id: 't1' }, { id: 't2' }],
       reviews: [{ id: 'r1', review_date: '2026-08-16' }],
       settings: [{ setting_key: 'pomodoro_sound_enabled' }],
+      vocabCards: [{ id: 'v1', word: 'abandon' }, { id: 'v2', word: 'benefit' }],
     };
     const existing = {
       presets: [], tasks: ['t1', 't9'], reviews: { ids: [], dates: ['2026-08-16'] },
       courses: [], episodes: [], focusSessions: [], studyRecords: [], settings: ['theme'],
+      vocabCards: { ids: ['v2'], words: ['abandon'] },
     };
     const summary = computeDiffSummary(fileData, existing);
     expect(summary.tasks).toEqual({ added: 1, updated: 1, kept: 1 });
     expect(summary.reviews).toEqual({ added: 0, updated: 1, kept: 0 });
     expect(summary.settings).toEqual({ added: 1, updated: 0, kept: 1 });
     expect(summary.presets).toEqual({ added: 0, updated: 0, kept: 0 });
+    // v1 命中 existing word → updated；v2 命中 existing id → updated；kept：无未命中现有键
+    expect(summary.vocabCards).toEqual({ added: 0, updated: 2, kept: 0 });
+    expect(Object.keys(summary)).toContain('vocabCards');
+  });
+
+  it('vocabCards：同词不同 id → updated（word 冲突键命中）', () => {
+    const fileData: MappedData = {
+      ...emptyMapped,
+      vocabCards: [{ id: 'new-id', word: 'abandon' }],
+    };
+    const existing = {
+      presets: [], tasks: [], reviews: { ids: [], dates: [] },
+      courses: [], episodes: [], focusSessions: [], studyRecords: [], settings: [],
+      vocabCards: { ids: ['old-id'], words: ['abandon'] },
+    };
+    expect(computeDiffSummary(fileData, existing).vocabCards).toEqual({ added: 0, updated: 1, kept: 1 });
   });
 });
 
@@ -86,9 +111,12 @@ describe('buildInsertSql', () => {
     expect(buildInsertSql('daily_tasks', [])).toBeNull();
   });
 
-  it('TABLE_DEFS 覆盖 8 表（仅表名，无 updateColumns）', () => {
-    expect(Object.keys(TABLE_DEFS)).toEqual(['presets', 'tasks', 'reviews', 'courses', 'episodes', 'focusSessions', 'studyRecords', 'settings']);
+  it('TABLE_DEFS 覆盖 9 表（仅表名，无 updateColumns）', () => {
+    expect(Object.keys(TABLE_DEFS)).toEqual([
+      'presets', 'tasks', 'reviews', 'courses', 'episodes', 'focusSessions', 'studyRecords', 'settings', 'vocabCards',
+    ]);
     expect(TABLE_DEFS.presets).toEqual({ table: 'study_presets' });
+    expect(TABLE_DEFS.vocabCards).toEqual({ table: 'vocab_cards' });
     expect('updateColumns' in TABLE_DEFS.reviews).toBe(false);
   });
 });
@@ -129,9 +157,23 @@ describe('collectConflictKeys', () => {
     expect(dels[0]!.params).toEqual(['u1', 'theme', 'pomodoro_sound_enabled']);
   });
 
+  it('vocabCards（vocab 模式）：先按 id、再按 word 两条删除', () => {
+    const rows = [
+      { user_id: 'u1', id: 'v1', word: 'abandon' },
+      { user_id: 'u1', id: 'v2', word: 'benefit' },
+    ];
+    const dels = collectConflictKeys('vocab_cards', rows, 'vocab');
+    expect(dels).toHaveLength(2);
+    expect(dels[0]!.sql).toContain('AND id IN (?, ?)');
+    expect(dels[0]!.params).toEqual(['u1', 'v1', 'v2']);
+    expect(dels[1]!.sql).toBe('DELETE FROM vocab_cards WHERE user_id = ? AND word IN (?, ?)');
+    expect(dels[1]!.params).toEqual(['u1', 'abandon', 'benefit']);
+  });
+
   it('空行返回 []', () => {
     expect(collectConflictKeys('daily_tasks', [], 'id')).toEqual([]);
     expect(collectConflictKeys('daily_reviews', [], 'review')).toEqual([]);
     expect(collectConflictKeys('user_settings', [], 'setting')).toEqual([]);
+    expect(collectConflictKeys('vocab_cards', [], 'vocab')).toEqual([]);
   });
 });

@@ -5,7 +5,8 @@
  *   1. 创建 users 表（若不存在）；
  *   2. 写入种子管理员（admin@yantai.local），用于承接本地存量数据；
  *   3. 为 7 张业务表补 user_id 列 + 外键（ON DELETE CASCADE）+ 复合索引；
- *   4. daily_reviews 唯一索引由 (review_date) 调整为 (user_id, review_date)。
+ *   4. daily_reviews 唯一索引由 (review_date) 调整为 (user_id, review_date)；
+ *   5. 创建 vocab_cards 表（单词本模块，word 唯一约束在 (user_id, word)）。
  *
  * 幂等性：全部通过 information_schema 检查后执行，可重复运行不报错；
  *   也兼容「上次迁移中断」的中间状态（如列已加但仍有 NULL 行）。
@@ -48,6 +49,35 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     UNIQUE INDEX idx_users_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+
+// vocab_cards 表 DDL：与 schema.sql 保持一致的最终形态（单词本模块）
+const CREATE_VOCAB_TABLE = `
+CREATE TABLE IF NOT EXISTS vocab_cards (
+    id               CHAR(36) PRIMARY KEY,
+    user_id          CHAR(36) NOT NULL,
+    word             VARCHAR(100) NOT NULL,
+    phonetic         VARCHAR(100) NULL,
+    definitions      JSON NOT NULL,
+    examples         JSON NOT NULL,
+    extra            TEXT NULL,
+    exam_freq        VARCHAR(20) NULL,
+    mastery_level    TINYINT NOT NULL DEFAULT 0,
+    interval_days    INT NOT NULL DEFAULT 0,
+    next_review_date DATE NOT NULL,
+    is_mastered      BOOLEAN NOT NULL DEFAULT FALSE,
+    first_learned_at DATETIME NULL,
+    correct_count    INT NOT NULL DEFAULT 0,
+    wrong_count      INT NOT NULL DEFAULT 0,
+    last_reviewed_at DATETIME NULL,
+    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    UNIQUE INDEX idx_vocab_user_word (user_id, word),
+    INDEX idx_vocab_user_next_review (user_id, next_review_date),
+    INDEX idx_vocab_user_mastery (user_id, mastery_level),
+    CONSTRAINT fk_vocab_user FOREIGN KEY (user_id)
+        REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
 interface IndexToAdd {
@@ -327,6 +357,11 @@ export async function migrateUsers(conn: mysql.Connection, dbName: string): Prom
   } else {
     console.log('  [focus_sessions] column paused_total_seconds already exists, skip');
   }
+
+  // 5. vocab_cards（单词本词卡；CREATE TABLE IF NOT EXISTS 本身幂等）
+  // 置于 users 建表之后：外键引用 users(id)，须确保被引用表已存在
+  await conn.query(CREATE_VOCAB_TABLE);
+  console.log('  [vocab_cards] table ready');
 }
 
 // 独立运行入口（被 init.ts import 时不触发）
