@@ -785,7 +785,7 @@ vocab: {
 
 **Files:**
 - Create: `client/src/pages/VocabularyPage.tsx` + `client/src/pages/VocabularyPage.css`、`client/src/components/vocab/{VocabQueryModal,VocabLlmConfigModal,VocabCardItem,VocabReviewCard,VocabIndexSwitcher,VocabMasteryDots,markdown}.tsx`（+ 各自 co-located css，小组件可合并 css 到 VocabularyPage.css）、`client/src/components/vocab/speak.ts`
-- Modify: `client/src/App.tsx`（四位点）、`client/src/components/layout/TopNav.tsx` + `TopNav.css`（第 8 项 + 让宽）
+- Modify: `client/src/App.tsx`（四位点）、`client/src/components/layout/TopNav.tsx` + `TopNav.css`（第 8 项 + 让宽）、`client/src/components/ui/ImportBackupModal.tsx`（`RESOURCE_LABELS` 加 `vocabCards` 中文标签一行——C1 已把 `DiffSummarySchema.vocabCards` 定为必填，缺此行 `npm run build` 会红）
 - Test: 无单测（node 环境）；验收 = lint + build + 手工清单 + C5 门禁
 
 **Interfaces:**
