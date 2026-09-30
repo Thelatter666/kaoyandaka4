@@ -54,6 +54,33 @@ describe('buildReviewQueue', () => {
     expect(q.newCards.map((c) => c.id)).toEqual(['new-1', 'new-2']);
     expect(q.dueCards.map((c) => c.id)).toEqual(['due-m0', 'due-m2']);
   });
+  it('空内容卡（definitions 为空）不进新词区与到期区，quota=null 也不出现', () => {
+    const empty = { definitions: [], examples: [] };
+    const cards = [
+      mkCard({ id: 'empty-new', createdAt: '2026-09-30T01:00:00.000Z', ...empty }),
+      mkCard({ id: 'new-1', createdAt: '2026-09-30T02:00:00.000Z' }),
+      mkCard({ id: 'empty-due', firstLearnedAt: '2026-09-29T00:00:00.000Z', ...empty }),
+      mkCard({ id: 'due-1', firstLearnedAt: '2026-09-29T00:00:00.000Z' }),
+    ];
+    const q = buildReviewQueue(cards, '2026-09-30', null);
+    expect(q.newCards.map((c) => c.id)).toEqual(['new-1']);
+    expect(q.dueCards.map((c) => c.id)).toEqual(['due-1']);
+  });
+  it('空内容卡不占配额：quota 截断后额度仍归有内容的卡', () => {
+    const empty = { definitions: [], examples: [] };
+    const cards = [
+      mkCard({ id: 'empty-new', createdAt: '2026-09-30T01:00:00.000Z', ...empty }),
+      mkCard({ id: 'new-1', createdAt: '2026-09-30T02:00:00.000Z' }),
+      mkCard({ id: 'empty-due', firstLearnedAt: '2026-09-29T00:00:00.000Z', ...empty }),
+      mkCard({ id: 'due-1', firstLearnedAt: '2026-09-29T00:00:00.000Z' }),
+    ];
+    const q = buildReviewQueue(cards, '2026-09-30', 2);
+    expect(q.newCards.map((c) => c.id)).toEqual(['new-1']);
+    expect(q.dueCards.map((c) => c.id)).toEqual(['due-1']);
+    const tight = buildReviewQueue(cards, '2026-09-30', 1);
+    expect(tight.newCards.map((c) => c.id)).toEqual(['new-1']);
+    expect(tight.dueCards).toEqual([]);
+  });
   it('配额截断：新词优先占额度，余量给到期词', () => {
     const cards = [
       mkCard({ id: 'n1' }), mkCard({ id: 'n2' }),

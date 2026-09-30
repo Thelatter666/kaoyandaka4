@@ -13,11 +13,19 @@ export const VocabContentSchema = z.object({
 });
 export const VocabLookupResultSchema = VocabContentSchema; // LLM 输出契约 = 词卡内容
 
-export const CreateVocabCardSchema = z.object({ word: z.string().min(1).max(100), content: VocabContentSchema });
+// content 缺省即「暂存卡」（空内容卡，待 LLM 恢复后经 PATCH 补全）
+export const CreateVocabCardSchema = z.object({ word: z.string().min(1).max(100), content: VocabContentSchema.optional() });
 
 export const UpdateVocabCardSchema = z
-  .object({ masteryLevel: z.number().int().min(0).max(5).optional(), reset: z.boolean().optional() })
-  .refine((v) => (v.masteryLevel !== undefined) !== (v.reset === true), { message: 'masteryLevel 与 reset 必须二选一' });
+  .object({
+    masteryLevel: z.number().int().min(0).max(5).optional(),
+    reset: z.boolean().optional(),
+    content: VocabContentSchema.optional(),
+  })
+  .refine(
+    (v) => [v.masteryLevel !== undefined, v.reset === true, v.content !== undefined].filter(Boolean).length === 1,
+    { message: 'masteryLevel / reset / content 必须三选一' },
+  );
 
 export const ReviewGradeSchema = z.enum(['known', 'fuzzy', 'unknown']);
 

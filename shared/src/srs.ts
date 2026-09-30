@@ -33,11 +33,12 @@ export function applyReview(state: SrsState, grade: ReviewGrade, today: string):
 }
 
 export function buildReviewQueue(cards: VocabCard[], today: string, quota: number | null) {
+  // 空内容卡（definitions 为空，暂存待补全）不进任何队列
   const newCards = cards
-    .filter((c) => c.firstLearnedAt === null)
+    .filter((c) => c.firstLearnedAt === null && c.definitions.length > 0)
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const dueCards = cards
-    .filter((c) => c.firstLearnedAt !== null && !c.isMastered && c.nextReviewDate <= today)
+    .filter((c) => c.firstLearnedAt !== null && !c.isMastered && c.nextReviewDate <= today && c.definitions.length > 0)
     .sort((a, b) => a.masteryLevel - b.masteryLevel || a.nextReviewDate.localeCompare(b.nextReviewDate));
   if (quota === null) return { newCards, dueCards };
   const newTaken = newCards.slice(0, quota);
