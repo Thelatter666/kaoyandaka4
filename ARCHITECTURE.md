@@ -24,7 +24,7 @@ client/src/          → React SPA (hash-router, lazy-loaded pages)
   components/        → UI primitives + feature components (layout/, tasks/, timer/, courses/, presets/, forest/, heatmap/, review/, vocab/, landing/, ui/)
   pages/             → Page components with co-located CSS (HomePage, PlanPage, PomodoroPage, ReviewPage, LoginPage/RegisterPage, LocalModePage, CourseDetailPage, CoursesPage, PresetsPage, StatisticsPage, VocabularyPage；AuthPage.css 为 Login/Register/LocalModePage 三页共用样式)
   hooks/             → useApi, useAuth, useFocusSession, useKeyboardSort, useScreenWakeLock, useTheme, usePowerSave（节能模式：开关 + useShouldReduceMotion 降级谓词）
-  utils/             → date/duration/sound/accessibility + focusPause (专注暂停纯函数) + unlockMarker (复盘锁解锁标记,含上锁与跨标签广播) + localPower (关闭系统:本机判定 + 关机请求) + reviewLockHash (本地复盘锁哈希) + powerSave (节能模式真源与判定) + localStatistics + localImport + parseCourseText + uuid + vocabLlm (LLM 浏览器直连客户端：lookupWord / testLlmConnection / 配置读写)
+  utils/             → date/duration/sound/accessibility + focusPause (专注暂停纯函数) + unlockMarker (复盘锁解锁标记,含上锁与跨标签广播) + localPower (关闭系统:本机判定 + 关机请求) + reviewLockHash (本地复盘锁哈希) + powerSave (节能模式真源与判定) + localStatistics + localImport + parseCourseText + uuid + vocabLlm (LLM 浏览器直连客户端：lookupWord / testLlmConnection / 配置读写 + buildVocabSystemPrompt（契约骨架固定 + extra 可自定义）/ 提示词预设 CRUD（loadPromptStore / savePromptStore / getActiveExtraRequirement）/ parseWordList 批量输入解析)
   workers/           → countdown-title.ts (标签页标题倒计时), end-sound.ts (番茄钟准点响铃)
   styles/            → tokens.css, global.css, utilities.css, power-save.css (节能模式开销削减层)
 
@@ -93,7 +93,7 @@ e2e/                 → playwright.config.ts + tests/（smoke / power-save / vo
 - **通用组件**（`client/src/components/ui/`）：Button, Card, Modal(portal 到 body), Toast, ConfirmDialog, ProgressBar, EmptyState/ErrorState/LoadingState, SkipLink, SubjectBadge, Dropdown, Calendar, ImportBackupModal(导入向导), ProfileDropdown(顶栏账户菜单: 导出/导入/复盘锁/登出), SoundToggle, ThemeToggle, PowerSaveToggle(节能模式开关, 44px 圆钮, 开启时主色高亮兼作状态指示)
 - **复盘门禁**（`client/src/components/review/`）：ReviewGate(三态门禁,包裹 ReviewPage 保持 lazy) + ReviewLockModal(设置/修改弹窗) + ReviewLockContext(上锁回调 context,独立 chunk 以免复盘页拖带门禁依赖)
 - **顶栏**（`client/src/components/layout/TopNav.tsx`）：品牌 + 8 项导航 + 节能模式/主题/账户菜单 + 「关闭系统」（仅本机 host 渲染，见 AGENT.md「本地启动与关闭系统」）。**顶栏宽度已满**：960px 胶囊上限不变，为第 8 项「单词本」按节能钮先例让宽——`.top-nav` gap 6→5px、左 padding 16→12px / 右 8→6px、`.top-nav__links` gap 4→3→2px、`.top-nav__link` padding 16→8px、`.top-nav__actions` gap 4→3px（实测 8 项 + 右侧动作区自然宽 1012px，收窄后余 44px，图标与文字未压缩、触控高度仍 44px）
-- **单词本**（`client/src/components/vocab/`）：VocabQueryModal(LLM 查词，失败可「暂存单词」) / VocabLlmConfigModal(设备级配置 + 「测试连接」) / VocabCardItem + VocabDetail(词库卡与详情：待补全徽标 / 内容待补全占位 / 单卡「AI 补全」) / VocabReviewCard(翻面复习卡) / VocabIndexSwitcher(三索引) / VocabMasteryDots / VocabSpeakButton / markdown.tsx(纯 React 轻量 Markdown)。`VocabularyPage` 工具栏含「待补全 (N)」过滤与「补全选中（N）」串行批量补全（逐卡 排队/进行/成功/失败，AbortController 可取消）；术语见 `CONTEXT.md`，决策见 `docs/adr/0008` 与 spec §12（2026-09-30 增补）
+- **单词本**（`client/src/components/vocab/`）：VocabQueryModal(LLM 查词：textarea 输入 + 单查/批量查词，逐词状态列表与进度、取消；失败可「暂存单词」) / VocabLlmConfigModal(设备级配置 + 「测试连接」+ 「提示词」预设管理区：单选列表 / 新建编辑 / 删除 / 只读预览) / VocabCardItem + VocabDetail(词库卡与详情：待补全徽标 / 内容待补全占位 / 单卡「AI 补全」) / VocabReviewCard(翻面复习卡) / VocabIndexSwitcher(三索引) / VocabMasteryDots / VocabSpeakButton / markdown.tsx(纯 React 轻量 Markdown)。`VocabularyPage` 工具栏含「待补全 (N)」过滤与「补全选中（N）」串行批量补全（逐卡 排队/进行/成功/失败，AbortController 可取消）；术语见 `CONTEXT.md`，决策见 `docs/adr/0008` 与 spec §12–§14（2026-09-30 增补）
 - **动效组件**（framer-motion）：AnimatedThemeToggle, Magnetic, GlowCard, Card3D, FileUpload, GradientCard, InteractiveHoverButton
 - **砚池计时器**（`client/src/components/timer/`）：RingCountdown.tsx + RingCountdown.css + inkSurface.ts(等面积 LUT) + inkWavePaths.ts(三变体波形) + BurstParticles.tsx；设计见 `docs/adr/0001`-`0004` 与 `docs/superpowers/specs/2026-08-21-pomodoro-inkwell-design.md`；术语见 `CONTEXT.md`
 - **功能子目录**：courses/ forest/ heatmap/ landing/ layout/ presets/ tasks/ vocab/
@@ -109,8 +109,8 @@ e2e/                 → playwright.config.ts + tests/（smoke / power-save / vo
 
 - `client/vite.config.ts`：`manualChunks` 拆 **4 个** vendor —— `react-vendor`(react/react-dom/scheduler) / `lucide-vendor` / `motion-vendor`(framer-motion/motion-dom/motion-utils) / `virtual-vendor`(@tanstack/react-virtual)
 - alias：`@shared` → `shared/src`；dev proxy：`/api` → `http://localhost:3001`；端口 5173
-- 性能预算脚本：`e2e/check-perf-budget.mjs`（构建后核对 chunk 体积预算；2026-08-30 起 TopNav/ReviewGate 已拆出入口图，2026-09-30 单词本（含暂存/补全/测试连接）加入后实测首屏 JS **189.6KB** ≤ 200KB，`VocabularyPage` 仍在 lazy chunk）
-- 测试基线（2026-09-30 实跑）：单测 `npx vitest run` **20 文件 / 198 tests 全绿**；E2E `PW_CHANNEL=chrome npx playwright test` 5 用例（smoke / power-save / vocab）串行 `workers: 1`；`npx eslint .` 0 error / 0 warning。数字以实跑为准
+- 性能预算脚本：`e2e/check-perf-budget.mjs`（构建后核对 chunk 体积预算；2026-08-30 起 TopNav/ReviewGate 已拆出入口图，2026-09-30 单词本（含暂存/补全/测试连接 + 提示词管理/批量查词）加入后实测首屏 JS **189.6KB** ≤ 200KB，`VocabularyPage` 仍在 lazy chunk）
+- 测试基线（2026-09-30 实跑）：单测 `npx vitest run` **20 文件 / 210 tests 全绿**；E2E `PW_CHANNEL=chrome npx playwright test` 6 用例（smoke / power-save / vocab）串行 `workers: 1`；`npx eslint .` 0 error / 0 warning。数字以实跑为准
 
 ## 环境变量（.env 位于项目根）
 

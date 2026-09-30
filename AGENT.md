@@ -106,7 +106,9 @@
 - **多表写入路由必须用 `withTransaction`**（`server/src/db/transaction.ts`；现 focus/courses/export/tasks/import 已用）
 - **词库唯一约束**：服务器 `vocab_cards` UNIQUE `(user_id, word)` / 本地 `vocabCards` 复合索引 `accountId_word`；`word` 一律先归一（trim + lowercase，shared `normalizeWord`）；复习调度唯一真源 `shared/src/srs.ts`（服务器与本地调用同一份 `applyReview`/`buildReviewQueue`，禁止各写一份）
 - **待补全判据（单词本暂存）**：`definitions.length === 0` 即暂存空卡，**不新增列**（空数组就是标记，备份结构未变）；`POST /vocab` 无 `content` 创建空卡，`PATCH /vocab/:id` 的 `{content}` 分支只补内容、**不动任何 SRS 字段**（mastery/interval/next_review_date/is_mastered/last_reviewed_at）；`buildReviewQueue` 过滤 `definitions.length > 0`，空卡不进新词区也不进到期队列，补全后 `first_learned_at` 仍为 NULL → 走新词首学
-- **查词契约双角色注入**：`lookupWord` 把提示词契约全文**同时**放进 system 与 user 消息（user 末尾「现在查询单词：xxx」）——部分「网页产品转 API」网关会丢弃/覆盖 system 角色，只带 system 时模型会把单词当普通对话指令；解析前先剥 `<think>` 块（ADR-0008 浏览器直连决策的实现延伸；单测 `client/src/utils/vocabLlm.test.ts`）
+- **查词契约双角色注入**：提示词由 `buildVocabSystemPrompt(extra)` 构建（契约骨架固定 + 末尾 `extra 部分的要求：`），`lookupWord` 把全文**同时**放进 system 与 user 消息（user 末尾「现在查询单词：xxx」）——部分「网页产品转 API」网关会丢弃/覆盖 system 角色，只带 system 时模型会把单词当普通对话指令；解析前先剥 `<think>` 块（ADR-0008 浏览器直连决策的实现延伸；单测 `client/src/utils/vocabLlm.test.ts`）
+- **提示词契约骨架固定**：JSON 结构/字段说明/数量与转义要求由代码持有，**用户唯一可自定义的是 extra 拓展内容的要求描述**（留空/空白回落 `DEFAULT_EXTRA_REQUIREMENT`）；预设存 localStorage `kaoyandaily-vocab-prompt-presets`（`{presets, activeId}`，activeId=null 或指向不存在的预设即回落默认），**设备级、不进备份、不上传服务器**（与 LLM 配置同语义）；`lookupWord` 内部解析激活预设、**签名不变**，单查/批量/补全一路共用
+- **批量查词**：`parseWordList` 按 `[\s,;，；]+` 切分 → 归一 → 保序去重 → 超 `VOCAB_BATCH_MAX`（=20）截断；≥2 词走**串行**批量（AbortController 可取消、逐词状态、结束汇总 Toast），LLM 失败自动暂存空卡（复用暂存/待补全口径）；1 个词仍走原单查流程
 - **🚫 客户端禁止运行时值导入 `@shared/schemas/*`**：schema 模块顶层构造 zod，值导入会把 zod 拖进前端产物（perf 预算断言 `assets/*.js` 不含 `"invalid_type"`，ADR-0008）；客户端只允许值导入 `@shared/srs` / `@shared/constants`，`normalizeWord` 的 zod-free 版在 `client/src/local/types.ts`
 
 ## Git Conventions
@@ -134,11 +136,11 @@
 
 ## Testing
 
-- **单测/集成**：`npx vitest run`（匹配 `**/*.test.ts(x)`，与被测文件同目录共存）。基线：2026-09-30 为 **20 文件 / 198 tests 全绿**（以实跑为准；根 `vitest.config.ts` 已配 `@shared` 别名）
+- **单测/集成**：`npx vitest run`（匹配 `**/*.test.ts(x)`，与被测文件同目录共存）。基线：2026-09-30 为 **20 文件 / 210 tests 全绿**（以实跑为准；根 `vitest.config.ts` 已配 `@shared` 别名）
 - **E2E 前置**：`npx playwright install`（chromium 二进制不在仓库内，新机器首次跑 `test:e2e` 会报 "Executable doesn't exist"）。**下不动二进制时可用系统 Chrome 跑**：`PW_CHANNEL=chrome npx playwright test`（`e2e/playwright.config.ts` 的可选开关，默认行为不变）。config 本地/CI 均 **`workers: 1`**：节能模式的布局逐元素比对对并行负载敏感（入场动画在主线程被抢时会冻在起始帧）
 - **环境为 `node` 而非 jsdom**：写不了依赖 DOM 的组件测试 → 需要浏览器行为时拆成纯函数（如 `inkSurface.ts`/`inkWavePaths.ts`/`sound.ts`/`focusPause.ts`/`reviewLockHash.ts`）或把断言下沉到数据层
-- **E2E**：`npm run test:e2e` 跑 `e2e/tests/` 全部 spec——`smoke.spec.ts`（真实会话认证）、`power-save.spec.ts`（节能模式）、`vocab.spec.ts`（单词本：本地模式 IndexedDB 播种词卡，不调真 LLM），共 5 个用例；`e2e/` 的工具脚本见 `ARCHITECTURE.md`，`playwright-report/`、`test-results/` 是产物目录
-> 注：2026-09-27 起有 `power-save.spec.ts`（首帧标记 / 无限动画清零 / 布局逐元素比对）；2026-09-30 起有 `vocab.spec.ts` 两个用例（① 三索引 / 首学与到期复习调度落库 / 节能模式全页无限动画扫描 / 收尾级联清理测试账户；② LLM 不可达 → 暂存空卡带「待补全」徽标 → 不进复习概况 → 「待补全」过滤默认勾选。死地址是 `http://localhost:9/v1`，其浏览器资源加载 error 日志按 URL 前缀豁免，401 照旧豁免）
+- **E2E**：`npm run test:e2e` 跑 `e2e/tests/` 全部 spec——`smoke.spec.ts`（真实会话认证）、`power-save.spec.ts`（节能模式）、`vocab.spec.ts`（单词本：本地模式，不调真 LLM），共 6 个用例；`e2e/` 的工具脚本见 `ARCHITECTURE.md`，`playwright-report/`、`test-results/` 是产物目录
+> 注：2026-09-27 起有 `power-save.spec.ts`（首帧标记 / 无限动画清零 / 布局逐元素比对）；2026-09-30 起有 `vocab.spec.ts` 三个用例（① 三索引 / 首学与到期复习调度落库 / 节能模式全页无限动画扫描 / 收尾级联清理测试账户；② LLM 不可达 → 暂存空卡带「待补全」徽标 → 不进复习概况 → 「待补全」过滤默认勾选；③ 提示词预设选中态与预览 → 批量 3 词死地址逐词自动暂存 → 直读 IndexedDB 3 张空内容卡 + 汇总 Toast「已暂存 3」。死地址是 `http://localhost:9/v1`，其浏览器资源加载 error 日志按 URL 前缀豁免，401 照旧豁免）
 - **已知缺口**：全库**无全局 ErrorBoundary** — 页面靠各自 `ErrorState` + `App.tsx` 的 Suspense `pageFallback` 兜底，勿假设有全局兜底
 - **lint 基线**（2026-08-30）：`eslint-plugin-react-hooks` 已装载（rules-of-hooks=error / exhaustive-deps=warn），全库 **0 error / 0 warning**；泛型 hook 转发调用方 deps 的既有豁免见 `useApi.ts`（disable-line + 契约注释）。注意：向已有 effect 的 deps 补依赖前先确认声明顺序 —— deps 数组在渲染期求值，引用声明在下方的 const 会 TDZ（曾致 PomodoroPage/Card3D 崩溃风险）
 

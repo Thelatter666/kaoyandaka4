@@ -250,7 +250,7 @@ LLM 不可用（网络断、CORS 被拒、401/429、响应不合契约）时，�
 
 - 存储：localStorage `kaoyandaily-vocab-prompt-presets`，结构 `{ presets: VocabPromptPreset[], activeId: string | null }`；`VocabPromptPreset = { id: uuid, name: string, extraRequirement: string }`。
 - **设备级、不进备份、不上传服务器**（与 LLM 连接配置同语义；ADR-0008 关联）。
-- 管理入口：LLM 配置弹窗内新增「提示词」区——预设列表（选中态=当前生效）、新建（命名+填入 extra 要求）、编辑（改名/改内容）、删除（生效中的删除后回落默认，需确认）、「使用默认」项常驻列表首位；`activeId` 为 null 或指向不存在的预设时回落默认。
+- 管理入口：LLM 配置弹窗内新增「提示词」区——预设列表（选中态=当前生效，`role=radiogroup`）、新建（命名+填入 extra 要求，保存即选中生效）、编辑（改名/改内容）、删除（**生效中的删除弹 ConfirmDialog，确认后回落默认；非生效预设直接删除不弹确认**）、「使用默认」项常驻列表首位；`activeId` 为 null 或指向不存在的预设时回落默认。新建/编辑表单内嵌「提示词预览」只读折叠区，显示 `buildVocabSystemPrompt(编辑值)` 全文。
 - 生效范围：`lookupWord` 内部解析激活预设（读取失败回落默认），**签名不变**；单查、批量查词、批量/单卡补全一律自动使用当前预设。
 
 ## 14. 批量查词（2026-09-30 增补）
@@ -268,8 +268,9 @@ LLM 不可用（网络断、CORS 被拒、401/429、响应不合契约）时，�
 - **串行**逐词执行（尊重服务商限流、思考模型单次较慢）：词库已有该词 → 标记「已存在」跳过（不调 LLM）；否则 `lookupWord` → 成功后 `vocabApi.create({word, content})` 立即入库；**LLM 失败（任何 `LlmError`）→ 自动 `vocabApi.create({word})` 暂存**（复用 §12，标记「已暂存」）；暂存也失败 → 标记「失败」附原因。
 - `not_configured`：整批中止并引导打开配置弹窗。
 - 进度：逐词状态行（排队中 / 生成中 / 已加入 / 已存在 / 已暂存 / 失败 / 已取消），进行中显示 `生成中 x/y` 与「取消」按钮（AbortController；取消时未处理项标记「已取消」，已完成项保留）。
-- 结束 Toast 汇总：成功 x · 已存在 y · 已暂存 z · 失败 w（有失败 error 级、取消 info 级）。
+- 结束 Toast 汇总（带前缀，实现口径）：`批量生成完成：成功 x · 已存在 y · 已暂存 z · 失败 w`（有失败 error 级、否则 success 级）；取消为 `已取消批量生成：…`（info 级）；`not_configured` 中断为 `LLM 未配置，批量生成已中断：…`（info 级）。
 - 完成后词库列表增量刷新（`onCreated` 逐卡回调，父子协议不变）。
+- 单查错误区的「重试」按钮**复用 `handleSubmit`**：按当前输入重新判定单查 / 批量（不是仅重发上次单词）。
 
 ### 14.3 上限与常量
 

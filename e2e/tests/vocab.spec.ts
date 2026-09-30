@@ -4,6 +4,8 @@
  * 不调真 LLM：进场走本地模式（`#/local` 新建账户），再向 IndexedDB `kaoyandaily_local`
  * 的 `vocabCards` 播种两张卡（一条新词 + 一条已学到期），经顶部导航进入单词本走完整复习流。
  * 第二个用例不开 LLM：把配置写成不可达地址，验「查词失败 → 暂存空卡 → 待补全」支路。
+ * 第三个用例同样不调真 LLM：localStorage 写入生效中的提示词预设 + 死地址配置，验
+ * 「预设选中态 → 批量 3 词逐词失败自动暂存 → 待补全卡 ×3 + 汇总 Toast」。
  *
  * 覆盖只有真实浏览器才能验的部分：
  *   1. 词库列表 2 张卡 + 三索引切换行为（顺序 = createdAt 升序；掌握程度 = 档升序；
@@ -14,8 +16,12 @@
  *      known 升档到 2、intervalDays=2、nextReviewDate=今天+2；
  *   4. 暂存支路：死地址查词失败 → 错误文案 + 「暂存单词」→ 空内容卡带「待补全」徽标、
  *      不进复习概况（仍「1 新词 · 1 到期」）、「待补全」过滤可见且默认勾选；
- *   5. 全页无常驻（无限循环）CSS 动画（沿用 power-save.spec 扫描法）+ 无 console error；
- *   6. 收尾按 accountId 级联清理测试账户全部 store。
+ *   5. 提示词预设：localStorage 里的生效预设显示为选中态（item--active + radio aria-checked），
+ *      预览只读全文含契约骨架与自定义 extra 要求；
+ *   6. 批量查词：textarea 输入 3 词 →「批量生成（3）」+「将处理 3 个词」→ 死地址逐词失败
+ *      自动暂存 → 直读 IndexedDB 3 条空内容卡 + 汇总 Toast「已暂存 3」；
+ *   7. 全页无常驻（无限循环）CSS 动画（沿用 power-save.spec 扫描法）+ 无 console error；
+ *   8. 收尾按 accountId 级联清理测试账户全部 store + 设备级两键。
  */
 import { test, expect, type Page } from '@playwright/test';
 
@@ -41,6 +47,15 @@ const DUE_PHONETIC = '/ˈbenɪfɪt/';
    不依赖任何真实 LLM；错误不阻塞暂存路径 */
 const STASH_WORD = 'resilience';
 const DEAD_LLM_BASE = 'http://localhost:9/v1';
+
+/* 提示词预设 + 批量用例：预设与死地址配置由测试直接写 localStorage，
+   批量 3 词必然逐词失败并自动暂存为待补全卡 */
+const PRESET_ID = 'e2e-prompt-root';
+const PRESET_NAME = '只讲词根';
+const PRESET_EXTRA = '只输出词根词缀拆解，不要辨析和记忆法';
+const BATCH_INPUT = 'alpha, beta, gamma';
+const BATCH_WORDS = ['alpha', 'beta', 'gamma'];
+const LOCAL_VOCAB_KEYS = ['kaoyandaily-vocab-llm-config', 'kaoyandaily-vocab-prompt-presets'];
 
 /** 加载转圈豁免名单（与 power-save.spec / styles/power-save.css 保持一致） */
 const SPINNER_ALLOWLIST = ['btn__spinner', 'plan-spin', 'review-spin'];
@@ -243,6 +258,24 @@ async function cleanVocabTestAccount(page: Page, accountId: string): Promise<voi
     },
     { accountId, stores: BUSINESS_STORES }
   );
+}
+
+/** 读取当前激活本地账户 id（不播种词卡、只清理账户时使用；口径同 seedVocabCards） */
+async function activeLocalAccountId(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const stored = JSON.parse(localStorage.getItem('kaoyandaily_local_activeAccount') ?? 'null') as {
+      accountId?: string;
+    } | null;
+    if (!stored?.accountId) throw new Error('本地账户未激活，无法取得 accountId');
+    return stored.accountId;
+  });
+}
+
+/** 清理设备级 vocab 两键（LLM 连接配置 / 提示词预设），避免测试账户删除后仍有残留 */
+async function clearVocabLocalKeys(page: Page): Promise<void> {
+  await page.evaluate((keys) => {
+    for (const key of keys) localStorage.removeItem(key);
+  }, LOCAL_VOCAB_KEYS);
 }
 
 /** 所有仍在无限循环的 CSS 动画（排除转圈白名单；扫描法同 power-save.spec）。
@@ -491,6 +524,125 @@ test('单词本：LLM 不可达 → 暂存空卡 → 待补全过滤 → 不进�
     await cleanVocabTestAccount(page, accountId);
     cleaned = true;
     expect(await readVocabCards(page), '清理后测试账户不应残留词卡').toEqual([]);
+
+    expect(consoleErrors, '页面不应有 console error（401 与死地址网络日志除外）').toEqual([]);
+  } finally {
+    if (accountId && !cleaned) {
+      try {
+        await cleanVocabTestAccount(page, accountId);
+      } catch {
+        /* 页面已关闭等场景无需处理 */
+      }
+    }
+  }
+});
+
+test('单词本：提示词预设管理 + 批量查词（死地址→全部暂存）', async ({ page }) => {
+  /* 批量 3 词各发一次死地址请求，浏览器资源加载 error 日志按 URL 前缀豁免（同暂存用例） */
+  const consoleErrors = trackConsoleErrors(page, [DEAD_LLM_BASE]);
+
+  let accountId: string | null = null;
+  let cleaned = false;
+
+  try {
+    await enterLocalApp(page);
+    accountId = await activeLocalAccountId(page);
+
+    /* 设备级两键：生效中的提示词预设（activeId 指向它）+ 死地址 LLM 配置 */
+    await page.evaluate(
+      ({ deadBase, preset }) => {
+        localStorage.setItem(
+          'kaoyandaily-vocab-prompt-presets',
+          JSON.stringify({ presets: [preset], activeId: preset.id })
+        );
+        localStorage.setItem(
+          'kaoyandaily-vocab-llm-config',
+          JSON.stringify({ baseUrl: deadBase, apiKey: 'sk-e2e-dead', model: 'e2e-dead-model' })
+        );
+      },
+      {
+        deadBase: DEAD_LLM_BASE,
+        preset: { id: PRESET_ID, name: PRESET_NAME, extraRequirement: PRESET_EXTRA },
+      }
+    );
+
+    await page.getByRole('link', { name: '单词本' }).click();
+    await expect(page.locator('.vocab-toolbar').getByRole('button', { name: '查询单词' })).toBeVisible();
+
+    /* ---------- 1. 配置弹窗：提示词区显示该预设为选中态 ---------- */
+    await page.locator('.vocab-settings').click();
+    const configDialog = page.getByRole('dialog', { name: 'LLM 配置' });
+    await expect(configDialog).toBeVisible();
+    const prompts = configDialog.locator('.vocab-llm__prompts');
+    await expect(prompts.locator('.vocab-llm__prompts-current')).toHaveText(`当前：${PRESET_NAME}`);
+    await prompts.locator('.vocab-llm__prompts-toggle').click();
+    const activeItem = prompts.locator('.vocab-llm__prompt-item--active');
+    await expect(activeItem, '应恰有一条预设处于选中态').toHaveCount(1);
+    await expect(activeItem).toContainText(PRESET_NAME);
+    await expect(activeItem.getByRole('radio')).toHaveAttribute('aria-checked', 'true');
+    await expect(prompts.getByRole('radio', { name: /默认/ })).toHaveAttribute('aria-checked', 'false');
+
+    /* 预览只读全文：契约骨架仍在（不可自定义），仅末尾 extra 要求换成用户值 */
+    await activeItem.getByRole('button', { name: '编辑' }).click();
+    await prompts.locator('.vocab-llm__preview-toggle').click();
+    const preview = prompts.locator('.vocab-llm__preview');
+    await expect(preview).toBeVisible();
+    await expect(preview).toContainText('只输出一个 JSON 对象');
+    await expect(preview).toContainText(`extra 部分的要求：${PRESET_EXTRA}`);
+    await expect(preview, '自定义 extra 应替换掉默认要求文案').not.toContainText(
+      '词根词缀拆解、2-4 组高频易混词辨析、一句话记忆法'
+    );
+
+    /* Esc 关闭配置弹窗（表单未保存即关闭，不应写回预设） */
+    await page.keyboard.press('Escape');
+    await expect(configDialog).toBeHidden();
+
+    /* ---------- 2. 查询弹窗：textarea 一次输入 3 词 → 批量入口 ---------- */
+    await page.locator('.vocab-toolbar').getByRole('button', { name: '查询单词' }).click();
+    const queryDialog = page.getByRole('dialog', { name: '查询单词' });
+    await expect(queryDialog).toBeVisible();
+    await queryDialog.getByLabel('要查询的单词或短语，可一次输入多个').fill(BATCH_INPUT);
+    await expect(queryDialog.getByRole('button', { name: '批量生成（3）' })).toBeVisible();
+    await expect(queryDialog.locator('.vocab-query__batch-hint')).toHaveText('将处理 3 个词');
+
+    /* ---------- 3. 提交：死地址逐词失败自动暂存；汇总 Toast 3.5s 后消失，第一时间断言 ---------- */
+    await queryDialog.getByRole('button', { name: '批量生成（3）' }).click();
+    await expect(page.locator('.toast-item', { hasText: '已暂存 3' })).toBeVisible();
+    await expect(queryDialog.locator('.vocab-query__batch-progress')).toHaveText('已完成 3/3');
+    await expect(queryDialog.locator('.vocab-query__batch-item--staged')).toHaveCount(3);
+    await expect(queryDialog.locator('.vocab-query__batch-badge--staged')).toHaveText([
+      '已暂存',
+      '已暂存',
+      '已暂存',
+    ]);
+
+    /* ---------- 4. 落库与词库 UI：3 张待补全空卡 ---------- */
+    const rows = await readVocabCards(page);
+    expect(rows, '批量应入库 3 张卡').toHaveLength(3);
+    expect([...rows.map((row) => row.word)].sort()).toEqual([...BATCH_WORDS].sort());
+    for (const row of rows) {
+      expect(row.definitions, `${row.word} 应为待补全空卡`).toEqual([]);
+      expect(row.examples, `${row.word} 应为待补全空卡`).toEqual([]);
+      expect(row.firstLearnedAt, `${row.word} 不应有首次学习时间`).toBeNull();
+    }
+
+    await queryDialog.getByRole('button', { name: '关闭' }).click();
+    await expect(queryDialog).toBeHidden();
+    await expect(page.locator('.vocab-card')).toHaveCount(3);
+    await expect(page.locator('.vocab-card__badge--pending')).toHaveCount(3);
+
+    /* ---------- 5. 收尾：级联清理测试账户 + 设备级两键 ---------- */
+    await cleanVocabTestAccount(page, accountId);
+    await clearVocabLocalKeys(page);
+    cleaned = true;
+    expect(await readVocabCards(page), '清理后测试账户不应残留词卡').toEqual([]);
+    expect(
+      await page.evaluate(() => [
+        localStorage.getItem('kaoyandaily-vocab-llm-config'),
+        localStorage.getItem('kaoyandaily-vocab-prompt-presets'),
+      ]),
+      '设备级两键应清理干净'
+    ).toEqual([null, null]);
 
     expect(consoleErrors, '页面不应有 console error（401 与死地址网络日志除外）').toEqual([]);
   } finally {
