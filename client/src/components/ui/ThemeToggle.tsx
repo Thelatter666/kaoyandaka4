@@ -2,12 +2,13 @@ import React from 'react';
 import { flushSync } from 'react-dom';
 import { Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
+import { useShouldReduceMotion } from '../../hooks/usePowerSave';
 import './ThemeToggle.css';
 
 /**
  * View Transitions 水波扩散（圆形扩散 180ms，与降级颜色淡变同速）。
- * 特性检测：不支持 startViewTransition 或 prefers-reduced-motion 时
- * 直接切换主题，由 global.css 的 180ms 颜色淡变（reduced-motion 下瞬时）降级接管。
+ * 特性检测：不支持 startViewTransition 或需要减少动效（系统偏好 / 节能模式，
+ * 该扩散会为整屏生成新旧两张快照，是切主题时最重的一笔）时直接切换主题。
  */
 interface ViewTransitionLike {
   ready: Promise<void>;
@@ -19,12 +20,12 @@ type DocumentWithViewTransition = Document & {
 
 export function ThemeToggle() {
   const { isDark, toggleTheme } = useTheme();
+  const shouldReduceMotion = useShouldReduceMotion();
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     const doc = document as DocumentWithViewTransition;
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    if (typeof doc.startViewTransition !== 'function' || reducedMotion) {
+    if (typeof doc.startViewTransition !== 'function' || shouldReduceMotion) {
       toggleTheme();
       return;
     }

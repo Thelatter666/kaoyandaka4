@@ -4,6 +4,7 @@ import { SkipLink } from './components/ui/SkipLink';
 import { ToastContainer } from './components/ui/Toast';
 import { LoadingState } from './components/ui/LoadingState';
 import { useAuth } from './hooks/useAuth';
+import { useShouldReduceMotion } from './hooks/usePowerSave';
 import './styles/global.css';
 import './styles/utilities.css';
 
@@ -108,6 +109,8 @@ export default function App() {
   /* 登录态：未登录 → 介绍页/登录/注册；已登录 → 应用。
      isLoading = 首次会话探测（GET /auth/me）进行中，期间渲染加载壳避免闪现 landing */
   const { isLoggedIn, isLoading } = useAuth();
+  /* 降级动效（系统偏好 / 节能模式）：跳过 140ms 退场等待，立即换页 */
+  const shouldReduceMotion = useShouldReduceMotion();
   const [hash, setHash] = useState(getHash);
   const incoming = parseHashRoute(hash);
 
@@ -139,8 +142,8 @@ export default function App() {
       return;
     }
 
-    // prefers-reduced-motion：立即切换，无过渡
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    // 降级动效（系统偏好 / 节能模式）：立即切换，无过渡
+    if (shouldReduceMotion) {
       if (exitTimerRef.current !== null) {
         clearTimeout(exitTimerRef.current);
         exitTimerRef.current = null;
@@ -161,7 +164,7 @@ export default function App() {
       setDisplayed(pendingRef.current);
       setPhase('idle');
     }, EXIT_DURATION_MS);
-  }, [hash, displayed]);
+  }, [hash, displayed, shouldReduceMotion]);
 
   // 卸载时清理计时器，避免内存泄漏
   useEffect(() => {

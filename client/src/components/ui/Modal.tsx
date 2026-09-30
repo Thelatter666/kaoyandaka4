@@ -101,9 +101,11 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      {/* 遮罩：rgba(16,24,40,0.32) + blur 8px；transition 实现可中断 */}
+      {/* 遮罩：rgba(16,24,40,0.32) + blur 8px；transition 实现可中断
+          （类名供节能模式 data-flat-glass 覆盖 inline blur，见 styles/power-save.css） */}
       <div
         data-exiting={exiting}
+        className="modal__scrim"
         style={{
           position: 'absolute',
           inset: 0,

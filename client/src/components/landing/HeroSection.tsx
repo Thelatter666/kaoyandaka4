@@ -1,5 +1,6 @@
 import React from 'react';
-import { m, useReducedMotion } from 'framer-motion';
+import { m } from 'framer-motion';
+import { useShouldReduceMotion } from '../../hooks/usePowerSave';
 import type { Variants } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { Button } from '../ui/Button';
@@ -26,7 +27,7 @@ const itemVariants: Variants = {
 };
 
 export function HeroSection() {
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = useShouldReduceMotion();
   const days = getDaysRemaining();
 
   const scrollToNext = () => {

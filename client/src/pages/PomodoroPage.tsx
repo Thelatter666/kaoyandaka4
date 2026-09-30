@@ -27,6 +27,7 @@ import { pauseRemainingSeconds, sessionRemainingSeconds } from '../utils/focusPa
 import { formatSeconds } from '../utils/duration';
 import { useFocusSession } from '../hooks/useFocusSession';
 import type { FocusMode } from '../hooks/useFocusSession';
+import { useShouldReduceMotion } from '../hooks/usePowerSave';
 import { SoundToggle } from '../components/ui/SoundToggle';
 import { initSoundOnGesture, playEndSound } from '../utils/sound';
 import { useScreenWakeLock } from '../hooks/useScreenWakeLock';
@@ -68,6 +69,10 @@ const SUBJECT_ORDER: Subject[] = ['math', 'english', '408'];
 
 /** 注墨时长（ms），与 tokens.css 的 --dur-inking 保持一致（rAF 内插值，非 CSS 过渡） */
 const INKING_MS = 520;
+
+/** 节能模式下的墨面推进节拍（ms）：墨面下降速度约 1px/s，60fps 属过采样，
+ *  降到 4Hz 视觉几乎无差，而这一段是专注期间唯一的高频 JS 循环 */
+const POWER_SAVE_PAINT_MS = 250;
 /** 澄清时长（ms），与 tokens.css 的 --dur-clarify 保持一致；播完才切完成态 */
 const CLARIFY_MS = 700;
 
@@ -842,6 +847,9 @@ const SmoothRing = React.memo(function SmoothRing({
       : fallbackRemainingSeconds
   );
 
+  /** 节能模式（或系统减少动效）：墨面降频推进、跳过注墨缓动 */
+  const shouldReduceMotion = useShouldReduceMotion();
+
   // 砚池根元素 + 需逐帧平移的元素集合（墨体 .inkwell__surf-g ×2 与
   // 阳文裁剪 .inkwell__surf-clip ×1）。不用回调 ref 收集数组：React 18 卸载时
   // 回调只收到 null，无法精确移除对应元素，数组会留悬垂引用
@@ -860,10 +868,12 @@ const SmoothRing = React.memo(function SmoothRing({
   useEffect(() => {
     if (endsAtMs == null) return;
     let rafId = 0;
+    let timerId = 0;
     let lastSeconds = -1;
     const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
-    const tick = () => {
-      const now = Date.now();
+
+    /** 单帧工作：算比例 → 直写 SVG transform → 整数秒才 setState */
+    const paint = (now: number) => {
       const remaining = Math.max(0, (endsAtMs - now) / 1000);
       const live = totalSeconds > 0 ? Math.min(1, Math.max(0, remaining / totalSeconds)) : 0;
 
@@ -889,21 +899,41 @@ const SmoothRing = React.memo(function SmoothRing({
         lastSeconds = secs;
         setDisplaySeconds(secs);
       }
+    };
+
+    const tick = () => {
+      paint(Date.now());
       rafId = requestAnimationFrame(tick);
     };
+
+    /* 节能模式：改用定时器节拍推进，**不留挂起的 rAF**。
+       差别不在单帧工作量而在帧的产生：只要还有挂起的 rAF，浏览器每个 vsync
+       都得产出一帧、合成器不进空闲，于是「什么都没变」也按 60fps 计费。
+       定时器节拍之间页面完全静止，实测这是番茄钟场景降幅的主要来源。
+       后台标签页下 setInterval 会被节流到 ~1Hz —— 墨面本就看不见，无影响；
+       计时精度不受影响（每拍都按 Date.now() 重算，不累加）。 */
+    if (shouldReduceMotion) {
+      const timerTick = () => paint(Date.now());
+      timerTick();
+      timerId = window.setInterval(timerTick, POWER_SAVE_PAINT_MS);
+      return () => window.clearInterval(timerId);
+    }
+
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [endsAtMs, totalSeconds]);
+  }, [endsAtMs, totalSeconds, shouldReduceMotion]);
 
   // 会话切换即触发一次注墨（endsAtMs 变化 = 新会话开始或恢复）
   useEffect(() => {
     if (endsAtMs == null) return;
+    // 降级模式：跳过注墨缓动（250ms 节拍下 520ms 缓动只剩两帧，无意义）
+    if (shouldReduceMotion) return;
     // 会话恢复（刷新后墨面本就该在中途）不播注墨：仅当剩余接近计划时长才视为新开始
     const remaining = (endsAtMs - Date.now()) / 1000;
     if (totalSeconds > 0 && remaining > totalSeconds - 2) {
       inkingUntilRef.current = Date.now() + INKING_MS;
     }
-  }, [endsAtMs, totalSeconds]);
+  }, [endsAtMs, totalSeconds, shouldReduceMotion]);
 
   const remainingSeconds = endsAtMs != null ? displaySeconds : fallbackRemainingSeconds;
 

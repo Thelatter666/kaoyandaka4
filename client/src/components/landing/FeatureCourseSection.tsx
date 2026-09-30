@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
-import { m, useScroll, useTransform, useReducedMotion } from 'framer-motion';
+import { m, useScroll, useTransform } from 'framer-motion';
+import { useShouldReduceMotion } from '../../hooks/usePowerSave';
 import type { MotionValue } from 'framer-motion';
 import { ListVideo, Clock } from 'lucide-react';
 
@@ -45,7 +46,7 @@ function FillBar({ progress, range, finalScale, reduced, fillClassName, icon, la
 
 export function FeatureCourseSection() {
   const sectionRef = useRef<HTMLElement>(null);
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = useShouldReduceMotion();
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,

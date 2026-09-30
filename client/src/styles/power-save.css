@@ -1,0 +1,90 @@
+/* ============================================================
+   节能模式（Power Save）— 运行时开销削减层
+
+   与正常模式的唯一差异是降低前端运行时开销；布局、配色、字号、内容、
+   交互反馈一概不变。真源为 <html data-power-save="on">（见 utils/powerSave.ts）。
+
+   三层手段：
+     1. 全部 CSS 动画立即完成（落入终帧）——常驻动效从此不再产生每帧合成；
+     2. 加载转圈豁免——它是「正在加载」的唯一反馈，且只有小元素、成本可忽略；
+     3. 玻璃模糊降级（data-flat-glass，见文件末）——按测量结果启用。
+
+   为何用 animation-duration 手术而非 animation: none 或 animation-play-state: paused：
+     · animation: none 会让元素退回基准帧。对「从 opacity:0 入场」的动画
+       （page-enter、森林树生长）等于内容永久不可见 —— 不可接受；
+     · 全局 paused 有同样的问题（新动画从 0% 起就被冻住），且 paused 与
+       duration 改动叠加时进度会被重算，反而产生跳帧；
+     · duration: 0.01ms + iteration-count: 1 让入场动画瞬时落到**终帧**（可见、
+       正确、零残留开销），是三者中唯一对入场与常驻都安全的写法。
+   已知副作用：切换瞬间常驻环境动效（极光光斑 / 森林尘埃 / 墨池波纹）会归位到
+   终帧位置，属一次性软边渐变位移，不改变布局（替代方案见 spec「未采纳方案」）。
+   ============================================================ */
+
+/* ---- 1. 全部动画立即完成（落入终帧）----
+   ⚠️ 刻意不覆写 transition-duration（global.css 的 reduced-motion 块会覆写成 100ms）：
+   transition-property 的初始值是 all，只改 duration 等于给**所有元素**凭空装上
+   过渡 —— 墨面每 250ms 直写一次 SVG transform，就会各自重启一段 100ms 过渡，
+   于是「什么都静止」的页面照样每帧产帧、每帧重算样式（实测番茄钟场景因此
+   只剩 41% 降幅）。过渡本就只在交互瞬间发生，不构成常驻开销，故原样保留，
+   交互手感也与正常模式完全一致。 */
+[data-power-save="on"] *,
+[data-power-save="on"] *::before,
+[data-power-save="on"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  /* 延迟一并清零：入场的 stagger 延迟（--i × 70ms）与森林尘埃的 1.5~4s 起播延迟
+     若保留，元素会先停在起始帧（.reveal 起始 opacity: 0 = 不可见）再瞬间归位；
+     清零后「立即完成」是真正立即，不存在延迟窗口内的错位与跳变 */
+  animation-delay: 0s !important;
+}
+
+/* ---- 2. 加载转圈豁免（保留「正在加载」反馈；三个类均为 0.8s linear infinite）---- */
+[data-power-save="on"] .btn__spinner,
+[data-power-save="on"] .plan-spin,
+[data-power-save="on"] .review-spin {
+  animation-duration: 0.8s !important;
+  animation-iteration-count: infinite !important;
+}
+
+/* ---- 3. 撤掉常驻装饰层的图层提升 ----
+   动画静止后 will-change 只会白占显存并让四个 40~60vmax 巨层持续参与合成 */
+[data-power-save="on"] .aurora-blob,
+[data-power-save="on"] .forest__mote {
+  will-change: auto !important;
+}
+
+/* ---- 4. 玻璃模糊降级（data-flat-glass）----
+   背景层静止后模糊本身已变便宜，故此项仅在测量显示仍不达标时启用：
+   由 PowerSaveToggle 决定是否同时下发 data-flat-glass（见 utils/powerSave.ts）。
+   降级为不透明实底：布局、圆角、边框、阴影一律不变，仅去掉背景透光。 */
+[data-flat-glass] {
+  --blur-glass: 0px;
+  --blur-glass-strong: 0px;
+}
+
+[data-flat-glass] .glass-1,
+[data-flat-glass] .glass-2 {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: var(--color-bg-card-solid);
+}
+
+[data-flat-glass] .glass-3 {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: var(--color-glass-3-solid);
+}
+
+/* 组件级玻璃面（非 .glass-* 工具类，逐个点名以免遗漏；
+   清单＝全库 backdrop-filter 出现点，Card3D 已废弃除外） */
+[data-flat-glass] .gradient-card__badge,
+[data-flat-glass] .btn--glass,
+[data-flat-glass] .stats-hero .forest,
+[data-flat-glass] .profile-dropdown__menu,
+[data-flat-glass] .dropdown__menu,
+[data-flat-glass] .file-upload-placeholder,
+[data-flat-glass] .modal__scrim,
+[data-flat-glass] .top-nav__powered-off {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}

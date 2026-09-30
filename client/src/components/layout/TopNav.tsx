@@ -10,8 +10,10 @@ import {
   Power,
   type LucideIcon,
 } from 'lucide-react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { useShouldReduceMotion } from '../../hooks/usePowerSave';
 import { ThemeToggle } from '../ui/ThemeToggle';
+import { PowerSaveToggle } from '../ui/PowerSaveToggle';
 import { ProfileDropdown } from '../ui/ProfileDropdown';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { showToast } from '../ui/Toast';
@@ -44,7 +46,7 @@ interface TopNavProps {
 }
 
 export function TopNav({ activeHash, onNavigate, onPrefetch }: TopNavProps) {
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = useShouldReduceMotion();
   const [powerConfirmOpen, setPowerConfirmOpen] = useState(false);
   /** 浏览器拒绝脚本关窗时的兜底态：留在页面上明说「已关闭」 */
   const [poweredOff, setPoweredOff] = useState(false);
@@ -117,8 +119,9 @@ export function TopNav({ activeHash, onNavigate, onPrefetch }: TopNavProps) {
           })}
         </div>
 
-        {/* 右：主题切换 + 账户菜单（导出数据 / 登出）+ 关闭系统（最右上角） */}
+        {/* 右：节能模式 + 主题切换 + 账户菜单（导出数据 / 登出）+ 关闭系统（最右上角） */}
         <div className="top-nav__actions">
+          <PowerSaveToggle />
           <ThemeToggle />
           <ProfileDropdown />
           {isLocalLauncherHost() && (

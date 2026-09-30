@@ -1,0 +1,51 @@
+/* ============================================================
+   节能模式开关（顶栏）：44px 玻璃圆形图标按钮
+   与 .theme-toggle / .top-nav__power 同一套图标钮造型（尺寸须一致，
+   混排在一行里才不会高低不齐）
+   ============================================================ */
+
+.power-save-toggle {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.power-save-toggle:hover {
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-glass-md);
+}
+
+/* 开启态：主色高亮 + 主色淡底，常驻指示「当前为节能模式」
+   （双通道表达：颜色 + aria-pressed，不依赖颜色单通道） */
+.power-save-toggle[aria-pressed='true'] {
+  color: var(--color-accent-primary-strong);
+  background: var(--color-accent-primary-light);
+}
+
+/* 位移仅鼠标设备生效（触摸 tap 后粘性 hover 会卡住上浮状态） */
+@media (hover: hover) and (pointer: fine) {
+  .power-save-toggle:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.power-save-toggle:active {
+  transform: scale(0.97);
+}
+
+/* Reduced motion: 取消形变 */
+@media (prefers-reduced-motion: reduce) {
+  .power-save-toggle:hover,
+  .power-save-toggle:active {
+    transform: none;
+  }
+}

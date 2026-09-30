@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { shouldReduceMotion } from '../../utils/powerSave';
 
 /**
  * 完成粒子爆散（设计文档 5.1.7）
@@ -6,7 +7,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
  * 会话自然结束 / 提前完成时，在父容器（需 position: relative）中心触发
  * 一次轻量 canvas 粒子爆散：≤20 粒子、模式色、重力 + 淡出，1.2s 后销毁
  * canvas。取消 / 休息结束不触发（由使用方控制 burstKey 不递增即可）。
- * prefers-reduced-motion 直接跳过；组件卸载时清理 animation frame 与定时器。
+ * 系统「减少动效」或节能模式直接跳过（后者视粒子为纯装饰开销）；
+ * 组件卸载时清理 animation frame 与定时器。
  *
  * 触发方式：burstKey 从 0 开始递增，每次递增触发一次爆散（0 不触发）。
  */
@@ -48,10 +50,10 @@ export function BurstParticles({ burstKey, colorVar = '--color-accent-primary' }
     }
   }, []);
 
-  // burstKey 递增 → 触发一次爆散；reduced-motion 跳过
+  // burstKey 递增 → 触发一次爆散；减少动效 / 节能模式跳过
   useEffect(() => {
     if (burstKey <= 0) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (shouldReduceMotion()) return;
     setActive(true);
   }, [burstKey]);
 

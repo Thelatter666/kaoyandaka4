@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
-import { m, useScroll, useTransform, useReducedMotion } from 'framer-motion';
+import { m, useScroll, useTransform } from 'framer-motion';
+import { useShouldReduceMotion } from '../../hooks/usePowerSave';
 import type { MotionValue } from 'framer-motion';
 import { TreePine, TreeBroadleaf, TreeFruit, TreeWillow } from '../forest/trees';
 
@@ -36,7 +37,7 @@ function GrowingTree({ progress, range, reduced, label, children }: GrowingTreeP
 
 export function FeatureForestSection() {
   const sectionRef = useRef<HTMLElement>(null);
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = useShouldReduceMotion();
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,
