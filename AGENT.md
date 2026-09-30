@@ -112,15 +112,27 @@
 ## CSS 与 Design Tokens（红线）
 
 - Aurora Glass（极光玻璃）双主题；token 在 `client/src/styles/tokens.css` — **组件 MUST 用 `var(--color-xxx)`，禁硬编码颜色**；co-located `*.css`；主题切换 `[data-theme="dark"]` + `useTheme`
-- **新动效必须支持 `prefers-reduced-motion`**（全库 34 文件已落地，参考 `plans/014-magnetic-reduced-motion.md`）
+- **新动效必须支持 `prefers-reduced-motion`**（全库 34 文件已落地，参考 `plans/014-magnetic-reduced-motion.md`）**与节能模式**：降级判定统一走 `useShouldReduceMotion()` / `shouldReduceMotion()`（`hooks/usePowerSave.ts`），**不要再手写 `matchMedia('(prefers-reduced-motion: reduce)')`**——节能模式是它的超集，手写即漏
 - 动效统一 framer-motion；新组件进 `components/ui/`；勿破坏 `client/vite.config.ts` 的 manualChunks vendor 分包
+
+## 节能模式（Power Save Mode）
+
+- **一句话**：顶栏 `Leaf` 钮切换的全局模式，只降前端运行时开销（实测加权降幅见 `2026-09-27-节能模式实测报告.md`），布局/配色/内容/功能不变。设计见 spec `docs/superpowers/specs/2026-09-27-power-save-mode-design.md`，决策见 `docs/adr/0007`
+- **真源唯一**：`<html data-power-save="on">`。判断当前模式一律 `isPowerSave()`（`utils/powerSave.ts`），**不要读 localStorage、不要另立 React state**——CSS 生效的依据就是那个属性。首帧写入在 `main.tsx` 模块顶层（早于 `createRoot`）
+- **🚫 禁止给 `[data-power-save="on"] *` 加 `transition-*` 覆写**：`transition-property` 初始值是 `all`，只改 duration 等于给所有元素凭空装上过渡——墨面每 250ms 直写一次 SVG transform 就重启一段过渡，页面照旧每帧产帧（实测番茄钟场景因此从 89% 掉到 41%）。**这是踩过的坑**
+- **新增常驻（无限）动效前先确认它在节能模式下静止**：`e2e/tests/power-save.spec.ts` 会全页扫描「仍在无限循环的 CSS 动画」，只有转圈白名单（`.btn__spinner`/`.plan-spin`/`.review-spin`）豁免，新增即测试失败
+- 墨面推进在节能模式下走 `setInterval` 节拍而**不是**「rAF 里跳帧」：只要还有挂起的 rAF，浏览器每个 vsync 都得产出一帧——降帧率必须换驱动源，不是降低单帧工作量
+- 别把 `MotionConfig` 放进 `App.tsx`：它来自 framer-motion，静态引入会把 `motion-vendor` 拖进首屏图（首屏预算红线）
+- **屏幕常亮（`useScreenWakeLock`）不在节能模式范围内**：那是能耗策略不是渲染开销，改动前先问
+- 度量：`node e2e/measure-runtime-cost.mjs`（CPU 30% + GPU 70% 加权，门槛 ≥70%，非零退出即未达标）
 
 ## Testing
 
 - **单测/集成**：`npx vitest run`（匹配 `**/*.test.ts(x)`，与被测文件同目录共存）。基线：2026-09 为 **15 文件 / 127 tests 全绿**（以实跑为准；根 `vitest.config.ts` 已配 `@shared` 别名）
-- **E2E 前置**：`npx playwright install`（chromium 二进制不在仓库内，新机器首次跑 `test:e2e` 会报 "Executable doesn't exist"）
+- **E2E 前置**：`npx playwright install`（chromium 二进制不在仓库内，新机器首次跑 `test:e2e` 会报 "Executable doesn't exist"）。**下不动二进制时可用系统 Chrome 跑**：`PW_CHANNEL=chrome npx playwright test`（`e2e/playwright.config.ts` 的可选开关，默认行为不变）
 - **环境为 `node` 而非 jsdom**：写不了依赖 DOM 的组件测试 → 需要浏览器行为时拆成纯函数（如 `inkSurface.ts`/`inkWavePaths.ts`/`sound.ts`/`focusPause.ts`/`reviewLockHash.ts`）或把断言下沉到数据层
 - **E2E**：`npm run test:e2e` 仅 `e2e/tests/smoke.spec.ts` 一个用例（真实会话认证）；`e2e/` 的工具脚本见 `ARCHITECTURE.md`，`playwright-report/`、`test-results/` 是产物目录
+> 注：2026-09-27 起另有 `e2e/tests/power-save.spec.ts`（节能模式断言：首帧标记 / 无限动画清零 / 布局逐元素比对），共 3 个 E2E 用例
 - **已知缺口**：全库**无全局 ErrorBoundary** — 页面靠各自 `ErrorState` + `App.tsx` 的 Suspense `pageFallback` 兜底，勿假设有全局兜底
 - **lint 基线**（2026-08-30）：`eslint-plugin-react-hooks` 已装载（rules-of-hooks=error / exhaustive-deps=warn），全库 **0 error / 0 warning**；泛型 hook 转发调用方 deps 的既有豁免见 `useApi.ts`（disable-line + 契约注释）。注意：向已有 effect 的 deps 补依赖前先确认声明顺序 —— deps 数组在渲染期求值，引用声明在下方的 const 会 TDZ（曾致 PomodoroPage/Card3D 崩溃风险）
 

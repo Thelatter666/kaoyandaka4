@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { m, animate, useInView, useReducedMotion } from 'framer-motion';
+import { m, animate, useInView } from 'framer-motion';
+import { useShouldReduceMotion } from '../../hooks/usePowerSave';
 
 /**
  * S3 数据机制（设计文档 §4/§5）：进入视口时数字滚动计数。
@@ -39,7 +40,7 @@ const STATS = [
 ] as const;
 
 export function StatsSection() {
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = useShouldReduceMotion();
 
   return (
     <section className="landing-stats" aria-label="产品机制">

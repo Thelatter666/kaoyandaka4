@@ -5,6 +5,9 @@
 /* 字体：系统字体栈（见 tokens.css --font-heading/--font-body/--font-mono），零网络下载 */
 @import './tokens.css';
 
+/* 节能模式运行时开销削减层（[data-power-save="on"] / [data-flat-glass]） */
+@import './power-save.css';
+
 *,
 *::before,
 *::after {

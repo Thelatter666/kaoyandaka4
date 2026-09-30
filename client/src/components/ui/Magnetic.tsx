@@ -1,7 +1,8 @@
-import React, { useRef, useCallback, useEffect, useState } from 'react';
+import React, { useRef, useCallback, useEffect } from 'react';
+import { useShouldReduceMotion } from '../../hooks/usePowerSave';
 
-// 磁吸为纯装饰位移：reduced-motion 下直接渲染 children，不注册指针逻辑
-const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
+// 磁吸为纯装饰位移：减少动效（系统偏好）或节能模式下一律直接渲染 children，
+// 不注册指针逻辑、不启 rAF —— 判定统一走 useShouldReduceMotion
 
 interface MagneticProps {
   children: React.ReactNode;
@@ -30,16 +31,7 @@ export function Magnetic({
   const currentRef = useRef({ x: 0, y: 0 });
   const targetRef = useRef({ x: 0, y: 0 });
 
-  const [reducedMotion, setReducedMotion] = useState(() =>
-    typeof window !== 'undefined' && window.matchMedia(REDUCED_MOTION_QUERY).matches
-  );
-
-  useEffect(() => {
-    const mq = window.matchMedia(REDUCED_MOTION_QUERY);
-    const onChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
+  const reducedMotion = useShouldReduceMotion();
 
   const applyTransform = useCallback(() => {
     if (!elRef.current) return;
@@ -104,7 +96,7 @@ export function Magnetic({
     };
   }, []);
 
-  // reduced-motion：磁吸为纯装饰，直接渲染 children，不注册指针逻辑
+  // 降级（系统减少动效 / 节能模式）：磁吸为纯装饰，直接渲染 children，不注册指针逻辑
   if (reducedMotion) return <>{children}</>;
 
   // 使用 React.createElement 支持动态标签

@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
-import { m, useScroll, useTransform, useReducedMotion } from 'framer-motion';
+import { m, useScroll, useTransform } from 'framer-motion';
+import { useShouldReduceMotion } from '../../hooks/usePowerSave';
 
 /**
  * S4 界面实拍（设计文档 §4/§5）：真实 UI 截图多层视差。
@@ -17,7 +18,7 @@ const SHOTS = [
 
 export function ScreenshotsSection() {
   const sectionRef = useRef<HTMLElement>(null);
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = useShouldReduceMotion();
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,

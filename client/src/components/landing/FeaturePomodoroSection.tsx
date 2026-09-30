@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
-import { m, useScroll, useTransform, useReducedMotion } from 'framer-motion';
+import { m, useScroll, useTransform } from 'framer-motion';
+import { useShouldReduceMotion } from '../../hooks/usePowerSave';
 
 /**
  * S2-1 番茄钟（设计文档 §4/§5）：sticky 钉屏，SVG 圆环进度绑定滚动进度，
@@ -15,7 +16,7 @@ const DEMO_PROGRESS = 0.75;
 
 export function FeaturePomodoroSection() {
   const sectionRef = useRef<HTMLElement>(null);
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = useShouldReduceMotion();
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,

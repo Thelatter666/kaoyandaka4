@@ -15,7 +15,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-sm);
+  /* 间距从 --space-sm(8px) 收到 6px：加入节能模式圆钮（+48px）后，
+     960px 胶囊内只剩 1px 余量，实测内容超出右内边距 5.1px；
+     此处两处间距各收 2px/1px 共让出 10px，重新留出约 5px 余量 */
+  gap: 6px;
   border-radius: var(--radius-full);
 }
 
@@ -40,7 +43,8 @@
 .top-nav__links {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
+  /* 4px → 3px：与 .top-nav 的间距收紧一起为节能模式圆钮让宽（见上） */
+  gap: 3px;
 }
 
 /* 灯管指示器（tubelight）：活动链接内的主色 tint 胶囊 + 顶部发光灯管。

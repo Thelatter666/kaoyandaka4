@@ -7,7 +7,8 @@
  * prefers-reduced-motion 关闭动效、点击外部 / Escape 关闭。
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useShouldReduceMotion } from '../../hooks/usePowerSave';
 import { ChevronDown, Check } from 'lucide-react';
 import './Dropdown.css';
 
@@ -45,7 +46,7 @@ export function Dropdown({
 }: DropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = useShouldReduceMotion();
   const selected = options.find((o) => o.value === value) ?? null;
 
   // 点击组件外部 / Escape 关闭

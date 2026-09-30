@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useShouldReduceMotion } from '../../hooks/usePowerSave';
 import { Download, KeyRound, LogOut, Upload } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { backupApi } from '../../api/backup';
@@ -25,7 +26,7 @@ export function ProfileDropdown() {
   const [importOpen, setImportOpen] = useState(false);
   const [lockModalOpen, setLockModalOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = useShouldReduceMotion();
 
   const email = user?.email ?? '';
   const initial = email ? email.charAt(0).toUpperCase() : '砚';
