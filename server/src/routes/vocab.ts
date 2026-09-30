@@ -7,6 +7,7 @@ import {
   UpdateVocabCardSchema,
   normalizeWord,
   type ReviewGrade,
+  type VocabContent,
   type VocabDefinition,
   type VocabExample,
 } from '../../../shared/src/schemas/vocab.js';
@@ -117,11 +118,12 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 });
 
 // POST /api/v1/vocab — 加入词库（word 归一后唯一；重复 → 409 WORD_EXISTS）
+// content 缺省 = 暂存卡：definitions/examples 落空数组、extra/exam_freq 为 NULL，待 PATCH 补全
 router.post('/', validate(CreateVocabCardSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = sessionUserId(req);
     const word = normalizeWord(req.body.word);
-    const { content } = req.body;
+    const content = req.body.content as VocabContent | undefined;
     const id = generateUUID();
     try {
       await pool.query(
@@ -133,11 +135,11 @@ router.post('/', validate(CreateVocabCardSchema), async (req: Request, res: Resp
           id,
           userId,
           word,
-          content.phonetic ?? null,
-          JSON.stringify(content.definitions),
-          JSON.stringify(content.examples),
-          content.extra ?? null,
-          content.examFreq ?? null,
+          content?.phonetic ?? null,
+          JSON.stringify(content?.definitions ?? []),
+          JSON.stringify(content?.examples ?? []),
+          content?.extra ?? null,
+          content?.examFreq ?? null,
           addDays(today(), 1),
         ]
       );
@@ -153,12 +155,32 @@ router.post('/', validate(CreateVocabCardSchema), async (req: Request, res: Resp
   }
 });
 
-// PATCH /api/v1/vocab/:id — 手动调档 / 重置进度（masteryLevel 与 reset 二选一）
+// PATCH /api/v1/vocab/:id — 手动调档 / 重置进度 / 内容补全（三选一，schema refine 保证）
 router.patch('/:id', validate(UpdateVocabCardSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = pathId(req);
     const userId = sessionUserId(req);
     await fetchCard(id, userId);
+    // 补全分支：仅写内容列（暂存卡 → 完整卡）；刻意不触碰 mastery/interval/next_review_date/
+    // is_mastered/last_reviewed_at —— 补内容不是复习，SRS 状态与复习时间线保持原样
+    if (req.body.content !== undefined) {
+      const content = req.body.content as VocabContent;
+      await pool.query(
+        `UPDATE vocab_cards SET phonetic = ?, definitions = ?, examples = ?, extra = ?, exam_freq = ?
+         WHERE id = ? AND user_id = ?`,
+        [
+          content.phonetic ?? null,
+          JSON.stringify(content.definitions),
+          JSON.stringify(content.examples),
+          content.extra ?? null,
+          content.examFreq ?? null,
+          id,
+          userId,
+        ]
+      );
+      res.json(transformVocabCard(await fetchCard(id, userId)));
+      return;
+    }
     let mastery: number;
     let interval: number;
     let next: string;

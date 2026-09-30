@@ -66,6 +66,19 @@ describe('computeDiffSummary', () => {
     };
     expect(computeDiffSummary(fileData, existing).vocabCards).toEqual({ added: 0, updated: 1, kept: 1 });
   });
+
+  it('vocabCards：暂存卡（空内容列）仍按 id/word 复合键参与差异（无空卡特判）', () => {
+    const fileData: MappedData = {
+      ...emptyMapped,
+      vocabCards: [{ id: 'stub-new-id', word: 'stub', definitions: '[]', examples: '[]', extra: null, exam_freq: null }],
+    };
+    const existing = {
+      presets: [], tasks: [], reviews: { ids: [], dates: [] },
+      courses: [], episodes: [], focusSessions: [], studyRecords: [], settings: [],
+      vocabCards: { ids: [], words: ['stub', 'other'] },
+    };
+    expect(computeDiffSummary(fileData, existing).vocabCards).toEqual({ added: 0, updated: 1, kept: 1 });
+  });
 });
 
 describe('resolveImportTarget', () => {

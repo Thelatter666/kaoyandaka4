@@ -133,6 +133,41 @@ describe('mapBackupData', () => {
     expect(() => mapBackupData(badDefs)).toThrow(MappingError);
   });
 
+  it('vocabCards：暂存卡（definitions/examples 空数组、内容列 NULL）映射通过（备份往返）', () => {
+    const stub = {
+      ...data,
+      vocabCards: [{
+        ...data.vocabCards![0]!,
+        phonetic: null,
+        definitions: [],
+        examples: [],
+        extra: null,
+        examFreq: null,
+        masteryLevel: 0,
+        intervalDays: 0,
+        firstLearnedAt: null,
+        correctCount: 0,
+        wrongCount: 0,
+        lastReviewedAt: null,
+      }],
+    };
+    const card = mapBackupData(stub).vocabCards[0]!;
+    expect(card.definitions).toBe('[]');
+    expect(card.examples).toBe('[]');
+    expect(card.phonetic).toBeNull();
+    expect(card.extra).toBeNull();
+    expect(card.exam_freq).toBeNull();
+    expect(card.mastery_level).toBe(0);
+  });
+
+  it('vocabCards：空数组放行但非空数组仍逐项白名单校验', () => {
+    const badItem = {
+      ...data,
+      vocabCards: [{ ...data.vocabCards![0]!, definitions: [{ pos: '', meaning: '放弃' }] }],
+    };
+    expect(() => mapBackupData(badItem)).toThrow(MappingError);
+  });
+
   it('vocabCards：旧版备份省略该字段 → 空数组', () => {
     const legacy = { ...data };
     delete legacy.vocabCards;
