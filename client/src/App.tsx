@@ -23,6 +23,7 @@ const pageLoaders = {
   register: () => import('./pages/RegisterPage').then((m) => ({ default: m.RegisterPage })),
   review: () => import('./pages/ReviewPage').then((m) => ({ default: m.ReviewPage })),
   local: () => import('./pages/LocalModePage').then((m) => ({ default: m.LocalModePage })),
+  vocab: () => import('./pages/VocabularyPage').then((m) => ({ default: m.VocabularyPage })),
 };
 
 const LandingPage = lazy(pageLoaders.landing);
@@ -37,6 +38,7 @@ const LoginPage = lazy(pageLoaders.login);
 const RegisterPage = lazy(pageLoaders.register);
 const ReviewPage = lazy(pageLoaders.review);
 const LocalModePage = lazy(pageLoaders.local);
+const VocabularyPage = lazy(pageLoaders.vocab);
 
 /* TopNav / ReviewGate 也走代码分割：TopNav 静态链携带 framer-motion（motion-vendor
    143KB）与 ProfileDropdown/Dropdown/ThemeToggle，登录前首屏（介绍页）不渲染它们，
@@ -53,6 +55,7 @@ const NAV_PREFETCH: Record<string, () => Promise<{ default: React.ComponentType<
   '#/courses': pageLoaders.courses,
   '#/statistics': pageLoaders.statistics,
   '#/review': pageLoaders.review,
+  '#/vocabulary': pageLoaders.vocab,
 };
 
 /* 未登录可访问的公开路由（账号系统 T2.4）：介绍页 + 登录 + 注册 + 本地账户页（P3） */
@@ -240,6 +243,8 @@ export default function App() {
         return <CourseDetailPage courseId={displayed.params.id} />;
       case '/statistics':
         return <StatisticsPage />;
+      case '/vocabulary':
+        return <VocabularyPage />;
       case '/review':
         return (
           <ReviewGate>

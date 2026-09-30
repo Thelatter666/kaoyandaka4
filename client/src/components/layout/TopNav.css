@@ -11,14 +11,18 @@
   max-width: 960px;
   height: 56px;
   margin: 12px auto 0;
-  padding: 0 var(--space-sm) 0 var(--space-md);
+  /* 左 16px → 12px、右 8px → 6px：与链接内边距收窄一起为第 8 项「单词本」让宽
+     （胶囊 960px 上限是既有设计，改的是内容宽度不是胶囊宽度） */
+  padding: 0 6px 0 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   /* 间距从 --space-sm(8px) 收到 6px：加入节能模式圆钮（+48px）后，
      960px 胶囊内只剩 1px 余量，实测内容超出右内边距 5.1px；
-     此处两处间距各收 2px/1px 共让出 10px，重新留出约 5px 余量 */
-  gap: 6px;
+     此处两处间距各收 2px/1px 共让出 10px，重新留出约 5px 余量。
+     6px → 5px：第 8 项「单词本」加入后按同一先例继续让宽（见下方
+     .top-nav__links / .top-nav__link 的两处收窄） */
+  gap: 5px;
   border-radius: var(--radius-full);
 }
 
@@ -43,8 +47,8 @@
 .top-nav__links {
   display: flex;
   align-items: center;
-  /* 4px → 3px：与 .top-nav 的间距收紧一起为节能模式圆钮让宽（见上） */
-  gap: 3px;
+  /* 4px → 3px → 2px：与 .top-nav 的间距收紧一起为新增导航项让宽（见上） */
+  gap: 2px;
 }
 
 /* 灯管指示器（tubelight）：活动链接内的主色 tint 胶囊 + 顶部发光灯管。
@@ -116,7 +120,11 @@
   justify-content: center;
   gap: 6px;
   height: 44px;
-  padding: 0 var(--space-md);
+  /* 16px → 8px：第 8 项「单词本」入场时按节能钮先例让宽（胶囊 960px 上限不变）。
+     实测账：8 项 + 右侧动作区（含「关闭系统」圆钮）的自然宽度 1012px，
+     收窄后余 44px（邮箱前 4 字符宽度浮动 ±20px 也不溢出）；
+     图标与文字未被压缩，触控高度仍是 44px */
+  padding: 0 8px;
   border-radius: var(--radius-full);
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
@@ -149,7 +157,8 @@
 .top-nav__actions {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
+  /* 4px → 3px：三个 44px 圆钮的间距微收，为第 8 项导航让宽（见上） */
+  gap: 3px;
 }
 
 /* 关闭系统（最右上角）：仅本机启动时渲染。

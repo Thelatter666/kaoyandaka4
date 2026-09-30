@@ -1,0 +1,918 @@
+/* ============================================================
+   单词本（Vocabulary）— 页面与全部 vocab-* 组件样式
+   ============================================================
+   为什么集中一个文件：本页组件（卡片/详情/翻面卡/圆点/索引切换）只在本页出现，
+   计划允许小组件样式合并到 VocabularyPage.css；弹窗内部样式同样并入此处，
+   保证 tokens 与 BEM 命名一眼可查、避免多文件交叉引用。
+
+   约定：颜色只用 var(--color-*)；动效时长/曲线用 --dur-* / --ease-*；
+   glass 层级沿用 utilities.css 的 .glass-1/2/3；本页无任何常驻（循环）动画
+   （power-save.spec.ts 会全页扫描常驻动画，词库/复习页零 animation 声明）。
+   ============================================================ */
+
+/* ---------- 页头：LLM 设置钮（状态点表达「已配置 / 未配置」） ---------- */
+
+.vocab-settings {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: 44px;
+  padding: 0 var(--space-md);
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.vocab-settings:hover {
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-glass-md);
+}
+
+.vocab-settings:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+.vocab-settings__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-text-muted);
+}
+
+.vocab-settings__dot--on {
+  background: var(--color-accent-success);
+}
+
+/* ---------- 视图切换（词库 / 复习） ---------- */
+
+.vocab-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.vocab-tabs {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: var(--space-xs);
+  padding: 4px;
+  border-radius: var(--radius-full);
+  background: var(--color-glass-bg);
+  border: 1px solid var(--color-border);
+}
+
+.vocab-tabs__tab {
+  min-height: 36px;
+  padding: 0 var(--space-lg);
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.vocab-tabs__tab:hover {
+  color: var(--color-text-primary);
+}
+
+.vocab-tabs__tab--active {
+  background: var(--color-accent-primary-light);
+  color: var(--color-accent-primary-strong);
+  font-weight: var(--font-semibold);
+}
+
+.vocab-tabs__tab:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+.vocab-view {
+  min-height: 240px;
+}
+
+/* ---------- 词库：工具行 + 索引切换 + 列表 ---------- */
+
+.vocab-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-md);
+}
+
+.vocab-toolbar__count {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.vocab-index {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-full);
+}
+
+.vocab-index__btn {
+  min-height: 32px;
+  padding: 0 var(--space-md);
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.vocab-index__btn:hover {
+  color: var(--color-text-primary);
+}
+
+.vocab-index__btn--active {
+  background: var(--color-accent-primary-light);
+  color: var(--color-accent-primary-strong);
+  font-weight: var(--font-semibold);
+}
+
+.vocab-index__btn:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 1px;
+}
+
+.vocab-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-width: 860px;
+}
+
+/* ---------- 词卡（收起 / 展开） ---------- */
+
+.vocab-card {
+  border-radius: var(--radius-card);
+  padding: var(--space-md) var(--space-lg);
+  transition: box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.vocab-card:hover {
+  box-shadow: var(--shadow-glass-md);
+}
+
+.vocab-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.vocab-card__toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-xs) 0;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.vocab-card__toggle:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-md);
+}
+
+.vocab-card__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.vocab-card__word {
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.vocab-card__phonetic {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.vocab-card__meaning {
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vocab-card__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+.vocab-card__badge {
+  padding: 2px var(--space-sm);
+  border-radius: var(--radius-full);
+  background: var(--color-accent-success);
+  color: var(--color-text-inverse);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+}
+
+.vocab-card__chevron {
+  color: var(--color-text-muted);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.vocab-card__chevron--open {
+  transform: rotate(180deg);
+}
+
+.vocab-card__body {
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-border);
+}
+
+.vocab-card__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.vocab-card__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.vocab-card__delete:not(:disabled) {
+  color: var(--color-accent-danger);
+}
+
+/* 发音钮 */
+.vocab-speak {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.vocab-speak:hover:not(:disabled) {
+  background: var(--color-accent-primary-light);
+  color: var(--color-accent-primary-strong);
+}
+
+.vocab-speak:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.vocab-speak:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+/* 掌握档圆点 */
+.vocab-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.vocab-dots__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: transparent;
+}
+
+.vocab-dots__dot--filled {
+  border-color: var(--color-accent-primary);
+  background: var(--color-accent-primary);
+}
+
+/* ---------- 词卡详解（词库展开 / 复习背面 / 查询预览共用） ---------- */
+
+.vocab-detail__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.vocab-detail__phonetic {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.vocab-detail__freq {
+  padding: 2px var(--space-sm);
+  border-radius: var(--radius-full);
+  background: var(--color-accent-primary-light);
+  color: var(--color-accent-primary-strong);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+}
+
+.vocab-detail__defs {
+  margin: 0;
+  padding-left: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.vocab-detail__def {
+  color: var(--color-text-primary);
+  font-size: var(--text-base);
+  line-height: 1.6;
+}
+
+.vocab-detail__pos {
+  display: inline-block;
+  margin-right: var(--space-xs);
+  color: var(--color-accent-primary-strong);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-style: italic;
+}
+
+.vocab-detail__examples {
+  margin: var(--space-md) 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.vocab-detail__example {
+  padding: var(--space-sm) var(--space-md);
+  border-left: 2px solid var(--color-accent-primary-light);
+  border-radius: var(--radius-sm);
+  background: var(--color-glass-bg);
+}
+
+.vocab-detail__en {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.vocab-detail__zh {
+  margin: var(--space-xs) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.vocab-detail__extra {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-accent-primary-light);
+}
+
+.vocab-detail__extra-label {
+  display: block;
+  margin-bottom: var(--space-xs);
+  color: var(--color-accent-primary-strong);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.04em;
+}
+
+/* extra 的轻量 Markdown 渲染 */
+.vocab-md__p {
+  margin: 0 0 var(--space-xs);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.7;
+}
+
+.vocab-md__p:last-child {
+  margin-bottom: 0;
+}
+
+.vocab-md__list {
+  margin: 0 0 var(--space-xs);
+  padding-left: var(--space-lg);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.7;
+}
+
+.vocab-md__list:last-child {
+  margin-bottom: 0;
+}
+
+.vocab-md strong {
+  color: var(--color-text-primary);
+  font-weight: var(--font-semibold);
+}
+
+/* ---------- 复习：进度条 / 统计 / 面板 ---------- */
+
+.vocab-review {
+  max-width: 720px;
+}
+
+.vocab-review__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xs);
+}
+
+.vocab-review__progress {
+  flex: 1;
+  min-width: 0;
+}
+
+.vocab-review__stats {
+  margin: 0 0 var(--space-md);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.vocab-review__panel {
+  max-width: 560px;
+  border-radius: var(--radius-card);
+  padding: var(--space-xl) var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  text-align: center;
+}
+
+.vocab-review__panel-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+}
+
+.vocab-review__panel-count {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-base);
+}
+
+.vocab-review__panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
+}
+
+.vocab-review__done {
+  margin: 0;
+  max-width: 420px;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+/* 今日配额选择 */
+.vocab-quota {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.vocab-quota__label {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.vocab-quota__group {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-full);
+  background: var(--color-glass-bg);
+  border: 1px solid var(--color-border);
+}
+
+.vocab-quota__btn {
+  min-width: 40px;
+  min-height: 32px;
+  padding: 0 var(--space-sm);
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.vocab-quota__btn--active {
+  background: var(--color-accent-primary-light);
+  color: var(--color-accent-primary-strong);
+  font-weight: var(--font-semibold);
+}
+
+.vocab-quota__btn:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 1px;
+}
+
+/* 新词首学卡：正面即完整详解 */
+.vocab-first {
+  border-radius: var(--radius-card);
+  padding: var(--space-lg);
+}
+
+.vocab-first__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.vocab-first__badge {
+  display: inline-block;
+  margin: var(--space-xs) 0 var(--space-sm);
+  padding: 2px var(--space-sm);
+  border-radius: var(--radius-full);
+  background: var(--color-accent-primary-light);
+  color: var(--color-accent-primary-strong);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+}
+
+.vocab-first .vocab-review__panel-actions {
+  justify-content: flex-start;
+}
+
+/* ---------- 翻面复习卡（framer-motion 控制 rotateY） ---------- */
+
+.vocab-flip {
+  max-width: 720px;
+}
+
+.vocab-flip__scene {
+  perspective: 1400px;
+}
+
+.vocab-flip__inner {
+  position: relative;
+  transform-style: preserve-3d;
+}
+
+.vocab-flip__face {
+  border-radius: var(--radius-card);
+  padding: var(--space-lg);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* 正面：只露单词 + 音标，整面可点翻面 */
+.vocab-flip__face--front {
+  position: relative;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vocab-flip__face--back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+  /* 朝下时裁掉溢出，避免隐藏面的长内容撑出页面可滚动高度；
+     成为可见面后恢复（此刻它在流内、由内容决定高度） */
+  overflow: hidden;
+}
+
+.vocab-flip[data-phase='back'] .vocab-flip__face--front {
+  position: absolute;
+  inset: 0;
+}
+
+.vocab-flip[data-phase='back'] .vocab-flip__face--back {
+  position: relative;
+  inset: auto;
+  overflow: visible;
+}
+
+.vocab-flip__tap {
+  width: 100%;
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.vocab-flip__tap:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 4px;
+  border-radius: var(--radius-md);
+}
+
+.vocab-flip__word {
+  font-family: var(--font-heading);
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.vocab-flip__word--sm {
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+}
+
+.vocab-flip__phonetic {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+.vocab-flip__hint {
+  margin-top: var(--space-sm);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.vocab-flip__tools {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+}
+
+.vocab-flip__back-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+/* 自评三键 */
+.vocab-review__grades {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
+}
+
+.vocab-grade {
+  flex: 1;
+  min-height: 44px;
+  padding: 0 var(--space-md);
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-text-inverse);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    opacity var(--dur-fast) var(--ease-out);
+}
+
+.vocab-grade--known {
+  background: var(--color-accent-success-strong);
+}
+
+.vocab-grade--fuzzy {
+  background: var(--color-accent-warning-strong);
+}
+
+.vocab-grade--unknown {
+  background: var(--color-accent-danger);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .vocab-grade:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-glass-md);
+  }
+}
+
+.vocab-grade:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.vocab-grade:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+/* ---------- 查询弹窗 ---------- */
+
+.vocab-field {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-input);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  outline: none;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.vocab-field:focus {
+  border-color: var(--color-border-focus);
+}
+
+.vocab-query {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.vocab-query__form {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.vocab-query__input {
+  flex: 1;
+}
+
+.vocab-query__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.vocab-query__result {
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+}
+
+.vocab-query__result-title {
+  margin: 0 0 var(--space-sm);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.vocab-query__result-title strong {
+  color: var(--color-text-primary);
+}
+
+.vocab-query__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+.vocab-query__error {
+  padding: var(--space-md);
+  border: 1px solid var(--color-accent-danger);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-bg);
+}
+
+.vocab-query__error-text {
+  margin: 0;
+  color: var(--color-accent-danger);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+/* ---------- LLM 配置弹窗 ---------- */
+
+.vocab-llm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.vocab-llm__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.vocab-llm__label {
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+}
+
+.vocab-llm__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+}
+
+.vocab-llm__error {
+  margin: 0;
+  color: var(--color-accent-danger);
+  font-size: var(--text-sm);
+}
+
+.vocab-llm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-md);
+  margin-top: var(--space-xs);
+}
+
+/* ---------- 窄屏 ---------- */
+
+@media (max-width: 719px) {
+  .vocab-card {
+    padding: var(--space-md);
+  }
+
+  .vocab-card__word {
+    font-size: var(--text-lg);
+  }
+
+  .vocab-card__meaning {
+    white-space: normal;
+  }
+
+  .vocab-flip__word {
+    font-size: var(--text-2xl);
+  }
+
+  .vocab-review__grades {
+    flex-direction: column;
+  }
+
+  .vocab-settings {
+    padding: 0 var(--space-sm);
+  }
+}

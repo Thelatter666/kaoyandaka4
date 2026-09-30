@@ -8,6 +8,7 @@ import {
   NotebookPen,
   Trees,
   Power,
+  BookMarked,
   type LucideIcon,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -35,6 +36,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: '番茄钟', hash: '#/pomodoro', icon: Timer },
   { label: '网课', hash: '#/courses', icon: MonitorPlay },
   { label: '统计', hash: '#/statistics', icon: Trees },
+  { label: '单词本', hash: '#/vocabulary', icon: BookMarked },
   { label: '复盘', hash: '#/review', icon: NotebookPen },
 ];
 
