@@ -23,10 +23,10 @@ client/src/          → React SPA (hash-router, lazy-loaded pages)
   local/             → 本地模式数据层 (IndexedDB): db.ts, localStore.ts, mode.ts, storage.ts, accounts.ts, types.ts
   components/        → UI primitives + feature components (layout/, tasks/, timer/, courses/, presets/, forest/, heatmap/, review/, landing/, ui/)
   pages/             → Page components with co-located CSS (HomePage, PlanPage, PomodoroPage, ReviewPage, LoginPage/RegisterPage, LocalModePage, CourseDetailPage, CoursesPage, PresetsPage, StatisticsPage；AuthPage.css 为 Login/Register/LocalModePage 三页共用样式)
-  hooks/             → useApi, useAuth, useFocusSession, useKeyboardSort, useScreenWakeLock, useTheme
-  utils/             → date/duration/sound/accessibility + focusPause (专注暂停纯函数) + unlockMarker (复盘锁解锁标记,含上锁与跨标签广播) + localPower (关闭系统:本机判定 + 关机请求) + reviewLockHash (本地复盘锁哈希) + localStatistics + localImport + parseCourseText + uuid
+  hooks/             → useApi, useAuth, useFocusSession, useKeyboardSort, useScreenWakeLock, useTheme, usePowerSave（节能模式：开关 + useShouldReduceMotion 降级谓词）
+  utils/             → date/duration/sound/accessibility + focusPause (专注暂停纯函数) + unlockMarker (复盘锁解锁标记,含上锁与跨标签广播) + localPower (关闭系统:本机判定 + 关机请求) + reviewLockHash (本地复盘锁哈希) + powerSave (节能模式真源与判定) + localStatistics + localImport + parseCourseText + uuid
   workers/           → countdown-title.ts (标签页标题倒计时), end-sound.ts (番茄钟准点响铃)
-  styles/            → tokens.css, global.css, utilities.css
+  styles/            → tokens.css, global.css, utilities.css, power-save.css (节能模式开销削减层)
 
 server/src/          → Express REST API
   routes/            → 11 个路由文件: auth, presets, tasks, reviews, focus, courses, statistics, settings, reviewLock, export, import（另有 export.test.ts 测试）
@@ -42,7 +42,7 @@ shared/src/          → Shared between front-end and back-end
 
 plans/               → 18 个动效实现计划（001-018，全部为动画/动效类）+ README.md 总账表（#/标题/严重度/模块/状态/依赖）
 scripts/             → local-power.mjs：本地关机监听器（127.0.0.1:3999，「关闭系统」按钮的落地点，仅由桌面启动脚本拉起，npm 脚本不引用）
-docs/                → adr/ 6 条（0001-0004 砚池 / 0005 复盘锁 / 0006 暂停） + superpowers/ (specs 9 / plans 7 / spikes 14 项)
+docs/                → adr/ 7 条（0001-0004 砚池 / 0005 复盘锁 / 0006 暂停 / 0007 节能模式存储与口径） + superpowers/ (specs 11 / plans 8 / spikes 16 项)
 交接文档/             → 01-进度与上下文 / 02-后续任务与子代理分阶段实施 / 03-P3本地模式交接 / 04-P3本地模式完成交接报告 / 05-砚池计时器实施交接
 deploy/              → nginx.conf, nginx.ip.conf, deploy.sh, server-management-prompt.txt
 e2e/                 → playwright.config.ts + tests/smoke.spec.ts + 工具脚本（见下）
@@ -85,9 +85,9 @@ e2e/                 → playwright.config.ts + tests/smoke.spec.ts + 工具脚�
 
 ## UI 组件清单
 
-- **通用组件**（`client/src/components/ui/`）：Button, Card, Modal(portal 到 body), Toast, ConfirmDialog, ProgressBar, EmptyState/ErrorState/LoadingState, SkipLink, SubjectBadge, Dropdown, Calendar, ImportBackupModal(导入向导), ProfileDropdown(顶栏账户菜单: 导出/导入/复盘锁/登出), SoundToggle, ThemeToggle
+- **通用组件**（`client/src/components/ui/`）：Button, Card, Modal(portal 到 body), Toast, ConfirmDialog, ProgressBar, EmptyState/ErrorState/LoadingState, SkipLink, SubjectBadge, Dropdown, Calendar, ImportBackupModal(导入向导), ProfileDropdown(顶栏账户菜单: 导出/导入/复盘锁/登出), SoundToggle, ThemeToggle, PowerSaveToggle(节能模式开关, 44px 圆钮, 开启时主色高亮兼作状态指示)
 - **复盘门禁**（`client/src/components/review/`）：ReviewGate(三态门禁,包裹 ReviewPage 保持 lazy) + ReviewLockModal(设置/修改弹窗) + ReviewLockContext(上锁回调 context,独立 chunk 以免复盘页拖带门禁依赖)
-- **顶栏**（`client/src/components/layout/TopNav.tsx`）：品牌 + 7 项导航 + 主题/账户菜单 + 「关闭系统」（仅本机 host 渲染，见 AGENT.md「本地启动与关闭系统」）
+- **顶栏**（`client/src/components/layout/TopNav.tsx`）：品牌 + 7 项导航 + 节能模式/主题/账户菜单 + 「关闭系统」（仅本机 host 渲染，见 AGENT.md「本地启动与关闭系统」）。**顶栏宽度已满**：960px 胶囊内实测仅余 1px，新增控件须同时让宽（加入节能钮时把 `.top-nav` 的 gap 8→6px、`.top-nav__links` 的 gap 4→3px 共让出 10px）
 - **动效组件**（framer-motion）：AnimatedThemeToggle, Magnetic, GlowCard, Card3D, FileUpload, GradientCard, InteractiveHoverButton
 - **砚池计时器**（`client/src/components/timer/`）：RingCountdown.tsx + RingCountdown.css + inkSurface.ts(等面积 LUT) + inkWavePaths.ts(三变体波形) + BurstParticles.tsx；设计见 `docs/adr/0001`-`0004` 与 `docs/superpowers/specs/2026-08-21-pomodoro-inkwell-design.md`；术语见 `CONTEXT.md`
 - **功能子目录**：courses/ forest/ heatmap/ landing/ layout/ presets/ tasks/
@@ -131,7 +131,8 @@ import { CreateTaskSchema } from '../../../shared/src/schemas/task.js';
 
 | 脚本 | 用途 |
 |---|---|
-| `check-perf-budget.mjs` | 构建产物体积预算核对 |
+| `check-perf-budget.mjs` | 构建产物体积预算核对（静态：首屏 JS / zod 泄漏 / 截图体积） |
+| `measure-runtime-cost.mjs` | 节能模式运行时开销基准（CPU 30% + GPU 70% 加权，门槛 ≥70%；需先起 `npm run dev:client`） |
 | `verify-landing.mjs` / `take-landing-screenshots.mjs` / `compress-screenshots.mjs` | 介绍页截图与视觉验证 |
 | `gen-favicon.mjs` | favicon 生成 |
 
