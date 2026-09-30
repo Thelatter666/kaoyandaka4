@@ -3,6 +3,7 @@
  *
  * 不调真 LLM：进场走本地模式（`#/local` 新建账户），再向 IndexedDB `kaoyandaily_local`
  * 的 `vocabCards` 播种两张卡（一条新词 + 一条已学到期），经顶部导航进入单词本走完整复习流。
+ * 第二个用例不开 LLM：把配置写成不可达地址，验「查词失败 → 暂存空卡 → 待补全」支路。
  *
  * 覆盖只有真实浏览器才能验的部分：
  *   1. 词库列表 2 张卡 + 三索引切换行为（顺序 = createdAt 升序；掌握程度 = 档升序；
@@ -11,8 +12,10 @@
  *      到期卡正面只有单词 + 音标（无释义 DOM、背面 aria-hidden）→ 翻面 →「认识」→ 完成态；
  *   3. SRS 落库（直读 IndexedDB）：learn 置 firstLearnedAt 且 nextReviewDate=今天+1；
  *      known 升档到 2、intervalDays=2、nextReviewDate=今天+2；
- *   4. 全页无常驻（无限循环）CSS 动画（沿用 power-save.spec 扫描法）+ 无 console error；
- *   5. 收尾按 accountId 级联清理测试账户全部 store。
+ *   4. 暂存支路：死地址查词失败 → 错误文案 + 「暂存单词」→ 空内容卡带「待补全」徽标、
+ *      不进复习概况（仍「1 新词 · 1 到期」）、「待补全」过滤可见且默认勾选；
+ *   5. 全页无常驻（无限循环）CSS 动画（沿用 power-save.spec 扫描法）+ 无 console error；
+ *   6. 收尾按 accountId 级联清理测试账户全部 store。
  */
 import { test, expect, type Page } from '@playwright/test';
 
@@ -34,6 +37,11 @@ const DUE_WORD = 'benefit';
 const DUE_MEANING = '益处；好处';
 const DUE_PHONETIC = '/ˈbenɪfɪt/';
 
+/* 暂存用例：查词指向不可达地址（localhost:9 —— Chrome 保留端口，fetch 立即失败），
+   不依赖任何真实 LLM；错误不阻塞暂存路径 */
+const STASH_WORD = 'resilience';
+const DEAD_LLM_BASE = 'http://localhost:9/v1';
+
 /** 加载转圈豁免名单（与 power-save.spec / styles/power-save.css 保持一致） */
 const SPINNER_ALLOWLIST = ['btn__spinner', 'plan-spin', 'review-spin'];
 
@@ -47,6 +55,8 @@ interface SeedInfo {
 interface StoredVocabRow {
   id: string;
   word: string;
+  definitions: Array<{ pos: string; meaning: string }>;
+  examples: Array<{ en: string; zh: string }>;
   firstLearnedAt: string | null;
   lastReviewedAt: string | null;
   masteryLevel: number;
@@ -55,6 +65,24 @@ interface StoredVocabRow {
   isMastered: boolean;
   correctCount: number;
   wrongCount: number;
+}
+
+/**
+ * 收集非预期 console error，除外两类预期项：
+ * - 未登录时 `/api/v1/auth/me` 返回 401（本地模式同样请求，浏览器写成资源加载日志）；
+ * - 调用方显式声明的不可达端点（暂存用例的 LLM 死地址）：连接失败同样会被浏览器
+ *   写成 `Failed to load resource: net::ERR_*` 的 error 日志，位置即该请求 URL。
+ */
+function trackConsoleErrors(page: Page, ignoredUrlPrefixes: string[] = []): string[] {
+  const errors: string[] = [];
+  page.on('console', (msg) => {
+    if (msg.type() !== 'error') return;
+    if (msg.text().includes('401')) return;
+    const url = msg.location()?.url ?? '';
+    if (ignoredUrlPrefixes.some((prefix) => url.startsWith(prefix))) return;
+    errors.push(msg.text());
+  });
+  return errors;
 }
 
 /** 本地模式进场：新建账户 → 进入应用（同 power-save.spec，不依赖服务器会话） */
@@ -245,11 +273,7 @@ async function infiniteAnimations(page: Page, rootSelector?: string) {
 }
 
 test('单词本：播种词卡 → 三索引 → 首学/复习调度 → 无无限动画/无 console error', async ({ page }) => {
-  const consoleErrors: string[] = [];
-  page.on('console', (msg) => {
-    /* 未登录时 /api/v1/auth/me 正常返回 401，属预期 */
-    if (msg.type() === 'error' && !msg.text().includes('401')) consoleErrors.push(msg.text());
-  });
+  const consoleErrors = trackConsoleErrors(page);
 
   let accountId: string | null = null;
   let cleaned = false;
@@ -376,6 +400,101 @@ test('单词本：播种词卡 → 三索引 → 首学/复习调度 → 无无�
   } finally {
     if (accountId && !cleaned) {
       /* 断言失败路径的兜底清理：尽力而为，不遮盖主断言错误 */
+      try {
+        await cleanVocabTestAccount(page, accountId);
+      } catch {
+        /* 页面已关闭等场景无需处理 */
+      }
+    }
+  }
+});
+
+test('单词本：LLM 不可达 → 暂存空卡 → 待补全过滤 → 不进复习概况', async ({ page }) => {
+  /* 死地址的连接失败会被浏览器写成资源加载 error 日志（location = 该端点 URL），按前缀豁免 */
+  const consoleErrors = trackConsoleErrors(page, [DEAD_LLM_BASE]);
+
+  let accountId: string | null = null;
+  let cleaned = false;
+
+  try {
+    await enterLocalApp(page);
+
+    /* 播种两张正常卡（复用既有播种法），让复习概况有可对照的基线 */
+    const seed = await seedVocabCards(page);
+    accountId = seed.accountId;
+
+    /* 把 LLM 配置写死为不可达地址：查词必然以 LlmError('cors') 失败，暂存路径不依赖 LLM */
+    await page.evaluate(
+      ({ base }) => {
+        localStorage.setItem(
+          'kaoyandaily-vocab-llm-config',
+          JSON.stringify({ baseUrl: base, apiKey: 'sk-e2e-dead', model: 'e2e-dead-model' })
+        );
+      },
+      { base: DEAD_LLM_BASE }
+    );
+
+    await page.getByRole('link', { name: '单词本' }).click();
+    await expect(page.locator('.vocab-card')).toHaveCount(2);
+
+    /* ---------- 1. 查词失败：分类文案 + 重试 + 「暂存单词」入口 ---------- */
+    await page.locator('.vocab-toolbar').getByRole('button', { name: '查询单词' }).click();
+    await page.getByLabel('要查询的单词或短语').fill(STASH_WORD);
+    await page.getByRole('button', { name: '查询', exact: true }).click();
+
+    const queryError = page.locator('.vocab-query__error-text');
+    await expect(queryError).toBeVisible();
+    await expect(queryError, '连接失败应给出直连失败类文案').toContainText('无法连接 LLM 服务');
+    await expect(page.getByRole('button', { name: '重试' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '暂存单词' })).toBeVisible();
+
+    /* ---------- 2. 暂存：空内容卡入库并带「待补全」徽标 ---------- */
+    await page.getByRole('button', { name: '暂存单词' }).click();
+    await expect(page.locator('.toast-item', { hasText: '已暂存，LLM 恢复后可补全' })).toBeVisible();
+    await expect(page.locator('.vocab-query__error'), '暂存成功后查询弹窗应关闭').toHaveCount(0);
+
+    await expect(page.locator('.vocab-card')).toHaveCount(3);
+    const stashedCard = page.locator('.vocab-card', { hasText: STASH_WORD });
+    await expect(stashedCard.locator('.vocab-card__word')).toHaveText(STASH_WORD);
+    await expect(stashedCard.locator('.vocab-card__badge--pending')).toHaveText('待补全');
+
+    /* 落库口径：definitions/examples 空数组即待补全标记，无新列；SRS 字段照常初始化 */
+    const stashedRow = (await readVocabCards(page)).find((row) => row.word === STASH_WORD);
+    expect(stashedRow, '应能读到暂存卡').toBeTruthy();
+    expect(stashedRow!.definitions).toEqual([]);
+    expect(stashedRow!.examples).toEqual([]);
+    expect(stashedRow!.firstLearnedAt).toBeNull();
+    expect(stashedRow!.masteryLevel).toBe(0);
+    expect(stashedRow!.nextReviewDate).toBe(seed.tomorrow);
+
+    /* ---------- 3. 复习概况不含待补全卡：仍是播种的「1 新词 · 1 到期」 ---------- */
+    await page.getByRole('tab', { name: '复习' }).click();
+    await expect(page.locator('.vocab-review__panel-count')).toHaveText('1 新词 · 1 到期');
+    await expect(page.getByRole('button', { name: '开始复习' })).toBeEnabled();
+
+    /* ---------- 4. 「待补全」过滤：只列该卡、默认勾选、可批量补全 ---------- */
+    await page.getByRole('tab', { name: '词库' }).click();
+    const pendingFilter = page.getByRole('button', { name: '待补全 (1)' });
+    await expect(pendingFilter).toBeEnabled();
+    await pendingFilter.click();
+    await expect(page.locator('.vocab-card')).toHaveCount(1);
+    await expect(page.locator('.vocab-card__word')).toHaveText(STASH_WORD);
+    await expect(page.locator('.vocab-card__check')).toBeChecked();
+    await expect(page.getByRole('button', { name: '补全选中（1）' })).toBeVisible();
+
+    /* 展开：空内容占位 + 单卡「AI 补全」入口 */
+    await page.locator('.vocab-card__toggle').click();
+    await expect(page.locator('.vocab-detail__empty-title')).toHaveText('内容待补全');
+    await expect(page.getByRole('button', { name: 'AI 补全' })).toBeVisible();
+
+    /* ---------- 5. 收尾：级联清理测试账户，全程无 console error ---------- */
+    await cleanVocabTestAccount(page, accountId);
+    cleaned = true;
+    expect(await readVocabCards(page), '清理后测试账户不应残留词卡').toEqual([]);
+
+    expect(consoleErrors, '页面不应有 console error（401 与死地址网络日志除外）').toEqual([]);
+  } finally {
+    if (accountId && !cleaned) {
       try {
         await cleanVocabTestAccount(page, accountId);
       } catch {

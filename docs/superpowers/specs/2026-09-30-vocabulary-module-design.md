@@ -19,6 +19,7 @@
 | 5 | 配额语义 | **新词首学 + 到期复习**合占每日配额 N（默认 10，可选 5/10/20/30/全部） |
 | 6 | 备份 | **进备份**：`BackupFile.data` 加可选 `vocabCards`，schemaVersion 保持 1 |
 | 7 | 页面组织 | **单页双视图**：`#/vocabulary` 内「词库 / 复习」tab 切换，TopNav 加第 8 项 |
+| 8 | 暂存与补全 | **空数组即待补全标记**（无新列）：查词失败可暂存空卡，LLM 恢复后单卡 / 批量补全；空卡不进复习队列，补全后走新词首学；配置面板加「测试连接」（2026-09-30 增补，见 §12） |
 
 ## 2. 数据模型
 
@@ -195,3 +196,36 @@ buildReviewQueue(cards, today, quota) -> {newCards, dueCards}
 | C5 文档同步+E2E | `AGENT.md`/`ARCHITECTURE.md`/`CONTEXT.md`/`e2e/` | C2+C4 |
 
 C2 与 C3 并行（都只依赖 C1、领地互斥）；C4 依赖 C3 的类型与 api；C5 收尾。
+
+## 12. 暂存与补全（2026-09-30 增补）
+
+> 本节为实施期增补，**覆盖**前文与之冲突的契约描述（§2.3 的 `content` 必填、§7 的 PATCH 语义）；未提及处一律不变。
+
+### 12.1 动机
+
+LLM 不可用（网络断、CORS 被拒、401/429、响应不合契约）时，加词不应瘫痪：先把单词以空内容卡收入词库，内容留待 LLM 恢复后补全。查词失败与「暂存」是同一弹窗内的两条出路，不是替代关系。
+
+### 12.2 交互
+
+- **入口**：查词失败（任何 `LlmError`，`not_configured` 除外）→ 查询弹窗错误区出现「暂存单词」按钮 + 提示文案；「未配置」仍只走「去配置 LLM」引导，其余失败分支带「重试」。
+- **暂存**：以 `{word}`（不带 `content`）调 `CreateVocabCardInput` 创建**空内容卡**；Toast「已暂存，LLM 恢复后可补全」，弹窗关闭，卡片立即进入词库列表并带「待补全」徽标。
+- **待补全过滤**：词库工具栏「待补全 (N)」按钮（无待补全卡时禁用）；过滤列表只显示待补全卡 + 本轮批量已处理的卡，其余词卡隐藏；过滤模式下待补全卡带勾选框（进入过滤默认全选，新暂存的卡自动补选）。
+- **批量补全**：「补全选中（N）」**串行**逐卡 `lookupWord → PATCH {content}`；逐卡展示 排队中 / 补全中 / 已补全 / 补全失败（失败附原因摘要），进行中显示 `补全中 x/y` 与「取消补全」（AbortController；取消时未完成的卡标记「已取消」），结束后 Toast 汇总成功 / 失败数（有失败为 error 级、取消为 info 级）。
+- **单卡补全**：展开待补全卡 → 详情显示「内容待补全」占位 + 「AI 补全」按钮；未配置 LLM 时点击引导打开配置弹窗。补全只写内容，不动 SRS。
+- **补全之后**：卡片即完整卡，`first_learned_at` 仍为 NULL → 回到新词首学流程（当天出现在复习页新词区）。
+
+### 12.3 数据模型：空数组即标记
+
+- **待补全判据 = `definitions.length === 0`**，不新增列 / 字段；暂存卡的 `definitions` / `examples` 落空数组，`phonetic` / `extra` / `exam_freq` 为 NULL，其余字段照常初始化（`mastery_level=0`、`interval_days=0`、`next_review_date=今天+1`、`first_learned_at=NULL`）。
+- **备份天然兼容**：`vocabCards` 记录结构未变，`schemaVersion` 保持 1——旧备份可导入暂存卡，新备份可被旧版本导入。
+- **LLM 生成契约不变**：`VocabContentSchema` 的 `definitions` / `examples` 仍 `min(1)`——空内容只可能来自「暂存」，不可能来自 LLM 输出（契约校验同时充当输出校验）。
+
+### 12.4 契约变更
+
+- `CreateVocabCardSchema`：`content` 由必填改为**可选**；缺省即暂存卡。
+- `UpdateVocabCardSchema`：由「`masteryLevel` / `reset` 二选一」改为「`masteryLevel` / `reset` / `content` **三选一**」（refine 保证互斥）；`content` 分支只写 `phonetic` / `definitions` / `examples` / `extra` / `exam_freq`，SRS 字段（`mastery_level` / `interval_days` / `next_review_date` / `is_mastered` / `last_reviewed_at`）一律不动——补内容不是复习。
+- **队列规则**：`buildReviewQueue` 过滤 `definitions.length > 0`，待补全卡既不进新词区也不进到期队列；补全后 `first_learned_at` 仍为 NULL → 走新词首学。
+
+### 12.5 测试连接
+
+配置面板新增「测试连接」：以当前输入值（未保存也可）POST 一条最小对话（`max_tokens=64`），**HTTP 2xx 即成功**（不校验响应内容——思考模型可能只返回思维链，`content` 为空），15 秒超时；错误分类与查词共用同一请求层（`LlmError` 各 kind）。成功显示「连接正常」，失败显示分类原因；关闭弹窗即中止在途请求。
