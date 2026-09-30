@@ -1,5 +1,5 @@
 /**
- * LocalDataStore：本地模式数据访问层，实现与 8 个 xxxApi **同名同签名**的方法
+ * LocalDataStore：本地模式数据访问层，实现与 9 个 xxxApi **同名同签名**的方法
  * （P3-A：CRUD；P3-D：导出/导入）。业务页面组件零改动，仅 xxxApi 内部按 isLocalMode() 分支。
  *
  * 语义与服务器路由逐一对照：
@@ -8,6 +8,8 @@
  *   cancel 置 cancelled；getActive 过期自动完成；
  * - courses：打勾不写 study_records（历史决策）；delete 级联删集数；
  * - reviews：按 (accountId, reviewDate) upsert；
+ * - vocab：create 查重（重复抛 WORD_EXISTS，api 层转 409）；review/update 调 shared SRS 纯函数；
+ *   learn 幂等（首次置 firstLearnedAt）；
  * - 所有业务记录带 accountId 归属，查询一律先按 accountId 过滤；返回时剔除 accountId。
  */
 
@@ -29,6 +31,10 @@ import type {
   ImportPreviewResponse,
   ForestResponse,
   HeatmapResponse,
+  CreateVocabCardInput,
+  UpdateVocabCardInput,
+  ReviewGrade,
+  VocabCard,
 } from '@shared/types';
 import type { Task } from '../api/tasks';
 import type { Preset } from '../api/presets';
@@ -37,7 +43,8 @@ import type { Course, CourseDetail, Episode, ParseResult } from '../api/courses'
 import type { Review } from '../api/reviews';
 import type { Settings } from '../api/settings';
 import type { TodaySummary } from '../api/statistics';
-import { FOCUS_PAUSE_MAX_SECONDS } from '@shared/constants';
+import { FOCUS_PAUSE_MAX_SECONDS, VOCAB_MASTERY_MAX, VOCAB_SRS_INTERVALS } from '@shared/constants';
+import { addDays, applyReview } from '@shared/srs';
 import { hashReviewPassword, verifyReviewPassword } from '../utils/reviewLockHash';
 import type {
   LocalAccount,
@@ -49,12 +56,24 @@ import type {
   LocalSetting,
   LocalStudyRecord,
   LocalTask,
+  LocalVocabCard,
   Accountless,
 } from './types';
-import { BUSINESS_STORES, idbDelete, idbGetAll, idbGetAllByIndex, idbGetByKey, idbPut, tx, type StoreName } from './db';
+import { normalizeWord } from './types';
+import {
+  BUSINESS_STORES,
+  idbDelete,
+  idbGetAll,
+  idbGetAllByIndex,
+  idbGetByIndex,
+  idbGetByKey,
+  idbPut,
+  tx,
+  type StoreName,
+} from './db';
 import { findLocalAccountByEmail, getActiveLocalAccount, setActiveLocalAccount } from './accounts';
 import { generateUUID } from '../utils/uuid';
-import { formatDateTime, parseDateTime } from '../utils/date';
+import { formatDateTime, parseDateTime, today } from '../utils/date';
 import { computeForest, computeHeatmap, computeTodaySummary } from '../utils/localStatistics';
 import { parseCourseText } from '../utils/parseCourseText';
 import {
@@ -706,6 +725,124 @@ const reviewLock = {
   },
 };
 
+/* ---- vocab（单词本）：SRS 调度与服务器共用 @shared/srs 纯函数，杜绝口径漂移 ---- */
+
+/** 按 (accountId, word) 唯一索引取卡；word 须已归一 */
+async function findVocabByWord(accountId: string, word: string): Promise<LocalVocabCard | undefined> {
+  return (await tx('vocabCards', 'readonly', (t) =>
+    idbGetByIndex(t, 'vocabCards', 'accountId_word', [accountId, word])
+  )) as LocalVocabCard | undefined;
+}
+
+async function requireVocabCard(id: string): Promise<LocalVocabCard> {
+  const accountId = requireAccountId();
+  const row = await getOne<LocalVocabCard>('vocabCards', id, accountId);
+  if (!row) throw new Error('NOT_FOUND');
+  return row;
+}
+
+const vocab = {
+  async list(): Promise<VocabCard[]> {
+    const accountId = requireAccountId();
+    const rows = await rowsByAccount<LocalVocabCard>('vocabCards', accountId);
+    return rows.sort((a, b) => a.createdAt.localeCompare(b.createdAt)).map(strip);
+  },
+
+  async getByWord(word: string): Promise<VocabCard | null> {
+    const accountId = requireAccountId();
+    const row = await findVocabByWord(accountId, normalizeWord(word));
+    return row ? strip(row) : null;
+  },
+
+  async create(input: CreateVocabCardInput): Promise<VocabCard> {
+    const accountId = requireAccountId();
+    const word = normalizeWord(input.word);
+    if (await findVocabByWord(accountId, word)) throw new Error('WORD_EXISTS');
+    const nowIso = new Date().toISOString();
+    const row: LocalVocabCard = {
+      accountId,
+      id: generateUUID(),
+      word,
+      phonetic: input.content.phonetic ?? null,
+      definitions: input.content.definitions,
+      examples: input.content.examples,
+      extra: input.content.extra ?? null,
+      examFreq: input.content.examFreq ?? null,
+      masteryLevel: 0,
+      intervalDays: 0,
+      // 新词当天即出现在复习页新词区；次日进入到期判定
+      nextReviewDate: addDays(today(), 1),
+      isMastered: false,
+      firstLearnedAt: null,
+      correctCount: 0,
+      wrongCount: 0,
+      lastReviewedAt: null,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+    await tx('vocabCards', 'readwrite', (t) => idbPut(t, 'vocabCards', row));
+    return strip(row);
+  },
+
+  /** 手动调档（按间隔表重排下次复习）或重置进度（回到未学，次日到期） */
+  async update(id: string, patch: UpdateVocabCardInput): Promise<VocabCard> {
+    const row = await requireVocabCard(id);
+    const todayStr = today();
+    let next: LocalVocabCard;
+    if (patch.reset === true) {
+      next = { ...row, masteryLevel: 0, intervalDays: 0, nextReviewDate: addDays(todayStr, 1), isMastered: false };
+    } else {
+      const masteryLevel = patch.masteryLevel ?? row.masteryLevel;
+      const intervalDays = VOCAB_SRS_INTERVALS[masteryLevel];
+      next = {
+        ...row,
+        masteryLevel,
+        intervalDays,
+        nextReviewDate: addDays(todayStr, intervalDays),
+        isMastered: masteryLevel === VOCAB_MASTERY_MAX,
+      };
+    }
+    next.updatedAt = new Date().toISOString();
+    await tx('vocabCards', 'readwrite', (t) => idbPut(t, 'vocabCards', next));
+    return strip(next);
+  },
+
+  async remove(id: string): Promise<void> {
+    await requireVocabCard(id);
+    await tx('vocabCards', 'readwrite', (t) => idbDelete(t, 'vocabCards', id));
+  },
+
+  async review(id: string, grade: ReviewGrade): Promise<VocabCard> {
+    const row = await requireVocabCard(id);
+    const nextState = applyReview(
+      {
+        masteryLevel: row.masteryLevel,
+        intervalDays: row.intervalDays,
+        nextReviewDate: row.nextReviewDate,
+        isMastered: row.isMastered,
+        correctCount: row.correctCount,
+        wrongCount: row.wrongCount,
+      },
+      grade,
+      today()
+    );
+    const nowIso = new Date().toISOString();
+    const next: LocalVocabCard = { ...row, ...nextState, lastReviewedAt: nowIso, updatedAt: nowIso };
+    await tx('vocabCards', 'readwrite', (t) => idbPut(t, 'vocabCards', next));
+    return strip(next);
+  },
+
+  /** 首学完成：只置 firstLearnedAt（幂等，不动 SRS 字段） */
+  async learn(id: string): Promise<VocabCard> {
+    const row = await requireVocabCard(id);
+    if (row.firstLearnedAt) return strip(row);
+    const nowIso = new Date().toISOString();
+    const next: LocalVocabCard = { ...row, firstLearnedAt: nowIso, updatedAt: nowIso };
+    await tx('vocabCards', 'readwrite', (t) => idbPut(t, 'vocabCards', next));
+    return strip(next);
+  },
+};
+
 /* ---- 备份导出 / 导入（P3-D） ---- */
 
 /** 本地导出账户的密码哈希占位（本地账户无密码，文件仅用于本地迁移） */
@@ -720,6 +857,7 @@ async function loadExistingKeys(accountId: string): Promise<LocalExistingKeys> {
   const focusRows = await rowsByAccount<LocalFocusSession>('focusSessions', accountId);
   const recordRows = await rowsByAccount<LocalStudyRecord>('studyRecords', accountId);
   const settingRows = await rowsByAccount<LocalSetting>('settings', accountId);
+  const vocabRows = await rowsByAccount<LocalVocabCard>('vocabCards', accountId);
   return {
     presets: presets.map((r) => r.id),
     tasks: taskRows.map((r) => r.id),
@@ -729,6 +867,8 @@ async function loadExistingKeys(accountId: string): Promise<LocalExistingKeys> {
     focusSessions: focusRows.map((r) => r.id),
     studyRecords: recordRows.map((r) => r.id),
     settings: settingRows.map((r) => r.key),
+    // 唯一键 (accountId, word)：候选键为 id 与 'word:xxx'（word 已归一）
+    vocabCards: { ids: vocabRows.map((r) => r.id), words: vocabRows.map((r) => r.word) },
   };
 }
 
@@ -741,6 +881,7 @@ const EMPTY_KEYS: LocalExistingKeys = {
   focusSessions: [],
   studyRecords: [],
   settings: [],
+  vocabCards: { ids: [], words: [] },
 };
 
 const backup = {
@@ -749,7 +890,7 @@ const backup = {
     const account = getActiveLocalAccount();
     if (!account) throw new Error('未激活本地账户');
     const accountId = account.accountId;
-    const [presets, taskRows, reviewRows, courseRows, episodeRows, focusRows, recordRows, settingRows] =
+    const [presets, taskRows, reviewRows, courseRows, episodeRows, focusRows, recordRows, settingRows, vocabRows] =
       await Promise.all([
         rowsByAccount<LocalPreset>('presets', accountId),
         rowsByAccount<LocalTask>('tasks', accountId),
@@ -759,6 +900,7 @@ const backup = {
         rowsByAccount<LocalFocusSession>('focusSessions', accountId),
         rowsByAccount<LocalStudyRecord>('studyRecords', accountId),
         rowsByAccount<LocalSetting>('settings', accountId),
+        rowsByAccount<LocalVocabCard>('vocabCards', accountId),
       ]);
     return {
       format: 'kaoyandaily-backup',
@@ -778,6 +920,7 @@ const backup = {
         focusSessions: focusRows.map(strip),
         studyRecords: recordRows.map(strip),
         settings: settingRows.map((r) => ({ key: r.key, value: r.value })),
+        vocabCards: vocabRows.map(strip),
       },
     };
   },
@@ -877,6 +1020,15 @@ async function writeImportData(accountId: string, mapped: LocalMappedData, mode:
               await idbDelete(t, name, [String(row.accountId), String(row.key)]);
             }
           }
+        } else if (name === 'vocabCards') {
+          // 唯一键 (accountId, word)：id 或 word 冲突都先删（word 已在映射层归一）
+          const ids = new Set(rows.map((r) => String(r.id)));
+          const words = new Set(rows.map((r) => String(r.word)));
+          for (const row of targetRows) {
+            if (ids.has(String(row.id)) || words.has(String(row.word))) {
+              await idbDelete(t, name, String(row.id));
+            }
+          }
         } else {
           const ids = new Set(rows.map((r) => String(r.id)));
           for (const row of targetRows) {
@@ -897,6 +1049,7 @@ async function writeImportData(accountId: string, mapped: LocalMappedData, mode:
     await write('focusSessions', mapped.focusSessions as unknown as Array<Record<string, unknown>>);
     await write('studyRecords', mapped.studyRecords as unknown as Array<Record<string, unknown>>);
     await write('settings', mapped.settings as unknown as Array<Record<string, unknown>>);
+    await write('vocabCards', mapped.vocabCards as unknown as Array<Record<string, unknown>>);
   });
 }
 
@@ -909,5 +1062,6 @@ export const localStore = {
   statistics,
   settings,
   reviewLock,
+  vocab,
   backup,
 };

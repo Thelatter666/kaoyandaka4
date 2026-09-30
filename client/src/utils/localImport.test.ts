@@ -92,6 +92,83 @@ describe('mapLocalBackupData', () => {
     });
     expect(() => mapLocalBackupData(file.data)).toThrow(MappingError);
   });
+
+  it('vocabCards：word 归一为小写、白名单丢弃未知键、缺失可选字段归 null', () => {
+    const file = backupFile({
+      vocabCards: [
+        {
+          id: 'v1',
+          word: '  Abandon ',
+          phonetic: '/əˈbændən/',
+          definitions: [{ pos: 'v.', meaning: '放弃', junk: 1 }],
+          examples: [{ en: 'He abandoned the plan.', zh: '他放弃了计划。', junk: 'x' }],
+          extra: null,
+          examFreq: '高',
+          masteryLevel: 2,
+          intervalDays: 2,
+          nextReviewDate: '2026-10-02',
+          isMastered: false,
+          firstLearnedAt: '2026-09-29T02:00:00.000Z',
+          correctCount: 3,
+          wrongCount: 1,
+          lastReviewedAt: '2026-09-30T02:00:00.000Z',
+          createdAt: '2026-09-28T02:00:00.000Z',
+          updatedAt: '2026-09-30T02:00:00.000Z',
+          hacker: 'should be dropped',
+          user_id: 'server-user',
+        },
+      ],
+    });
+    const mapped = mapLocalBackupData(file.data);
+    expect(mapped.vocabCards).toHaveLength(1);
+    expect(mapped.vocabCards[0]).toMatchObject({
+      id: 'v1',
+      word: 'abandon',
+      phonetic: '/əˈbændən/',
+      definitions: [{ pos: 'v.', meaning: '放弃' }],
+      examples: [{ en: 'He abandoned the plan.', zh: '他放弃了计划。' }],
+      examFreq: '高',
+      masteryLevel: 2,
+      intervalDays: 2,
+      nextReviewDate: '2026-10-02',
+      isMastered: false,
+      firstLearnedAt: '2026-09-29T02:00:00.000Z',
+      correctCount: 3,
+      wrongCount: 1,
+    });
+    expect(mapped.vocabCards[0].definitions[0]).not.toHaveProperty('junk');
+    expect(mapped.vocabCards[0]).not.toHaveProperty('hacker');
+    expect(mapped.vocabCards[0]).not.toHaveProperty('user_id');
+    expect(mapped.vocabCards[0]).not.toHaveProperty('accountId');
+  });
+
+  it('vocabCards：服务器备份缺 updatedAt → 回落 createdAt；masteryLevel 越界抛 MappingError 带路径', () => {
+    const base = {
+      id: 'v1',
+      word: 'abandon',
+      definitions: [{ pos: 'v.', meaning: '放弃' }],
+      examples: [{ en: 'a', zh: 'b' }],
+      masteryLevel: 0,
+      intervalDays: 0,
+      nextReviewDate: '2026-10-01',
+      isMastered: false,
+      firstLearnedAt: null,
+      correctCount: 0,
+      wrongCount: 0,
+      lastReviewedAt: null,
+      createdAt: '2026-09-30T02:00:00.000Z',
+    };
+    const mapped = mapLocalBackupData(backupFile({ vocabCards: [base] }).data);
+    expect(mapped.vocabCards[0].updatedAt).toBe('2026-09-30T02:00:00.000Z');
+
+    try {
+      mapLocalBackupData(backupFile({ vocabCards: [{ ...base, masteryLevel: 9 }] }).data);
+      expect.unreachable('应当抛错');
+    } catch (e) {
+      expect(e).toBeInstanceOf(MappingError);
+      expect((e as MappingError).issues[0].path).toBe('data.vocabCards[0].masteryLevel');
+    }
+  });
 });
 
 describe('computeDiffCounts（服务器口径）', () => {
@@ -113,6 +190,7 @@ describe('computeDiffCounts（服务器口径）', () => {
       focusSessions: [],
       studyRecords: [],
       settings: [],
+      vocabCards: { ids: [], words: [] },
     };
     const diff = computeDiffSummary(
       {
@@ -124,10 +202,63 @@ describe('computeDiffCounts（服务器口径）', () => {
         focusSessions: [],
         studyRecords: [],
         settings: [],
+        vocabCards: [],
       },
       keys
     );
     expect(diff.reviews).toEqual({ added: 0, updated: 1, kept: 1 });
+  });
+
+  it('vocabCards 按 id 与 word: 复合候选键（word 命中即 updated）', () => {
+    const keys: LocalExistingKeys = {
+      presets: [],
+      tasks: [],
+      reviews: { ids: [], dates: [] },
+      courses: [],
+      episodes: [],
+      focusSessions: [],
+      studyRecords: [],
+      settings: [],
+      vocabCards: { ids: ['v-id'], words: ['abandon', 'legacy'] },
+    };
+    const vocabCard = {
+      id: 'x',
+      word: 'w',
+      phonetic: null,
+      definitions: [{ pos: 'v.', meaning: 'm' }],
+      examples: [{ en: 'a', zh: 'b' }],
+      extra: null,
+      examFreq: null,
+      masteryLevel: 0,
+      intervalDays: 0,
+      nextReviewDate: '2026-10-01',
+      isMastered: false,
+      firstLearnedAt: null,
+      correctCount: 0,
+      wrongCount: 0,
+      lastReviewedAt: null,
+      createdAt: '2026-09-30T00:00:00.000Z',
+      updatedAt: '2026-09-30T00:00:00.000Z',
+    };
+    const diff = computeDiffSummary(
+      {
+        presets: [],
+        tasks: [],
+        reviews: [],
+        courses: [],
+        episodes: [],
+        focusSessions: [],
+        studyRecords: [],
+        settings: [],
+        vocabCards: [
+          { ...vocabCard, id: 'v-id', word: 'other' }, // id 命中 → updated
+          { ...vocabCard, id: 'new-id', word: 'abandon' }, // word 命中 → updated
+          { ...vocabCard, id: 'added-id', word: 'benefit' }, // 均未命中 → added
+        ],
+      },
+      keys
+    );
+    expect(diff.vocabCards).toEqual({ added: 1, updated: 2, kept: 1 });
   });
 
   it('空库全新增', () => {
@@ -140,9 +271,10 @@ describe('computeDiffCounts（服务器口径）', () => {
       focusSessions: [],
       studyRecords: [],
       settings: [],
+      vocabCards: { ids: [], words: [] },
     };
     const diff = computeDiffSummary(
-      { presets: [{ ...baseRow, name: 'p', subject: 'math', subSubject: null, durationMinutes: 25, lastUsedAt: null }], tasks: [], reviews: [], courses: [], episodes: [], focusSessions: [], studyRecords: [], settings: [] },
+      { presets: [{ ...baseRow, name: 'p', subject: 'math', subSubject: null, durationMinutes: 25, lastUsedAt: null }], tasks: [], reviews: [], courses: [], episodes: [], focusSessions: [], studyRecords: [], settings: [], vocabCards: [] },
       empty
     );
     expect(diff.presets).toEqual({ added: 1, updated: 0, kept: 0 });

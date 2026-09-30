@@ -1,13 +1,15 @@
 /**
- * IndexedDB 数据层：单库 kaoyandaily_local（version 1）。
- * stores：accounts（本地账户）+ 8 个业务 store（presets/tasks/reviews/courses/episodes/
- * focusSessions/studyRecords/settings）+ meta（库元信息，预留）。
+ * IndexedDB 数据层：单库 kaoyandaily_local（version 2）。
+ * stores：accounts（本地账户）+ 9 个业务 store（presets/tasks/reviews/courses/episodes/
+ * focusSessions/studyRecords/settings/vocabCards）+ meta（库元信息，预留）。
  * 每条业务记录携带 accountId 字段并建索引；查询一律先按 accountId 过滤。
- * settings 无业务 id，主键为复合键 [accountId, key]。
+ * settings 无业务 id，主键为复合键 [accountId, key]；vocabCards 按 (accountId, word)
+ * 唯一（对照服务器 UNIQUE(user_id, word)，word 由调用方归一）。
+ * v1→v2：新增 vocabCards store（onupgradeneeded 对新装/老库一视同仁）。
  */
 
 export const DB_NAME = 'kaoyandaily_local';
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 
 export const BUSINESS_STORES = [
   'presets',
@@ -18,6 +20,7 @@ export const BUSINESS_STORES = [
   'focusSessions',
   'studyRecords',
   'settings',
+  'vocabCards',
 ] as const;
 
 export const STORES = ['accounts', ...BUSINESS_STORES, 'meta'] as const;
@@ -47,6 +50,12 @@ export function openDb(): Promise<IDBDatabase> {
               if (name === 'reviews') {
                 // 模拟服务器唯一键 (user_id, review_date)
                 s.createIndex('accountId_reviewDate', ['accountId', 'reviewDate'], { unique: true });
+              }
+              if (name === 'vocabCards') {
+                // 模拟服务器唯一键 (user_id, word) + 到期/掌握档查询索引（word 已归一）
+                s.createIndex('accountId_word', ['accountId', 'word'], { unique: true });
+                s.createIndex('accountId_nextReviewDate', ['accountId', 'nextReviewDate'], { unique: false });
+                s.createIndex('accountId_masteryLevel', ['accountId', 'masteryLevel'], { unique: false });
               }
             }
           }

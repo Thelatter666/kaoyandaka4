@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetDb } from './db';
+import { DB_NAME, openDb, resetDb } from './db';
 import {
   createLocalAccount,
   deleteLocalAccount,
@@ -12,6 +12,7 @@ import {
 import { setLocalContext, setLocalMode } from './mode';
 import { localStore } from './localStore';
 import type { LocalAccount } from './types';
+import type { VocabContent } from '@shared/types';
 
 async function activate(email = 'user@example.com'): Promise<LocalAccount> {
   const account = await createLocalAccount(email);
@@ -22,12 +23,21 @@ async function activate(email = 'user@example.com'): Promise<LocalAccount> {
 const createTask = (input: { date: string; content: string; subject: 'math' | 'english' | '408' }) =>
   localStore.tasks.create({ ...input, isImportant: false });
 
+const vocabContent: VocabContent = {
+  phonetic: '/əˈbændən/',
+  definitions: [{ pos: 'v.', meaning: '放弃；抛弃' }],
+  examples: [{ en: 'He abandoned the plan.', zh: '他放弃了计划。' }],
+  extra: null,
+  examFreq: '高',
+};
+
 function backupFile(overrides: {
   email?: string;
   tasks?: import('@shared/types').BackupFile['data']['tasks'];
   presets?: import('@shared/types').BackupFile['data']['presets'];
   reviews?: import('@shared/types').BackupFile['data']['reviews'];
   settings?: import('@shared/types').BackupFile['data']['settings'];
+  vocabCards?: import('@shared/types').BackupFile['data']['vocabCards'];
 } = {}): import('@shared/types').BackupFile {
   const base = {
     id: 't1',
@@ -55,6 +65,7 @@ function backupFile(overrides: {
       focusSessions: [],
       studyRecords: [],
       settings: overrides.settings ?? [],
+      vocabCards: overrides.vocabCards ?? [],
     },
   };
 }
@@ -422,6 +433,167 @@ describe('statistics', () => {
   });
 });
 
+describe('vocab（单词本）', () => {
+  beforeEach(async () => {
+    await resetDb();
+    setLocalContext(false);
+    setActiveLocalAccount(null);
+    await activate('vocab@example.com');
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('create：word 归一、新词次日到期、返回不含 accountId；查重抛 WORD_EXISTS；list 按 createdAt 升序', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 8, 30, 10, 0, 0));
+    const c1 = await localStore.vocab.create({ word: '  Abandon ', content: vocabContent });
+    expect(c1).toMatchObject({
+      word: 'abandon',
+      masteryLevel: 0,
+      intervalDays: 0,
+      nextReviewDate: '2026-10-01',
+      isMastered: false,
+      firstLearnedAt: null,
+      correctCount: 0,
+      wrongCount: 0,
+    });
+    expect(c1).not.toHaveProperty('accountId');
+
+    vi.setSystemTime(new Date(2026, 8, 30, 11, 0, 0));
+    const c2 = await localStore.vocab.create({ word: 'Benefit', content: vocabContent });
+
+    await expect(localStore.vocab.create({ word: 'ABANDON', content: vocabContent })).rejects.toThrow('WORD_EXISTS');
+    expect(await localStore.vocab.list()).toHaveLength(2);
+
+    const list = await localStore.vocab.list();
+    expect(list.map((c) => c.word)).toEqual(['abandon', 'benefit']);
+    expect(list[0].id).toBe(c1.id);
+    expect(list[1].id).toBe(c2.id);
+    // getByWord：大小写/空白不敏感；未命中返回 null
+    expect((await localStore.vocab.getByWord(' ABANDON '))?.id).toBe(c1.id);
+    expect(await localStore.vocab.getByWord('missing')).toBeNull();
+
+    // 账户隔离：另一账户看不到
+    await activate('vocab-other@example.com');
+    expect(await localStore.vocab.list()).toHaveLength(0);
+    expect(await localStore.vocab.getByWord('abandon')).toBeNull();
+  });
+
+  it('review：认识升档按间隔表排期、模糊顺延 1 天、不认识降 2 档当天到期、满档毕业', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 8, 30, 10, 0, 0));
+    const card = await localStore.vocab.create({ word: 'abandon', content: vocabContent });
+
+    // 首学：只置 firstLearnedAt（幂等，不动 SRS）
+    const learned = await localStore.vocab.learn(card.id);
+    expect(learned.firstLearnedAt).toBe(new Date(2026, 8, 30, 10, 0, 0).toISOString());
+    expect(learned.masteryLevel).toBe(0);
+    expect(learned.nextReviewDate).toBe('2026-10-01');
+    const learnedAgain = await localStore.vocab.learn(card.id);
+    expect(learnedAgain.firstLearnedAt).toBe(learned.firstLearnedAt);
+
+    // 认识 0→1 档：间隔 SRS[1]=1 天
+    const known1 = await localStore.vocab.review(card.id, 'known');
+    expect(known1).toMatchObject({
+      masteryLevel: 1,
+      intervalDays: 1,
+      nextReviewDate: '2026-10-01',
+      isMastered: false,
+      correctCount: 1,
+      wrongCount: 0,
+    });
+    expect(known1.lastReviewedAt).toBe(new Date(2026, 8, 30, 10, 0, 0).toISOString());
+
+    // 次日再认识 1→2 档：间隔 SRS[2]=2 天
+    vi.setSystemTime(new Date(2026, 9, 1, 9, 0, 0));
+    const known2 = await localStore.vocab.review(card.id, 'known');
+    expect(known2).toMatchObject({ masteryLevel: 2, intervalDays: 2, nextReviewDate: '2026-10-03', correctCount: 2 });
+
+    // 模糊：档位不变、次日到期、不计对错
+    const fuzzy = await localStore.vocab.review(card.id, 'fuzzy');
+    expect(fuzzy).toMatchObject({
+      masteryLevel: 2,
+      intervalDays: 1,
+      nextReviewDate: '2026-10-02',
+      correctCount: 2,
+      wrongCount: 0,
+    });
+
+    // 不认识：降 2 档、当天到期、计错
+    const unknown = await localStore.vocab.review(card.id, 'unknown');
+    expect(unknown).toMatchObject({
+      masteryLevel: 0,
+      intervalDays: 0,
+      nextReviewDate: '2026-10-01',
+      isMastered: false,
+      wrongCount: 1,
+    });
+
+    // 4→5 档毕业：间隔 SRS[5]=15 天，isMastered 置位
+    const bumped = await localStore.vocab.update(card.id, { masteryLevel: 4 });
+    expect(bumped).toMatchObject({ masteryLevel: 4, intervalDays: 7, nextReviewDate: '2026-10-08', isMastered: false });
+    const graduated = await localStore.vocab.review(card.id, 'known');
+    expect(graduated).toMatchObject({ masteryLevel: 5, intervalDays: 15, nextReviewDate: '2026-10-16', isMastered: true });
+  });
+
+  it('update：reset 回到未学（次日到期、清毕业）；remove 删除；不存在 → NOT_FOUND', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 8, 30, 10, 0, 0));
+    const card = await localStore.vocab.create({ word: 'abandon', content: vocabContent });
+    await localStore.vocab.update(card.id, { masteryLevel: 5 });
+    const reset = await localStore.vocab.update(card.id, { reset: true });
+    expect(reset).toMatchObject({
+      masteryLevel: 0,
+      intervalDays: 0,
+      nextReviewDate: '2026-10-01',
+      isMastered: false,
+      firstLearnedAt: null,
+    });
+
+    await localStore.vocab.remove(card.id);
+    expect(await localStore.vocab.list()).toHaveLength(0);
+    await expect(localStore.vocab.review(card.id, 'known')).rejects.toThrow('NOT_FOUND');
+    await expect(localStore.vocab.remove(card.id)).rejects.toThrow('NOT_FOUND');
+  });
+
+  it('背卡完整往返：导出含 vocabCards（无 accountId），merge 导入恢复词库与进度', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 8, 30, 10, 0, 0));
+    const card = await localStore.vocab.create({ word: 'Abandon', content: vocabContent });
+    await localStore.vocab.learn(card.id);
+    await localStore.vocab.review(card.id, 'known');
+
+    const file = await localStore.backup.exportBackup();
+    expect(file.data.vocabCards).toHaveLength(1);
+    expect(file.data.vocabCards![0]).not.toHaveProperty('accountId');
+    expect(file.data.vocabCards![0]).toMatchObject({
+      id: card.id,
+      word: 'abandon',
+      masteryLevel: 1,
+      intervalDays: 1,
+      nextReviewDate: '2026-10-01',
+      firstLearnedAt: new Date(2026, 8, 30, 10, 0, 0).toISOString(),
+    });
+
+    // 清空后 merge 导入 → 词库与进度完整恢复
+    await localStore.vocab.remove(card.id);
+    await localStore.backup.importData(file, 'merge');
+    const restored = await localStore.vocab.list();
+    expect(restored).toHaveLength(1);
+    expect(restored[0]).toMatchObject({
+      id: card.id,
+      word: 'abandon',
+      masteryLevel: 1,
+      intervalDays: 1,
+      nextReviewDate: '2026-10-01',
+      firstLearnedAt: new Date(2026, 8, 30, 10, 0, 0).toISOString(),
+    });
+    expect(restored[0]).not.toHaveProperty('accountId');
+  });
+});
+
 describe('backup 导出 / 导入', () => {
   beforeEach(async () => {
     await resetDb();
@@ -522,6 +694,58 @@ describe('backup 导出 / 导入', () => {
     expect(await localStore.reviews.getHistory()).toHaveLength(1);
     expect((await localStore.settings.get()).pomodoroSoundEnabled).toBe(true);
   });
+
+  it('importData：vocab 按 id/word 候选键合并（不同 id 同 word 不触发唯一索引冲突）', async () => {
+    await activate('vocab-keys@example.com');
+    await localStore.vocab.create({ word: 'hello', content: vocabContent });
+    const file = backupFile({
+      email: 'vocab-keys@example.com',
+      vocabCards: [
+        {
+          id: 'imported-id',
+          word: 'HELLO',
+          phonetic: null,
+          definitions: [{ pos: 'n.', meaning: '你好' }],
+          examples: [{ en: 'Hello!', zh: '你好！' }],
+          extra: null,
+          examFreq: null,
+          masteryLevel: 3,
+          intervalDays: 4,
+          nextReviewDate: '2026-10-03',
+          isMastered: false,
+          firstLearnedAt: null,
+          correctCount: 0,
+          wrongCount: 0,
+          lastReviewedAt: null,
+          createdAt: '2026-09-30T02:00:00.000Z',
+        },
+      ],
+    });
+    // 差异口径：word 命中已有 → updated；已有 id 未被文件键命中 → kept
+    const preview = await localStore.backup.previewImport(file);
+    expect(preview.diff.vocabCards).toEqual({ added: 0, updated: 1, kept: 1 });
+
+    // word 冲突（不同 id）先删后插；备份条目无 updatedAt（服务器导出格式）→ 回落 createdAt
+    await localStore.backup.importData(file, 'merge');
+    const list = await localStore.vocab.list();
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({
+      id: 'imported-id',
+      word: 'hello',
+      masteryLevel: 3,
+      intervalDays: 4,
+      nextReviewDate: '2026-10-03',
+      updatedAt: '2026-09-30T02:00:00.000Z',
+    });
+  });
+
+  it('importData：overwrite 清空目标账户词库', async () => {
+    await activate('vocab-wipe@example.com');
+    await localStore.vocab.create({ word: 'old-word', content: vocabContent });
+    const file = backupFile({ email: 'vocab-wipe@example.com' });
+    await localStore.backup.importData(file, 'overwrite');
+    expect(await localStore.vocab.list()).toHaveLength(0);
+  });
 });
 describe('focus 暂停（ADR-0006）', () => {
   beforeEach(async () => {
@@ -596,5 +820,81 @@ describe('focus 暂停（ADR-0006）', () => {
     const records = await localStore.statistics.getTodaySummary();
     // 挂钟 20 分钟 - 3 分钟暂停 = 17 分钟 = 1020 秒
     expect(records.totalSeconds).toBe(1020);
+  });
+});
+
+describe('IndexedDB 升级（v1 → v2）', () => {
+  beforeEach(async () => {
+    await resetDb();
+    setLocalContext(false);
+    setActiveLocalAccount(null);
+  });
+
+  /** 按 v1 结构建库并写入一条老数据（照 db.ts v1 的 store/索引创建模式） */
+  function openV1Db(): Promise<IDBDatabase> {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, 1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        const accounts = db.createObjectStore('accounts', { keyPath: 'accountId' });
+        accounts.createIndex('email', 'email', { unique: true });
+        for (const name of [
+          'presets',
+          'tasks',
+          'reviews',
+          'courses',
+          'episodes',
+          'focusSessions',
+          'studyRecords',
+        ]) {
+          const s = db.createObjectStore(name, { keyPath: 'id' });
+          s.createIndex('accountId', 'accountId', { unique: false });
+        }
+        const settings = db.createObjectStore('settings', { keyPath: ['accountId', 'key'] });
+        settings.createIndex('accountId', 'accountId', { unique: false });
+        db.createObjectStore('meta', { keyPath: 'key' });
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  it('v1 老库升级：追加 vocabCards store 与 4 索引，老数据保留', async () => {
+    const v1 = await openV1Db();
+    await new Promise<void>((resolve, reject) => {
+      const txn = v1.transaction('tasks', 'readwrite');
+      txn.objectStore('tasks').put({
+        id: 't-old',
+        accountId: 'acc-old',
+        taskDate: '2026-01-01',
+        content: '升级前的任务',
+      });
+      txn.oncomplete = () => resolve();
+      txn.onerror = () => reject(txn.error);
+    });
+    v1.close();
+
+    const db = await openDb();
+    expect(db.version).toBe(2);
+    expect([...db.objectStoreNames]).toContain('vocabCards');
+
+    const txn = db.transaction('vocabCards', 'readonly');
+    const store = txn.objectStore('vocabCards');
+    expect([...store.indexNames].sort()).toEqual([
+      'accountId',
+      'accountId_masteryLevel',
+      'accountId_nextReviewDate',
+      'accountId_word',
+    ]);
+    expect(store.index('accountId_word').unique).toBe(true);
+    expect(store.index('accountId_word').keyPath).toEqual(['accountId', 'word']);
+
+    const oldRows = await new Promise<unknown[]>((resolve, reject) => {
+      const t = db.transaction('tasks', 'readonly');
+      const req = t.objectStore('tasks').getAll();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    expect(oldRows).toHaveLength(1);
   });
 });

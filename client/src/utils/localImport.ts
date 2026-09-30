@@ -6,8 +6,19 @@
  * - resolveLocalImportTarget：本地账户判定（未激活建号 / 邮箱占用 / 已激活邮箱一致）。
  */
 
-import type { BackupFile, DiffSummary } from '@shared/types';
-import type { LocalAccount, LocalPreset, LocalTask, LocalReview, LocalCourse, LocalEpisode, LocalFocusSession, LocalStudyRecord } from '../local/types';
+import type { BackupFile, DiffSummary, VocabDefinition, VocabExample } from '@shared/types';
+import type {
+  LocalAccount,
+  LocalPreset,
+  LocalTask,
+  LocalReview,
+  LocalCourse,
+  LocalEpisode,
+  LocalFocusSession,
+  LocalStudyRecord,
+  LocalVocabCard,
+} from '../local/types';
+import { normalizeWord } from '../local/types';
 
 export interface MappingIssue {
   path: string;
@@ -53,6 +64,23 @@ const intNullable = (v: unknown, path: string): number | null => {
   return intRequired(v, path);
 };
 
+const intNonNegative = (v: unknown, path: string): number => {
+  const n = intRequired(v, path);
+  if (n < 0) fail(path, '不得为负数');
+  return n;
+};
+
+const intInRange = (v: unknown, path: string, min: number, max: number): number => {
+  const n = intRequired(v, path);
+  if (n < min || n > max) fail(path, `必须在 ${min}-${max} 之间`);
+  return n;
+};
+
+const arrRequired = (v: unknown, path: string): unknown[] => {
+  if (!Array.isArray(v)) fail(path, '必须为数组');
+  return v;
+};
+
 const enumStrict = (allowed: readonly string[]) => (v: unknown, path: string): string => {
   const s = strRequired(v, path);
   if (!allowed.includes(s)) fail(path, `必须为 ${allowed.join('/')}`);
@@ -70,6 +98,7 @@ const SESSION_SUBJECTS = ['math', 'english', '408', 'free'] as const;
 const FOCUS_STATUSES = ['in_progress', 'completed', 'cancelled'] as const;
 const FOCUS_SOURCES = ['pomodoro', 'plan', 'course'] as const;
 const RECORD_SOURCES = ['focus_session', 'course_video'] as const;
+const EXAM_FREQS = ['高', '中', '低'] as const;
 
 export interface LocalMappedData {
   presets: Array<Omit<LocalPreset, 'accountId'>>;
@@ -80,6 +109,7 @@ export interface LocalMappedData {
   focusSessions: Array<Omit<LocalFocusSession, 'accountId'>>;
   studyRecords: Array<Omit<LocalStudyRecord, 'accountId'>>;
   settings: Array<{ key: string; value: string }>;
+  vocabCards: Array<Omit<LocalVocabCard, 'accountId'>>;
 }
 
 const mapPreset = (e: Row, p: string): Omit<LocalPreset, 'accountId'> => ({
@@ -180,7 +210,43 @@ const mapSetting = (e: Row, p: string): { key: string; value: string } => ({
   value: strRequired(e.value, `${p}.value`),
 });
 
-/** 备份 data → 本地行（未知键丢弃；任一非法立即抛 MappingError） */
+const mapVocabDefinition = (e: unknown, p: string): VocabDefinition => {
+  if (typeof e !== 'object' || e === null || Array.isArray(e)) fail(p, '必须为对象');
+  const row = e as Row;
+  return { pos: strRequired(row.pos, `${p}.pos`), meaning: strRequired(row.meaning, `${p}.meaning`) };
+};
+
+const mapVocabExample = (e: unknown, p: string): VocabExample => {
+  if (typeof e !== 'object' || e === null || Array.isArray(e)) fail(p, '必须为对象');
+  const row = e as Row;
+  return { en: strRequired(row.en, `${p}.en`), zh: strRequired(row.zh, `${p}.zh`) };
+};
+
+/** 第 9 类资源（词卡）：word 归一为小写；服务器侧备份不含 updatedAt，缺失时回落 createdAt */
+const mapVocabCard = (e: Row, p: string): Omit<LocalVocabCard, 'accountId'> => {
+  const createdAt = strRequired(e.createdAt, `${p}.createdAt`);
+  return {
+    id: strRequired(e.id, `${p}.id`),
+    word: normalizeWord(strRequired(e.word, `${p}.word`)),
+    phonetic: strNullable(e.phonetic, `${p}.phonetic`),
+    definitions: arrRequired(e.definitions, `${p}.definitions`).map((d, i) => mapVocabDefinition(d, `${p}.definitions[${i}]`)),
+    examples: arrRequired(e.examples, `${p}.examples`).map((x, i) => mapVocabExample(x, `${p}.examples[${i}]`)),
+    extra: strNullable(e.extra, `${p}.extra`),
+    examFreq: enumNullable(EXAM_FREQS)(e.examFreq, `${p}.examFreq`) as LocalVocabCard['examFreq'],
+    masteryLevel: intInRange(e.masteryLevel, `${p}.masteryLevel`, 0, 5),
+    intervalDays: intNonNegative(e.intervalDays, `${p}.intervalDays`),
+    nextReviewDate: strRequired(e.nextReviewDate, `${p}.nextReviewDate`),
+    isMastered: boolStrict(e.isMastered, `${p}.isMastered`),
+    firstLearnedAt: strNullable(e.firstLearnedAt, `${p}.firstLearnedAt`),
+    correctCount: intNonNegative(e.correctCount, `${p}.correctCount`),
+    wrongCount: intNonNegative(e.wrongCount, `${p}.wrongCount`),
+    lastReviewedAt: strNullable(e.lastReviewedAt, `${p}.lastReviewedAt`),
+    createdAt,
+    updatedAt: strNullable(e.updatedAt, `${p}.updatedAt`) ?? createdAt,
+  };
+};
+
+/** 备份 data → 本地行（未知键丢弃；任一非法立即抛 MappingError；vocabCards 在旧版备份中缺省为空） */
 export function mapLocalBackupData(data: BackupFile['data']): LocalMappedData {
   return {
     presets: data.presets.map((e, i) => mapPreset(e as Row, `data.presets[${i}]`)),
@@ -191,6 +257,7 @@ export function mapLocalBackupData(data: BackupFile['data']): LocalMappedData {
     focusSessions: data.focusSessions.map((e, i) => mapFocusSession(e as Row, `data.focusSessions[${i}]`)),
     studyRecords: data.studyRecords.map((e, i) => mapStudyRecord(e as Row, `data.studyRecords[${i}]`)),
     settings: data.settings.map((e, i) => mapSetting(e as Row, `data.settings[${i}]`)),
+    vocabCards: (data.vocabCards ?? []).map((e, i) => mapVocabCard(e as Row, `data.vocabCards[${i}]`)),
   };
 }
 
@@ -211,6 +278,8 @@ export interface LocalExistingKeys {
   focusSessions: string[];
   studyRecords: string[];
   settings: string[];
+  /** 词卡唯一键 (accountId, word)：候选键为 id 与 'word:xxx'（word 已归一） */
+  vocabCards: { ids: string[]; words: string[] };
 }
 
 export function computeDiffCounts(fileCandidateKeys: string[][], existingKeys: Set<string>): DiffCounts {
@@ -234,6 +303,8 @@ const idKeys = (rows: Array<{ id: string }>): string[][] => rows.map((r) => [r.i
 export function computeDiffSummary(fileData: LocalMappedData, existing: LocalExistingKeys): DiffSummary {
   const reviewKeys = fileData.reviews.map((r) => [r.id, `date:${r.reviewDate}`]);
   const reviewExisting = new Set([...existing.reviews.ids, ...existing.reviews.dates.map((d) => `date:${d}`)]);
+  const vocabKeys = fileData.vocabCards.map((c) => [c.id, `word:${c.word}`]);
+  const vocabExisting = new Set([...existing.vocabCards.ids, ...existing.vocabCards.words.map((w) => `word:${w}`)]);
   return {
     presets: computeDiffCounts(idKeys(fileData.presets), toSet(existing.presets)),
     tasks: computeDiffCounts(idKeys(fileData.tasks), toSet(existing.tasks)),
@@ -246,6 +317,7 @@ export function computeDiffSummary(fileData: LocalMappedData, existing: LocalExi
       fileData.settings.map((r) => [r.key]),
       toSet(existing.settings)
     ),
+    vocabCards: computeDiffCounts(vocabKeys, vocabExisting),
   };
 }
 

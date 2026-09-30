@@ -1,0 +1,205 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { VocabContent } from '@shared/types';
+import {
+  LlmError,
+  VOCAB_LLM_CONFIG_KEY,
+  VOCAB_SYSTEM_PROMPT,
+  extractJsonContent,
+  loadLlmConfig,
+  lookupWord,
+  saveLlmConfig,
+  type VocabLlmConfig,
+} from './vocabLlm';
+
+/* ---- 测试替身：内存 localStorage + fetch mock（node 环境无浏览器存储） ---- */
+
+function memoryStorage(): Storage {
+  const map = new Map<string, string>();
+  return {
+    get length() {
+      return map.size;
+    },
+    clear: () => map.clear(),
+    getItem: (key: string) => map.get(key) ?? null,
+    key: (index: number) => [...map.keys()][index] ?? null,
+    removeItem: (key: string) => {
+      map.delete(key);
+    },
+    setItem: (key: string, value: string) => {
+      map.set(key, String(value));
+    },
+  };
+}
+
+const config: VocabLlmConfig = { baseUrl: 'https://api.example.com/v1/', apiKey: 'sk-test', model: 'deepseek-chat' };
+
+const validContent: VocabContent = {
+  phonetic: '/əˈbændən/',
+  definitions: [{ pos: 'v.', meaning: '放弃；抛弃' }],
+  examples: [{ en: 'He abandoned the plan.', zh: '他放弃了计划。' }],
+  extra: 'ab-（离开）+ band（束缚）',
+  examFreq: '高',
+};
+
+function chatResponse(content: string, status = 200): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => ({ choices: [{ message: { content } }] }),
+  } as unknown as Response;
+}
+
+let fetchMock: ReturnType<typeof vi.fn>;
+
+function stubFetch(...responses: Array<Response | Error>): void {
+  fetchMock = vi.fn(async () => {
+    const next = responses.shift();
+    if (next === undefined) throw new Error('fetch mock 调用次数超出预期');
+    if (next instanceof Error) throw next;
+    return next;
+  });
+  vi.stubGlobal('fetch', fetchMock);
+}
+
+/** 取拒绝原因（并断言确为 LlmError） */
+async function catchLlmError(promise: Promise<unknown>): Promise<LlmError> {
+  const err = await promise.then(
+    () => null,
+    (e: unknown) => e
+  );
+  expect(err).toBeInstanceOf(LlmError);
+  return err as LlmError;
+}
+
+beforeEach(() => {
+  vi.stubGlobal('localStorage', memoryStorage());
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+describe('loadLlmConfig / saveLlmConfig', () => {
+  it('无配置 / 缺字段 / JSON 损坏 → null（三字段均非空才算已配置）', () => {
+    expect(loadLlmConfig()).toBeNull();
+    localStorage.setItem(VOCAB_LLM_CONFIG_KEY, JSON.stringify({ baseUrl: 'https://x/v1', apiKey: 'k' }));
+    expect(loadLlmConfig()).toBeNull();
+    localStorage.setItem(VOCAB_LLM_CONFIG_KEY, JSON.stringify({ baseUrl: '', apiKey: 'k', model: 'm' }));
+    expect(loadLlmConfig()).toBeNull();
+    localStorage.setItem(VOCAB_LLM_CONFIG_KEY, 'not-json');
+    expect(loadLlmConfig()).toBeNull();
+  });
+
+  it('完整三字段 → 原样返回；save 后 load 往返一致', () => {
+    saveLlmConfig(config);
+    expect(JSON.parse(localStorage.getItem(VOCAB_LLM_CONFIG_KEY) as string)).toEqual(config);
+    expect(loadLlmConfig()).toEqual(config);
+  });
+});
+
+describe('extractJsonContent', () => {
+  it('无围栏：原样 trim', () => {
+    expect(extractJsonContent('  {"a":1}  ')).toBe('{"a":1}');
+  });
+
+  it('```json 围栏：剥出内容', () => {
+    expect(extractJsonContent('```json\n{"a":1}\n```')).toBe('{"a":1}');
+    expect(extractJsonContent('```\n{"a":1}\n```')).toBe('{"a":1}');
+  });
+
+  it('围栏前后有解释文字：只取围栏内', () => {
+    expect(extractJsonContent('好的，结果如下：\n```json\n{"a":1}\n```\n以上。')).toBe('{"a":1}');
+  });
+});
+
+describe('lookupWord', () => {
+  it('成功路径：请求形状正确 + 契约校验通过（缺省字段归一为 null）', async () => {
+    stubFetch(chatResponse(JSON.stringify({ definitions: validContent.definitions, examples: validContent.examples })));
+    const result = await lookupWord(config, 'abandon');
+    expect(result).toEqual({
+      phonetic: null,
+      definitions: validContent.definitions,
+      examples: validContent.examples,
+      extra: null,
+      examFreq: null,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    // baseUrl 末尾斜杠被剥掉，避免双斜杠
+    expect(url).toBe('https://api.example.com/v1/chat/completions');
+    expect(init.method).toBe('POST');
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer sk-test');
+    const body = JSON.parse(init.body as string) as {
+      model: string;
+      temperature: number;
+      messages: Array<{ role: string; content: string }>;
+    };
+    expect(body.model).toBe('deepseek-chat');
+    expect(body.temperature).toBe(0.3);
+    expect(body.messages[0]).toEqual({ role: 'system', content: VOCAB_SYSTEM_PROMPT });
+    expect(body.messages[1]).toEqual({ role: 'user', content: 'abandon' });
+  });
+
+  it('剥围栏后校验：围栏包裹的合法 JSON 直接通过', async () => {
+    stubFetch(chatResponse('```json\n' + JSON.stringify(validContent) + '\n```'));
+    await expect(lookupWord(config, 'abandon')).resolves.toEqual(validContent);
+  });
+
+  it('契约违规一次后重试成功：第二次消息附上次失败原因', async () => {
+    stubFetch(chatResponse('当然可以！这是结果：'), chatResponse(JSON.stringify(validContent)));
+    await expect(lookupWord(config, 'abandon')).resolves.toEqual(validContent);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const retryBody = JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string) as {
+      messages: Array<{ role: string; content: string }>;
+    };
+    expect(retryBody.messages).toHaveLength(4);
+    expect(retryBody.messages[2]).toEqual({ role: 'assistant', content: '当然可以！这是结果：' });
+    expect(retryBody.messages[3].content).toContain('不符合 JSON 契约');
+    expect(retryBody.messages[3].content).toContain('重新输出纯 JSON');
+  });
+
+  it('两次输出都不是合法 JSON → LlmError(contract)', async () => {
+    stubFetch(chatResponse('不是 JSON'), chatResponse('仍不是 JSON'));
+    const err = await catchLlmError(lookupWord(config, 'abandon'));
+    expect(err.kind).toBe('contract');
+    expect(err.message).toContain('两次输出都不符合');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('JSON 合法但缺 definitions → 视为契约违规（重试后 contract）', async () => {
+    stubFetch(chatResponse(JSON.stringify({ examples: validContent.examples })), chatResponse(JSON.stringify({ definitions: [] })));
+    const err = await catchLlmError(lookupWord(config, 'abandon'));
+    expect(err.kind).toBe('contract');
+  });
+
+  it('401/403 → LlmError(unauthorized)', async () => {
+    stubFetch(chatResponse('', 401));
+    const err = await catchLlmError(lookupWord(config, 'abandon'));
+    expect(err.kind).toBe('unauthorized');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('429 → LlmError(rate_limit)；其他非 2xx → network', async () => {
+    stubFetch(chatResponse('', 429));
+    expect((await catchLlmError(lookupWord(config, 'abandon'))).kind).toBe('rate_limit');
+
+    stubFetch(chatResponse('', 500));
+    expect((await catchLlmError(lookupWord(config, 'abandon'))).kind).toBe('network');
+  });
+
+  it('fetch 抛网络/CORS 异常 → LlmError(cors)；AbortError 原样透传', async () => {
+    stubFetch(new TypeError('Failed to fetch'));
+    expect((await catchLlmError(lookupWord(config, 'abandon'))).kind).toBe('cors');
+
+    // 调用方主动 abort（如关闭弹窗）：不包装成 LlmError，原样抛出供 UI 忽略
+    const abortErr = new Error('The operation was aborted.');
+    abortErr.name = 'AbortError';
+    stubFetch(abortErr);
+    const err = await lookupWord(config, 'abandon').then(
+      () => null,
+      (e: unknown) => e
+    );
+    expect(err).toBe(abortErr);
+  });
+});
