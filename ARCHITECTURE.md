@@ -148,3 +148,4 @@ import { CreateTaskSchema } from '../../../shared/src/schemas/task.js';
 
 - **无全局 ErrorBoundary**：页面靠各自 `ErrorState` + `App.tsx` 的 `pageFallback`（Suspense fallback）兜底，勿假设有全局兜底
 - 组件测试受限于 vitest node 环境：需要浏览器行为时拆成纯函数（如 `inkSurface.ts`/`inkWavePaths.ts`/`sound.ts`）或将断言下沉到数据层
+- **死代码（2026-09-30 onboarding 全库核实，零引用）**：`hooks/useApi.ts`、`hooks/useKeyboardSort.ts`、`ui/GlowCard.tsx`、`ui/AnimatedThemeToggle.tsx`、`ui/Card3D.tsx`（CourseZoneCard.tsx 头注释明确弃用 Card3D）；清理时可顺手合并 `parseTimeString` 双实现——`utils/duration.ts:29`（导出版）与 `utils/parseCourseText.ts:19`（私有版）语义重复

@@ -2,6 +2,7 @@
 
 > **For agentic workers:** 本计划按卡（Task C1–C5）派发子代理执行（配合 superpowers:subagent-driven-development 的两段式审查）。步骤用 `- [ ]` 勾选跟踪。
 > **本仓执行纪律（硬性）**：子代理只写代码与测试、不执行 `git commit/push`；主代理（PM）逐卡验收（亲跑 lint/test/build，不轻信汇报）；提交与推送由主代理在用户明确下令后进行。spec：`docs/superpowers/specs/2026-09-30-vocabulary-module-design.md`。
+> **执行状态（2026-09-30）**：C1–C5 全部完成并逐卡提交（`dad0fc7`→`d78e07a`，分支 `feat/vocab-module`，门禁全绿）；执行中的实测修订已回填对应小节（ImportBackupModal 划入 C4 领地、mysql2 JSON 列回读形态、express v5 类型收窄、zod 禁入客户端产物、playwright workers=1），勾选框不再逐项回填，以 git 历史与本注为准。
 
 **Goal:** 新增单词本模块：LLM 查词生成考研向词卡（浏览器直连 OpenAI 兼容接口）+ 扇贝式「新词首学/到期复习」简化 SRS + 三索引词库，双数据模式（MySQL + IndexedDB）并纳入备份。
 
